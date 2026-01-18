@@ -1,0 +1,201 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F5F7FA;
+    --bg-tertiary: #E8ECF1;
+    --text-primary: #1A1A1A;
+    --text-secondary: #5A5A5A;
+    --text-tertiary: #8A8A8A;
+    --border: 0 0% 89.8%;
+    --border-hover: #B8C4D1;
+    --card-bg: #FFFFFF;
+    --sidebar-bg: #FAFBFC;
+    --header-bg: #FFFFFF;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 221 83% 45%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --input: 0 0% 89.8%;
+    --ring: 221 83% 53%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --bg-primary: #0D0D0D;
+    --bg-secondary: #1A1A1A;
+    --bg-tertiary: #2D2D2D;
+    --text-primary: #F5F5F5;
+    --text-secondary: #A0A0A0;
+    --text-tertiary: #808080;
+    --border: 0 0% 20%;
+    --border-hover: #505050;
+    --card-bg: #1F1F1F;
+    --sidebar-bg: #121212;
+    --header-bg: #1A1A1A;
+    --background: 0 0% 8%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 91% 55%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
+    --input: 0 0% 20%;
+    --ring: 217 91% 60%;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Source Sans 3', sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Manrope', sans-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-hover text-white font-header font-semibold px-4 py-2 rounded-lg transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 border font-header font-semibold px-4 py-2 rounded-lg transition-colors;
+    color: var(--text-secondary);
+    border-color: var(--border);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--border-hover);
+  }
+
+  .card {
+    @apply rounded-xl shadow-card hover:shadow-card-hover transition-all;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border);
+  }
+
+  .tag-azure {
+    @apply bg-primary/20 border-primary/40;
+    color: #002387;
+  }
+
+  .dark .tag-azure {
+    @apply bg-[#1E3A8A] border-[#3B82F6];
+    color: #DBEAFE;
+  }
+
+  .dark .tag-azure:hover {
+    @apply border-[#60A5FA];
+  }
+
+  .tag-m365 {
+    @apply bg-accent/20 border-accent/40;
+    color: #2D68C4;
+  }
+
+  .dark .tag-m365 {
+    @apply bg-[#155E75] border-[#06B6D4];
+    color: #CFFAFE;
+  }
+
+  .dark .tag-m365:hover {
+    @apply border-[#22D3EE];
+  }
+
+  .tag-workshop {
+    @apply bg-success/20 border-success/40;
+    color: #059669;
+  }
+
+  .dark .tag-workshop {
+    @apply bg-[#065F46] border-[#10B981];
+    color: #D1FAE5;
+  }
+
+  .dark .tag-workshop:hover {
+    @apply border-[#34D399];
+  }
+
+  .tag-tutorial {
+    @apply bg-warning/20 border-warning/40;
+    color: #D97706;
+  }
+
+  .dark .tag-tutorial {
+    @apply bg-[#92400E] border-[#F59E0B];
+    color: #FEF3C7;
+  }
+
+  .dark .tag-tutorial:hover {
+    @apply border-[#FBBF24];
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}

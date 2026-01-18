@@ -1,0 +1,1080 @@
+<script setup lang="ts">
+const contentItems = [
+  {
+    id: 1,
+    icon: '🤖',
+    title: 'LAB510: VS Code에서 GitHub Copilot의 강력한 기능',
+    description: '이 실습형 랩에서는 Visual Studio Code에서 GitHub Copilot을 활용하여 일상적인 코딩 작업에서 가치를 극대화하는 방법을 심층적으로 다룹니다. 참가자는 agent mode, 모델 선택 전략, 그리고 코드 품질을 유지하면서 생산성을 높이는 기법을 통해 Copilot이 워크플로를 어떻게 변화시키는지 학습합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Copilot', color: 'workshop' },
+      { label: 'DevOps', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 2,
+    icon: '🔍',
+    title: 'LAB511: Azure AI Search로 에이전틱 지식 베이스 구축: 차세대 RAG',
+    description: '이 실습형 랩에서는 Azure AI Search의 차세대 검색 방식인 에이전틱 RAG를 사용하여 Knowledge Base를 구축합니다. 여러 인덱스와 스토리지 시스템 전반에서 스마트 소스 선택을 활용해 에이전틱 검색 엔진을 엔터프라이즈 데이터에 연결합니다. 자연어 가이던스로 계획을 강화하고, 사용 사례에 맞춘 인용 기반의 근거 있는 응답을 생성하는 방법을 학습합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Data', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 3,
+    icon: '🎨',
+    title: 'LAB512: Microsoft Foundry 및 AI Toolkit을 사용한 멀티모달 에이전트 프로토타이핑',
+    description: '이 실습에서는 VS Code에서 AI Toolkit(AITK)과 Microsoft Foundry를 직접 사용하여 Model Catalog의 최신 멀티모달 및 추론 모델을 탐색하고 비교합니다. 프롬프트 및 컨텍스트 엔지니어링을 활용해 실제 비즈니스 시나리오에 맞게 모델을 보강하는 방법을 학습합니다. 또한 AITK Agent Builder로 에이전트를 프로토타이핑하고, MCP를 통해 적절한 도구를 연결하는 방법을 다룹니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Agent', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 4,
+    icon: '🔗',
+    title: 'LAB513: SWE Agents 및 agent-framework를 사용하여 A2A 및 MCP 시스템 구축',
+    description: 'Semantic Kernel 및 AutoGen 엔지니어링 팀이 제공하는 통합 플랫폼인 Microsoft Agent Framework를 활용하여 A2A 호환 에이전트를 구축하는 방법을 학습합니다. GitHub Copilot 코딩 에이전트와 Azure OpenAI 모델을 사용하는 Codex 등 SWE Agents를 활용해 개발을 가속화합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Agent', color: 'workshop' },
+      { label: 'Security', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 5,
+    icon: '⚡',
+    title: 'LAB514: MCP 및 Azure Functions로 AI 에이전트를 빌드하고 배포하기',
+    description: 'Azure Functions를 사용하여 GitHub Copilot과 같은 AI 어시스턴트를 위한 MCP(Model Context Protocol) 도구를 만드는 방법을 보여주는 지능형 코드 스니펫 서비스를 구축합니다. Microsoft Agent Framework로 내구성 있는(durable) AI 에이전트를 구현합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'DevOps', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 6,
+    icon: '🗄️',
+    title: 'LAB515: PostgreSQL로 고급 AI 에이전트를 구축하기',
+    description: '이 실습형 랩에서는 PostgreSQL과 Microsoft Agent Framework를 사용하여 실제 판례 데이터를 기반으로 추론하는 AI 기반 법률 리서치 어시스턴트를 구축합니다. retrieval-augmented generation(RAG), 벡터 검색, 그래프 인텔리전스를 결합합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Data', color: 'tutorial' },
+      { label: 'Agent', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 7,
+    icon: '🛡️',
+    title: 'LAB516: Microsoft Foundry의 AI Red Teaming Agent로 에이전트를 안전하게 보호하기',
+    description: '이 실습형 워크숍에서는 Microsoft Foundry를 사용하여 생성형 AI 시스템의 안전 및 보안 위험을 평가하기 위한 자동화된 AI 레드팀의 기본 개념을 소개합니다. 참가자는 배포 전에 여러 위험 차원에 걸쳐 안전 문제와 보안 취약점을 찾기 위해 자동화된 공격 기법을 적용하는 방법을 학습합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Security', color: 'azure' },
+      { label: 'Agent', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 8,
+    icon: '☸️',
+    title: 'LAB517: 모델, 에이전트 및 MCP를 활용한 차세대 AKS 운영',
+    description: '차세대 운영 도구를 활용하여 대규모 AKS 관리를 자신 있게 수행하는 방법을 익힙니다. 이 실습형 랩에서는 트래픽 급증으로 영향을 받는 프로덕션 서비스를 시뮬레이션하고, AI 기반 알림이 숨겨진 병목을 어떻게 드러내는지 확인하며, 노드를 자가 치유하는 에이전트를 배포합니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Kubernetes', color: 'tutorial' },
+      { label: 'DevOps', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 9,
+    icon: '🔄',
+    title: 'LAB518: Microsoft Agent Framework 또는 LangGraph를 활용한 멀티 에이전트 앱',
+    description: 'Azure Cosmos DB를 통해 확장 가능하고 고성능의 데이터 영속화 및 조회를 구현하면서, C#의 Microsoft Agent Framework 또는 Python의 LangChain을 사용해 MCP(Model Context Protocol)를 활용하는 멀티 에이전트 애플리케이션을 구축합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Agent', color: 'workshop' },
+      { label: 'Data', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 10,
+    icon: '🚪',
+    title: 'LAB519: Azure API Management의 AI Gateway로 AI 앱 및 에이전트를 거버넌스하기',
+    description: '이 실습형 랩에서는 Azure API Management의 AI Gateway를 사용하여 AI 앱과 에이전트를 거버넌스하는 방법을 학습합니다. AI 모델을 온보딩하고 토큰 사용량을 모니터링 및 제어하며, 안전 및 컴플라이언스 정책을 적용하는 동시에 semantic caching으로 성능을 향상시키는 방법을 다룹니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Governance', color: 'azure' },
+      { label: 'Security', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 11,
+    icon: '🍕',
+    title: 'LAB571: Microsoft Foundry 및 MCP로 피자 주문 에이전트 구축',
+    description: '이 실습형 워크숍에서는 Foundry Agent Service를 사용하여 도메인 특화 AI 에이전트를 구축하는 방법을 학습합니다. 간단한 에이전트에서 시작하여 시스템 프롬프트, 사용자 지정 지침, RAG를 통한 지식 추가를 단계적으로 적용합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Agent', color: 'workshop' },
+      { label: 'Azure', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 12,
+    icon: '🏥',
+    title: 'LAB596: 헬스케어 AI 모델 활용: 설정부터 사용 사례까지',
+    description: '헬스케어 AI 샘플 리포지토리를 살펴보며 Health & Life Sciences를 위한 멀티모달 AI를 성공적으로 활용할 수 있도록 준비합니다. 이미지 검색, 방사선/병리 이미지 기반 암 등급 분류, 이상치 탐지, 검사 파라미터 분류와 같은 문제를 다루는 노트북과 샘플 솔루션을 탐색합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Healthcare', color: 'm365' },
+      { label: 'Agent', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 13,
+    icon: '💊',
+    title: 'LAB598: 헬스케어에서의 Agentic AI: 멀티 에이전트 오케스트레이션 실전 적용',
+    description: 'Agentic framework의 역량을 활용하여 헬스케어 운영을 효율화하는 방법을 살펴봅니다. Healthcare Agent Orchestrator를 통해 지능형 에이전트를 맞춤 구성하고, 비공개 데이터셋과 공개 소스를 통합한 뒤, Teams 및 Word와 같은 Microsoft 365 도구에 원활하게 배포할 수 있습니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Healthcare', color: 'm365' },
+      { label: 'Agent', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 14,
+    icon: '📊',
+    title: 'PREL13: Azure를 사용하여 에이전틱 AI 앱을 관찰, 관리 및 확장하는 방법 알아보기',
+    description: '이 실습형 워크숍은 Azure 및 Azure AI Foundry를 사용하여 에이전틱 AI 애플리케이션을 효과적으로 관리, 거버넌스 적용 및 확장하는 역량을 제공합니다. 관찰 가능성(Observability) 기능, 모델 관리 정책, 에이전트 기능, 거버넌스 전략을 다룹니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Agent', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 15,
+    icon: '📦',
+    title: 'PREL15: AI-Ready Apps: Azure로 컨테이너화 및 현대화',
+    description: '이 실습 랩에서는 Azure Container Apps에 AI 기반 애플리케이션을 배포하여 Azure에서 컨테이너화된 애플리케이션을 AI와 함께 현대화하는 방법을 다룹니다. 참가자는 Azure OpenAI를 통합하고 서버리스 GPU에서 오픈 소스 모델(Ollama)을 실행하여 비용 효율적인 추론을 구현합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'DevOps', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 16,
+    icon: '💾',
+    title: 'PREL16: Azure Cosmos DB용 MCP Server를 사용하여 시맨틱 메모리 구현',
+    description: '이 실습형 워크숍에서는 Azure Cosmos DB에서 MCP Server를 사용하여 지속적인 시맨틱 메모리를 갖춘 지능형 멀티 에이전트 애플리케이션을 구축하는 방법을 학습합니다. 스레드 전반에서 컨텍스트를 임베딩하고 검색하는 패턴을 살펴보고, LangGraph(Python)와 Azure AI Foundry를 사용해 내구성 있는 메모리, 시맨틱 검색, 에이전트 협업을 구현합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Data', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 17,
+    icon: '👨‍💼',
+    title: 'PREL19: IT 전문가를 위한 AI 애플리케이션 배포 및 관리 가이드',
+    description: '하이브리드 환경 전반에서 AI 앱을 안전하게 배포하고 관리하는 방법을 학습합니다. 이 워크숍에서는 ID, 네트워킹, Key Vault, 모니터링과 함께 프롬프트 실드 및 데이터 라벨링과 같은 AI 특화 제어를 다룹니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Security', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 18,
+    icon: '🔭',
+    title: 'LAB500: Azure Copilot으로 관측 가능성과 최적화를 추진하기',
+    description: 'AI가 Azure에서 클라우드 운영을 어떻게 변화시키는지 살펴봅니다. 이 랩에서는 AI를 사용하여 이상 징후를 조사하고, 텔레메트리를 상관 분석하며, 모니터링 태세를 강화합니다. Copilot의 새로운 agentic 최적화 기능을 활용해 비용 및 탄소 절감 기회를 식별하고 검증하면서 FinOps와 지속 가능성 실천을 발전시킵니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Analytics', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 19,
+    icon: '🔧',
+    title: 'LAB502: GitHub Copilot을 활용한 앱 현대화를 통해 AKS Automatic으로 마이그레이션',
+    description: 'AI 기반 도구를 사용하여 레거시 Spring Boot 애플리케이션을 Azure Kubernetes Service(AKS) Automatic으로 현대화하고 마이그레이션하는 방법을 학습합니다. 이 실습 랩에서는 로컬 개발부터 클라우드 배포까지의 전체 과정을 다루며, GitHub Copilot for app modernization을 활용해 코드를 평가하고 안전한 인증 패턴을 구현하며 컨테이너화를 자동화합니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Kubernetes', color: 'tutorial' },
+      { label: 'Migration', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 20,
+    icon: '☁️',
+    title: 'LAB503: 마이그레이션 및 최적화에서 현대화까지의 AVS',
+    description: '참가자는 클릭스루 방식의 AVS 랩을 활용하여 Azure VMware Solution(AVS) 배포 및 현대화 워크플로를 엔드투엔드로 수행하는 실습형 랩에 참여합니다. 이 랩은 디스커버리와 배포부터 마이그레이션, 연결, 스토리지 확장, 현대화까지의 여정을 다루는 6개 모듈로 구성됩니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Migration', color: 'tutorial' },
+      { label: 'Data', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 21,
+    icon: '🌐',
+    title: 'LAB504: Azure Arc로 하이브리드, 멀티클라우드 및 엣지를 연결하고 보안 강화 및 관리하기',
+    description: '하이브리드 및 멀티클라우드 환경은 연결, 거버넌스, 보안 측면에서 복잡성을 증가시킵니다. 이 실습형 랩에서는 Azure Arc가 다양한 인프라 전반의 관리를 어떻게 단순화하는지 보여줍니다. 온프레미스, 다른 클라우드 또는 엣지에서 실행되는 워크로드를 대상으로 리소스 온보딩, 모니터링 활성화, 규정 준수 적용, 보안 강화에 대한 실무 경험을 얻습니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Security', color: 'azure' },
+      { label: 'Governance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 22,
+    icon: '🐧',
+    title: 'LAB505: Azure Migrate로 Linux 및 PostgreSQL 마이그레이션을 빠르게 진행하기',
+    description: 'Azure에서 Linux 애플리케이션 스택을 원활하게 현대화하는 방법을 학습합니다. 참가자는 Linux/Postgres/Java 애플리케이션을 사용하여 마이그레이션 프로세스를 단계별로 진행하고, 대규모 마이그레이션을 위해 infrastructure as code(IaC)를 활용합니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Migration', color: 'tutorial' },
+      { label: 'Data', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 23,
+    icon: '🪟',
+    title: 'LAB506: Windows 및 SQL Server 워크로드를 Azure로 마이그레이션 및 현대화',
+    description: '이 랩은 Windows Server, SQL Server 및 .NET 애플리케이션을 Azure로 마이그레이션하고 현대화하는 방법에 중점을 둡니다. 참가자는 Azure Migrate와 Azure Database Migration Service(DMS)를 사용하여 워크로드를 평가하고 마이그레이션하는 방법을 학습합니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Migration', color: 'tutorial' },
+      { label: 'Data', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 24,
+    icon: '🔄',
+    title: 'LAB520: Azure 운영 플랫폼에서 미션 크리티컬 애플리케이션 및 인프라를 위한 복원력 시작, 강화, 지속하기',
+    description: '이 랩은 Azure의 복원력 및 구성(Configuration) 경험을 활용하여 미션 크리티컬 애플리케이션을 설계하기 위한 "Start, Get, and Stay Resilient" 여정을 다룹니다. 참가자는 복원력 상태를 평가하고 권장 사항을 적용하여 개선 사항을 검증하며 복구를 오케스트레이션합니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Security', color: 'azure' },
+      { label: 'Governance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 25,
+    icon: '🌍',
+    title: 'LAB597: 지리공간 인텔리전스로 더 정보에 기반한 의사결정하기',
+    description: '이 실습형 랩에서는 Microsoft Planetary Computer Pro를 사용하여 지리공간 인텔리전스를 활용하는 방법을 학습합니다. 참가자는 실제 데이터를 기반으로 위성 영상과 항공 사진을 활용해 피닉스 지역 학교 캠퍼스를 분석하고, 지표면 온도와 식생 피복을 측정합니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Data', color: 'tutorial' },
+      { label: 'Analytics', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 26,
+    icon: '📋',
+    title: 'PREL20: IT 자산 현대화: 전략에서 실행까지 - 포트폴리오 전환을 위한 실습 워크숍',
+    description: '이 실습 워크숍은 IT 리더와 실무자를 대상으로, 전략 수립부터 실행까지 IT 자산을 현대화하는 방법에 초점을 맞춥니다. 참가자는 실습과 실제 사례 연구를 통해 6가지 핵심 마이그레이션 및 현대화 전략(Retire, Rehost, Replatform, Refactor, Rearchitect, Rebuild)을 학습하고 적용합니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Migration', color: 'tutorial' },
+      { label: 'DevOps', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 27,
+    icon: '💿',
+    title: 'LAB530: Azure SQL Database로 새로운 AI 애플리케이션 구축',
+    description: '이 실습형 워크숍에서는 애플리케이션 개발을 가속화하는 최신 Azure SQL 혁신을 소개합니다. 참가자는 Azure SQL Database와 함께 generative AI를 활용하는 방법을 학습하며, language model, prompt engineering, Retrieval Augmented Generation(RAG)과 같은 AI 개념을 다룹니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Data', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 28,
+    icon: '📈',
+    title: 'LAB531: AI 시대의 Azure Databricks로 BI를 가속화하기',
+    description: '이 90분 분량의 초급자 친화형 실습에서는 Azure Databricks를 사용하여 엔드 투 엔드 분석 솔루션을 구축합니다. Lakeflow를 통한 자동화된 데이터 파이프라인, Unity Catalog를 활용한 엔터프라이즈 거버넌스, Metric Views 기반의 시맨틱 메트릭 레이어를 다룹니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Data', color: 'tutorial' },
+      { label: 'Analytics', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 29,
+    icon: '🌊',
+    title: 'LAB532: Real-Time Intelligence로 실시간 데이터를 행동으로 전환하기',
+    description: '이 세션에서는 실시간 분석과 디지털 트윈의 역량을 활용하여 핵심 운영 과제를 수행하는 방법을 다룹니다. 본 실습에서 참가자는 물리적 시스템을 동적인 디지털 복제본으로 전환하여 시뮬레이션을 강화하고 운영을 최적화합니다. 또한 스트리밍 데이터와 데이터 로그를 활용해 이벤트 기반 시나리오를 위한 엔드 투 엔드 솔루션을 구축합니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Data', color: 'tutorial' },
+      { label: 'Analytics', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 30,
+    icon: '📊',
+    title: 'LAB533: Microsoft Fabric의 SQL Database로 확장 가능한 데이터 솔루션 개발',
+    description: '이 실습형 랩은 Microsoft Fabric의 SQL database를 중심으로 확장 가능한 데이터 솔루션을 설계, 구축, 운영하는 과정을 안내합니다. 참가자는 Copilot을 활용한 T-SQL 개발 및 자연어 쿼리 기능을 사용하고, 벡터 임베딩과 유사도 검색을 기반으로 Azure OpenAI를 활용한 RAG를 구현합니다.',
+    tags: [
+      { label: 'Data', color: 'tutorial' },
+      { label: 'AI', color: 'workshop' },
+      { label: 'Azure', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 31,
+    icon: '🔗',
+    title: 'LAB534: Microsoft Fabric에서 Cosmos DB로 실시간 분석 구축',
+    description: 'Cosmos DB in Microsoft Fabric를 사용하여 완전한 실시간 분석 솔루션을 구축하는 방법을 학습합니다. 이 실습 랩에서는 운영 데이터 저장소를 생성하고, 스트리밍 데이터 파이프라인을 구현하며, 크로스 데이터베이스 분석을 구축하고, Reverse ETL 패턴을 활용해 개인화 추천을 배포하는 과정을 시연합니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Data', color: 'tutorial' },
+      { label: 'Analytics', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 32,
+    icon: '🤝',
+    title: 'LAB535: Azure Databricks 실전: Microsoft 전반에서 통합 AI 및 분석 구현',
+    description: '이 실습형 랩에서는 Azure Databricks, Azure AI Foundry, Microsoft Copilot Studio를 사용하여 현대적인 클라우드 네이티브 분석 및 AI 솔루션을 설계하고 배포합니다. Zava-Litware 시나리오를 기반으로 데이터 수집, Lakeflow를 통한 오케스트레이션, Genie를 활용한 AI 기반 인사이트 도출을 수행합니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Data', color: 'tutorial' },
+      { label: 'AI', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 33,
+    icon: '📦',
+    title: 'PREL14: Microsoft Fabric로 데이터를 통합하고 인사이트에 기반해 실행하며 AI 솔루션을 구축하기',
+    description: '이 반일(half-day) 기술 랩에서는 Microsoft Fabric를 엔드 투 엔드로 직접 경험합니다. OneLake에서 시작하여 단일 데이터 사본이 거버넌스를 간소화하고 중복을 제거하는 방식을 살펴봅니다. 참가자는 역할 기반 가이드 랩을 통해 데이터를 수집, 변환, 보강하고 Copilot으로 데이터 솔루션 개발을 가속화하며 Fabric data agents를 사용해 대화형 Q&A 시스템을 구축합니다.',
+    tags: [
+      { label: 'Data', color: 'tutorial' },
+      { label: 'AI', color: 'workshop' },
+      { label: 'Analytics', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 34,
+    icon: '🔒',
+    title: 'LAB540: Microsoft Purview와 Microsoft Defender XDR 통합',
+    description: '위협이 점점 더 복잡해짐에 따라, 팀은 더 빠르게 위협에 대응하기 위해 향상된 가시성과 컨텍스트가 필요합니다. 이 랩에서는 Microsoft Purview와 Microsoft Defender XDR이 통합되어 단일 화면에서 보안 인시던트를 조사할 수 있도록 조직을 지원하는 방법을 살펴봅니다. 또한 Insider Risk 알림 공유 및 조사, 인시던트 조사 워크플로, KQL 및 Advanced Hunting을 활용한 위협 헌팅을 다룹니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'Governance', color: 'azure' },
+      { label: 'Compliance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 35,
+    icon: '🏷️',
+    title: 'LAB545: 중요한 정보 유형 및 레이블 생성 및 관리',
+    description: '조직이 Microsoft 365 Copilot과 같은 AI 도구를 도입함에 따라 중요한 데이터를 보호하는 것이 필수적입니다. 이 실습 세션에서는 Microsoft Purview Information Protection 및 DLP를 사용하여 프로젝트 데이터를 분류하고 보호합니다. 사용자 지정 중요한 정보 유형을 만들고, 민감도 레이블을 게시하며, Copilot이 보호된 콘텐츠를 처리하지 못하도록 하는 DLP 정책을 추가합니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'AI', color: 'workshop' },
+      { label: 'Governance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 36,
+    icon: '👤',
+    title: 'LAB547: Insider Risk Management 및 Adaptive Protection 구현',
+    description: 'Microsoft Copilot과 같은 AI 도구는 생산성을 높이지만 민감한 데이터가 노출될 위험도 있습니다. 이 세션에서는 Microsoft Purview Insider Risk Management를 사용하여 위험한 AI 활동을 탐지하고 대응합니다. 분석을 활성화하고 AI 및 DLP 신호를 활용하는 정책을 생성하며, 위험 수준 변화에 따라 적용을 자동으로 조정하도록 Adaptive Protection을 설정합니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'AI', color: 'workshop' },
+      { label: 'Governance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 37,
+    icon: '🛡️',
+    title: 'LAB548: 데이터 손실 방지를 통해 Copilot 및 AI 앱에서 데이터 노출을 방지하기',
+    description: 'Microsoft 365 Copilot과 같은 AI 도구는 생산성을 높이지만 민감한 정보가 노출될 위험도 있습니다. 이 랩에서는 Microsoft Purview Data Loss Prevention(DLP)을 사용하여 Copilot 및 AI 환경 전반에서 데이터를 보호하기 위해 DLP 정책을 생성하고 테스트합니다. 또한 AI 웹사이트로의 업로드 및 붙여넣기를 차단하도록 엔드포인트 보호를 구성하고, 사용자 위험이 증가할 때 보호 조치를 동적으로 조정하도록 Adaptive Protection을 활성화합니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'AI', color: 'workshop' },
+      { label: 'Compliance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 38,
+    icon: '🔐',
+    title: 'PREL18: Copilot Ready: 전략, 데이터 및 보안',
+    description: '이 세션은 Microsoft 365 테넌트의 보안을 개선하기 위한 실습 중심의 접근 방식을 제공합니다. Copilot 및 AI 도입을 지원하기 위해 안전하지 않은 기본 설정을 식별하고, 보안 기준선을 적용하며, 데이터 레이블링 전략을 활용하는 과정을 안내합니다. 세션을 마치면 강화된 AI 준비 테넌트를 구축하고, 이를 지속적으로 유지·관리할 수 있는 자신감을 갖추게 됩니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'M365', color: 'm365' },
+      { label: 'Copilot', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 39,
+    icon: '📝',
+    title: 'LAB560 - TypeSpec 및 M365 Agents Toolkit을 사용하여 Declarative Agent 구축',
+    description: 'Microsoft 365 Copilot의 네이티브 스택을 사용하여 지능적이고 작업 지향적인 Copilot agent를 만드는 방법을 학습합니다. 이 실습 랩에서는 agent 사양을 작성하기 위한 타입 안전 언어인 TypeSpec과 Microsoft 365 Agents Toolkit을 사용하여, Microsoft 365 서비스뿐 아니라 서드파티 서비스와도 원활하게 통합되는 Declarative agent를 구축합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Agent', color: 'workshop' },
+      { label: 'M365', color: 'm365' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 40,
+    icon: '🤝',
+    title: 'LAB562: Employee Self-Service Agent로 AI 기반 HR 및 IT 지원을 빠르게 시작하기',
+    description: 'Ignite 2025에서 Microsoft의 Employee Self-Service Agent를 활용하여 AI 기반 HR 및 IT 지원을 빠르게 시작합니다. 워크플로를 간소화하고 생산성을 향상시키며, 더 스마트한 엔터프라이즈 솔루션을 위해 Azure AI 도구를 통합하는 방법을 학습합니다. ServiceNow, SharePoint 커넥터를 사용한 실시간 지원을 다룹니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Agent', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 41,
+    icon: '🎯',
+    title: 'LAB564: Copilot Studio로 목표 지향형 AI 에이전트를 설계하기',
+    description: '이 실습형 랩에서는 Microsoft 365 Copilot용 에이전트 구축 방식 이해를 돕는 내부 학습 도우미인 AgentWise에서 영감을 받은 고급 에이전트를 구축합니다. Copilot Studio를 사용하여 사용자 목표에 적응하고, 페르소나에 따라 안내를 개인화하며, 구조화된 플로우와 실시간 데이터를 활용해 지능적으로 의사결정을 수행하는 다계층 에이전트를 설계합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Agent', color: 'workshop' },
+      { label: 'Copilot', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 42,
+    icon: '⚙️',
+    title: 'LAB565: Makers in action: 실제 업무를 위한 Microsoft 365 Copilot Agents 제작',
+    description: '이 실습형 랩에서는 makers가 topics, MCP Tools, 자율 동작(autonomous behaviors)을 활용하여 Microsoft 365 Copilot용 지능형 에이전트를 만드는 방법을 학습합니다. 참가자는 에이전트의 기본 개념을 살펴보고, 맞춤형 워크플로를 구축하며, Copilot Studio의 기능을 활용해 실제 업무 작업을 간소화하는 실전 경험을 쌓습니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Copilot', color: 'workshop' },
+      { label: 'Agent', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 43,
+    icon: '🛠️',
+    title: 'LAB568: Teams Admin Center 및 보안 혁신 심층 분석',
+    description: '이 실습형 랩은 IT 전문가와 기술 의사결정자를 대상으로 Microsoft Teams 관리 및 보안의 최신 도구와 기능을 익히도록 설계되었습니다. 참가자는 운영 효율성을 높이고 협업을 보호하는 새로운 진단, 모니터링 및 보호 기능을 살펴봅니다. Teams Admin Center를 통해 관리 역량을 강화하고, 보안 혁신 기능을 실습합니다.',
+    tags: [
+      { label: 'M365', color: 'm365' },
+      { label: 'Security', color: 'azure' },
+      { label: 'Governance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 44,
+    icon: '🤖',
+    title: 'LAB590: Teams AI Library로 Microsoft Teams에서 협업 에이전트 구축하기',
+    description: '이 랩은 Teams SDK를 사용하여 기존 AI 에이전트를 Microsoft Teams로 가져와 채팅, 회의, 채널 전반에서 협업 경험을 제공하며 확장하는 방법에 초점을 둡니다. 참가자는 다른 플랫폼에서 Teams로 에이전트를 마이그레이션하는 방법과 agent-to-agent communication(A2A), Model Context Protocol(MCP)과 같은 새로운 기능을 활용하는 방법을 학습합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Agent', color: 'workshop' },
+      { label: 'M365', color: 'm365' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 45,
+    icon: '💰',
+    title: 'PREL17: 비용과 복잡성 제어: Copilot 및 Agent 라이프사이클 관리',
+    description: '이 워크숍은 Copilot Studio Lite 및 Copilot Studio에서 구축한 Microsoft Copilot과 커스텀 agent를 관리하는 IT 관리자와 플랫폼 소유자를 대상으로 합니다. 참가자는 비용을 제어하고 agent 난립을 줄이며, 액세스 정책을 적용하고, 분석을 구성하고, agent 프로비저닝을 비즈니스 우선순위에 맞추기 위한 라이프사이클 프로세스 거버넌스를 학습합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Agent', color: 'workshop' },
+      { label: 'Governance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 46,
+    icon: '🔄',
+    title: 'LAB570: Copilot Studio로 에이전틱 솔루션 구축하기',
+    description: '이 실습형 랩은 Microsoft Copilot Studio를 사용하여 목적 중심 설계부터 고급 기능까지 에이전트 라이프사이클 전 과정을 안내합니다. 참가자는 Agent Flows와 Model Context Protocol(MCP) 같은 도구를 활용해 완전한 기능을 갖춘 에이전트를 구축, 통합, 자동화 및 배포하는 방법을 학습합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Agent', color: 'workshop' },
+      { label: 'Copilot', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 47,
+    icon: '📧',
+    title: 'LAB572: MCP Tools로 엔터프라이즈 워크플로를 자동화하기',
+    description: '이 랩에서는 Agent 365의 에이전트와 함께 사용할 수 있도록 새로 출시된 Model Context Protocol(MCP) 서버를 시연합니다. 참가자는 Agent 365와 MCP를 소개받은 뒤 Copilot Studio 에이전트를 빌드하고 구성하며, 메일/캘린더/OneDrive 및 SharePoint용 MCP 서버를 추가합니다. 여러 서버와 도구를 가로지르는 점점 더 복잡한 쿼리를 실행하고, 새로운 observability 기능도 살펴봅니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Agent', color: 'workshop' },
+      { label: 'M365', color: 'm365' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 48,
+    icon: '🏥',
+    title: 'LAB595: 파트너가 구축한 AI 솔루션으로 Dragon Copilot 확장하기',
+    description: '이 실습형 랩에서는 개발자와 파트너가 Dragon Copilot을 통해 제공할 수 있는 솔루션, 에이전트 및 확장 기능을 구축하는 방법을 안내합니다. Dragon Copilot 확장성 프레임워크를 활용하여 동작하는 AI 앱을 만들고 배포를 위한 준비 과정을 학습합니다. 또한 AI 앱의 패키징, 설치 및 호출 방법을 다루어 Microsoft의 규모를 활용해 도달 범위와 참여도를 확장할 수 있도록 합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Agent', color: 'workshop' },
+      { label: 'Healthcare', color: 'm365' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 49,
+    icon: '☁️',
+    title: 'LAB580: Windows 365 Reserve: 빠르고 유연하며 어떤 상황에도 대비할 수 있습니다',
+    description: '이 실습형 랩에서는 여행, 복구, 임시 접근과 같은 시나리오에 적합한 Windows 365 Reserve를 사용하여 안전한 온디맨드 Cloud PC를 배포하는 방법을 학습합니다. 참가자는 프로비저닝 프로필을 생성하고 Cloud PC를 할당하며 Conditional Access, Entra ID 및 네트워킹을 구성합니다. 또한 로그인부터 생산성 확보까지의 엔드투엔드 사용자 여정을 경험합니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Security', color: 'azure' },
+      { label: 'M365', color: 'm365' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 50,
+    icon: '👥',
+    title: 'LAB581: Windows 365 Frontline: Dedicated, Shared, Cloud Apps 살펴보기',
+    description: '이 실습형 랩에서는 Windows 365 Frontline을 살펴보고 Dedicated, Shared, Cloud Apps 환경을 생성 및 구성하는 방법을 학습합니다. 참가자는 교대 근무자, 작업 기반 역할, 앱 전용 액세스 시나리오에 따라 각 모델을 언제 사용해야 하는지 이해합니다. 또한 프로비저닝, Entra ID, Intune, Conditional Access를 단계별로 진행하고, 최종 사용자 경험을 통해 성능, 비용, 규정 준수를 최적화합니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Security', color: 'azure' },
+      { label: 'M365', color: 'm365' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 51,
+    icon: '🔐',
+    title: 'Windows 365 배포 랩: 클라우드 네이티브, Zero Trust, 완전한 준비 상태',
+    description: '안전하고 확장 가능한 모델을 사용하여 Windows 365 Cloud PC를 배포하는 방법을 학습합니다. 이 실습 랩에서는 프로비저닝 정책을 설정하고 Microsoft Entra와 통합하며 Zero Trust 네트워킹을 적용하고 Conditional Access를 구성합니다. 전체 사용자 여정과 관리자 설정을 직접 경험하고, Cloud PC를 효율적으로 모니터링 및 관리하는 방법을 익힙니다.',
+    tags: [
+      { label: 'Azure', color: 'azure' },
+      { label: 'Security', color: 'azure' },
+      { label: 'Zero Trust', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 52,
+    icon: '🖥️',
+    title: 'LAB583: Copilot+ PC 및 Windows 11을 위한 AI 기능 관리',
+    description: '이 랩 세션은 Copilot+ PC에서 AI 기능과 사용자 경험을 사용하고 관리하는 실습 경험을 제공합니다. 참가자는 이러한 경험을 활성화하고 제어하는 방법, 사용자 맞춤 설정과 IT 관리자가 사용할 수 있는 제어 항목의 차이를 이해하며, Microsoft Intune을 사용해 Recall, Click to Do 등의 기능을 세부 조정하는 방법을 학습합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Security', color: 'azure' },
+      { label: 'M365', color: 'm365' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 53,
+    icon: '🧠',
+    title: 'LAB584: Windows ML로 로컬 AI 통합하기',
+    description: '이 실습에서는 이제 정식 출시된 Windows ML을 사용하여 더 똑똑한 이미지 분류 앱을 구축합니다. NPU용 Execution Provider(EP)를 동적으로 다운로드하고, 하드웨어별 EP에 맞게 모델을 컴파일한 뒤, 로컬에서 추론을 실행하는 과정을 단계별로 다룹니다. 또한 WinML API를 사용해 앱을 배포, 디버그, 최적화하는 방법을 학습합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Windows', color: 'azure' },
+      { label: 'DevOps', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 54,
+    icon: '📄',
+    title: 'LAB585: 로컬 AI로 앱을 강화하기',
+    description: '이 실습에서는 WPF 앱에 새로운 AI 기능을 추가하여 PDF 파일을 질의하고 그 내용에 기반한 답변을 반환하는 애플리케이션을 구축하는 방법을 학습합니다. Semantic Search를 사용해 인덱싱 및 검색을 수행하고, OCR로 텍스트를 추출하며, 로컬 Phi-Silica 언어 모델로 응답을 생성합니다. 자연어 질의, 관련 페이지의 시각적 미리보기, 취소를 지원하는 스트리밍 응답까지 포함한 경험을 구현합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'Windows', color: 'azure' },
+      { label: 'DevOps', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 55,
+    icon: '🔍',
+    title: 'LAB587: Windows 365 AI 랩: 시맨틱 검색, 페더레이티드 검색 및 Click2Do 실습',
+    description: '이 실습형 랩에서는 Windows 365 AI의 시맨틱 검색, 페더레이티드 검색, Click2Do 기능을 구성하고 직접 체험합니다. Cloud PC에서 이러한 기능을 활성화하는 방법과 사전 요구 사항을 이해하고, IT 관리자 워크플로우와 최종 사용자 생산성을 어떻게 향상시키는지 살펴봅니다. 또한 Windows 365 for Agents와 Copilot Studio의 통합을 분석하여 Windows 365와 상호작용하는 맞춤형 Copilot 경험을 설계합니다.',
+    tags: [
+      { label: 'AI', color: 'workshop' },
+      { label: 'M365', color: 'm365' },
+      { label: 'Copilot', color: 'workshop' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 56,
+    icon: '🔒',
+    title: 'LAB541: Microsoft Defender XDR로 위협으로부터 방어하기',
+    description: '이 랩에서는 Microsoft Defender XDR 및 Microsoft Defender for Endpoint를 도입하는 회사의 보안 운영 분석가 역할을 수행합니다. 소수의 디바이스를 온보딩하여 구성을 검증하고 SecOps 대응 절차에 필요한 변경 사항을 파악합니다. 또한 모의 공격을 수행하고 Defender XDR을 사용하여 생성된 경고와 인시던트를 조사합니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Defender', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 57,
+    icon: '🔐',
+    title: 'Zero Trust 랩: Intune 및 Entra를 사용하여 ID와 디바이스를 보호하기',
+    description: '이 실습형 랩은 Microsoft Intune과 Microsoft Entra ID를 사용하여 현대적인 엔터프라이즈 환경에서 ID와 디바이스를 보호하는 Zero Trust 보안 원칙을 구현하는 실무 경험을 제공합니다. 규정 준수 및 조건부 액세스 구성, ID 보호, 디바이스 등록, 보안 기준선, 위협 모니터링 및 대응을 다룹니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Governance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 58,
+    icon: '🔎',
+    title: 'LAB543: Microsoft Sentinel에서 위협 헌팅 수행',
+    description: '이 랩에서는 Microsoft Sentinel을 도입하는 회사의 Security Operations Analyst 역할을 수행합니다. 로그 데이터를 분석하여 악성 활동을 탐지하고, 시각화를 구성하며, 위협 헌팅을 수행합니다. Sentinel Data Lake 및 고급 헌팅 기능을 포함하여 Kusto Query Language(KQL)를 사용해 데이터를 쿼리하고 조사합니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Data', color: 'tutorial' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 59,
+    icon: '🛡️',
+    title: 'LAB546: 스택 보안 강화 – 데이터, 인프라, 네트워크 및 SOC를 위한 Zero Trust',
+    description: '이 실습형 랩에서는 Microsoft Zero Trust Workshop을 소개하고 데이터, 인프라, 네트워크, 보안 운영의 네 가지 핵심 축에 걸쳐 기술 스택을 보호하는 방법을 안내합니다. 참가자는 워크숍 도구와 제공 가이드를 살펴본 뒤, 데모와 시나리오를 수행하며 엔터프라이즈 환경에서 Zero Trust 원칙을 적용합니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Governance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 60,
+    icon: '🔑',
+    title: 'LAB549: Conditional Access로 ID 보안 태세를 강화하기',
+    description: 'Zero Trust에 맞춰 Conditional Access로 테넌트를 보호합니다. 이 실습형 랩에서는 안전한 롤아웃 패턴을 학습하고, Entra의 CA Optimization Agent–Security Copilot을 사용하여 매일 스캔하고 격차를 표시하며, 원클릭 및 단계적 적용으로 개선 조치를 수행하는 방법을 다룹니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Governance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 61,
+    icon: '👤',
+    title: 'Lab544: Microsoft Entra를 사용하여 신뢰할 수 있게 ID를 거버넌스하기',
+    description: 'Microsoft Entra를 사용하여 대규모로 ID를 거버넌스하는 역량을 습득합니다. 프로비저닝 자동화, 액세스 간소화, 거버넌스 정책 적용, 그리고 위험을 줄이고 규정 준수를 보장하기 위한 ID 검증용 Face Check 구성에 대한 실습 경험을 제공합니다. Lifecycle Workflows, Entitlement Management, Privileged Identity Management를 다룹니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'Governance', color: 'azure' },
+      { label: 'Compliance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 62,
+    icon: '☁️',
+    title: 'LAB550: Microsoft Defender for Cloud를 사용하여 클라우드 위협을 완화하기',
+    description: '참가자는 Microsoft Defender for Cloud를 활성화하고 대시보드를 탐색하며 규정 준수 및 워크로드 보호 인사이트를 해석하는 방법을 학습합니다. 실습에서는 Secure Score 분석, 보안 권장 사항, 인벤토리 관리, 가격 책정 모델, 거버넌스 규칙 할당을 다룹니다. 과정이 끝나면 위협을 선제적으로 식별하고 완화하며 클라우드 보안 태세를 강화할 수 있습니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Governance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  },
+  {
+    id: 63,
+    icon: '🔐',
+    title: 'LAB551: 클라우드 보안 극대화: Microsoft Defender for Cloud의 CSPM',
+    description: '이 랩은 Microsoft Defender for Cloud의 CSPM 기능을 실습 중심으로 심층적으로 다루며, 하이브리드 환경 전반에서 클라우드 보안을 평가하고 개선하는 방법을 학습합니다. 참가자는 구성 오류를 식별하고, 규정 준수 프레임워크를 적용하며, 자동화된 수정(리미디에이션) 전략을 적용하여 전반적인 보안 태세를 강화합니다.',
+    tags: [
+      { label: 'Security', color: 'azure' },
+      { label: 'Azure', color: 'azure' },
+      { label: 'Governance', color: 'azure' }
+    ],
+    actions: [
+      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'GitHub', icon: 'github', primary: true }
+    ]
+  }
+]
+</script>
+
+<template>
+  <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+    <div
+      v-for="item in contentItems"
+      :key="item.id"
+      class="card cursor-pointer hover:-translate-y-1 overflow-hidden flex flex-col"
+    >
+      <div class="h-48 bg-primary flex items-center justify-center text-white font-header font-bold text-5xl">
+        {{ item.icon }}
+      </div>
+      
+      <div class="p-5 flex flex-col flex-1">
+        <div class="flex gap-1.5 flex-wrap mb-3">
+          <span
+            v-for="tag in item.tags"
+            :key="tag.label"
+            class="px-2.5 py-1 rounded-md text-xs font-header font-semibold uppercase tracking-wide border transition-colors cursor-pointer"
+            :class="{
+              'tag-azure': tag.color === 'azure',
+              'tag-m365': tag.color === 'm365',
+              'tag-workshop': tag.color === 'workshop',
+              'tag-tutorial': tag.color === 'tutorial'
+            }"
+          >
+            {{ tag.label }}
+          </span>
+        </div>
+
+        <h3 class="font-header font-semibold text-lg text-[var(--text-primary)] mb-2 leading-snug">
+          {{ item.title }}
+        </h3>
+        
+        <p class="text-sm text-[var(--text-secondary)] leading-relaxed mb-4 line-clamp-3">
+          {{ item.description }}
+        </p>
+
+        <div class="flex gap-2 pt-4 mt-auto border-t border-[var(--border)]">
+          <button
+            v-for="action in item.actions"
+            :key="action.label"
+            :class="[
+              'flex-1 px-4 py-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center gap-1.5',
+              action.primary
+                ? 'bg-primary hover:bg-primary-hover text-white'
+                : 'bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--border-hover)]'
+            ]"
+          >
+            <!-- GitHub SVG -->
+            <svg v-if="action.icon === 'github'" class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+            </svg>
+            <!-- YouTube SVG -->
+            <svg v-else-if="action.icon === 'youtube'" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+            <!-- PDF SVG -->
+            <svg v-else-if="action.icon === 'pdf'" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-8.5h2v1h-2v-1zm0 2h2v1h-2v-1zm0 2h2v1h-2v-1zm4-4h4v5h-4v-5z"/>
+            </svg>
+            
+            <span>{{ action.label }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
