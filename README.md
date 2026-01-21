@@ -2,16 +2,19 @@
 
 Microsoft & Azure 콘텐츠 학습 플랫폼
 
-> 📦 **코드명:** BuildFlow
-
 [![Backend CI](https://github.com/studydev/buildflow/actions/workflows/backend-ci.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/studydev/buildflow/actions/workflows/frontend-ci.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/frontend-ci.yml)
 [![Deploy to Dev](https://github.com/studydev/buildflow/actions/workflows/deploy-dev.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/deploy-dev.yml)
 [![Deploy Frontend](https://github.com/studydev/buildflow/actions/workflows/deploy-frontend.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/deploy-frontend.yml)
 
-🌐 [Demo Site](https://gentle-island-011f94300.1.azurestaticapps.net/)
+## 플랫폼 미리보기
 
-## 🎯 프로젝트 개요
+![NexusSkill Platform Preview](docs/images/platform-preview.png)
+
+*워크샵과 튜토리얼을 탐색하고 기술 역량을 가속화할 수 있는 큐레이션된 학습 경로를 제공합니다.*  
+[Demo 접속하기](https://nexus.studydev.com/)
+
+## 프로젝트 개요
 
 NexusSkill은 GitHub 저장소를 분석하여 Microsoft 및 Azure 클라우드 개발 학습 콘텐츠를 자동으로 큐레이션하고, AI 기반 검색 및 추천 기능을 제공하는 플랫폼입니다.
 
@@ -19,21 +22,21 @@ NexusSkill은 GitHub 저장소를 분석하여 Microsoft 및 Azure 클라우드 
 
 | 기능 | 설명 | 상태 |
 |------|------|------|
-| 🔍 GitHub 저장소 분석 | README, 메타데이터, 커밋 활동 자동 추출 | ✅ 완료 |
-| 🤖 AI 기반 콘텐츠 강화 | GPT-5.2를 활용한 요약, 난이도, 학습 성과 생성 | ✅ 완료 |
-| 🌐 다국어 지원 | 한국어 자동 번역 (Localization Pipeline) | ⏳ 예정 |
-| 🖼️ 자산 자동 생성 | 썸네일, OG 이미지 자동 생성 | ⏳ 예정 |
-| 🔎 하이브리드 검색 | Azure AI Search 기반 키워드 + 벡터 검색 | ⏳ 예정 |
-| 💬 AI 어시스턴트 | RAG 기반 콘텐츠 검색 및 추천 챗봇 | ⏳ 예정 |
+| GitHub 저장소 분석 | README, 메타데이터, 커밋 활동 자동 추출 | ✅ |
+| AI 기반 콘텐츠 강화 | GPT-5.2를 활용한 요약, 난이도, 학습 성과 생성 | ✅ |
+| 다국어 지원 | 한국어 자동 번역 (Localization Pipeline) | ⏳ |
+| 자산 자동 생성 | 썸네일, OG 이미지 자동 생성 | ⏳ |
+| 하이브리드 검색 | Azure AI Search 기반 키워드 + 벡터 검색 | ⏳ |
+| AI 챗봇 | 의미 기반 콘텐츠 검색 및 추천 챗봇 | ⏳ |
 
-## 🏗️ 아키텍처 개요
+## 아키텍처 개요
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         NexusSkill                               │
+│                         NexusSkill                              │
 ├──────────────────────┬──────────────────────────────────────────┤
 │  Frontend            │  Vue 3 + TypeScript + Vite               │
-│  (Azure SWA)         │  Pinia 상태관리, Tailwind CSS            │
+│  (Azure SWA)         │  Pinia 상태관리, Tailwind CSS              │
 ├──────────────────────┼──────────────────────────────────────────┤
 │  Backend API         │  FastAPI + Python 3.9                    │
 │  (Container Apps)    │  Cosmos DB, Azure OpenAI                 │
@@ -43,22 +46,22 @@ NexusSkill은 GitHub 저장소를 분석하여 Microsoft 및 Azure 클라우드 
 └──────────────────────┴──────────────────────────────────────────┘
 ```
 
-## 📁 프로젝트 구조
+## 프로젝트 구조
 
 ```
 buildflow/
-├── backend/                    # FastAPI 백엔드 → backend/README.md
-├── frontend/                   # Vue 3 프론트엔드
-├── infra/                      # Azure Bicep IaC → infra/README.md
-├── .github/workflows/          # CI/CD 워크플로우 → .github/workflows/README.md
-└── docs/                       # 추가 문서
+├── backend/              # FastAPI 백엔드 → backend/README.md
+├── frontend/             # Vue 3 프론트엔드
+├── infra/                # Azure Bicep IaC → infra/README.md
+├── .github/workflows/    # CI/CD 워크플로우 → .github/workflows/README.md
+└── docs/                 # 추가 문서
 ```
 
-> 📖 각 폴더의 상세 문서는 해당 폴더의 README.md를 참조하세요.
+> 각 폴더의 상세 문서는 해당 폴더의 README.md를 참조하세요.
 
-## 📋 구현 현황
+## 구현 현황
 
-### ✅ 완료된 기능
+### 완료 기능
 
 | 카테고리 | 항목 | 완료일 | 비고 |
 |----------|------|--------|------|
@@ -108,8 +111,9 @@ uvicorn app.main:app --reload --port 8001
 
 ### 상세 가이드
 
-- **Backend 개발**: [backend/README.md](backend/README.md)
 - **인프라 배포**: [infra/README.md](infra/README.md)
+- **Backend 개발**: [backend/README.md](backend/README.md)
+- **Frontend 개발**: [frontend/README.md](frontend/README.md)
 - **CI/CD 워크플로우**: [.github/workflows/README.md](.github/workflows/README.md)
 
 ## 🛠️ 기술 스택
