@@ -44,7 +44,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy dependency files
 COPY pyproject.toml ./
 
-# Install dependencies
+# Install dependencies directly using pip with pyproject.toml
 RUN pip install --upgrade pip && \
     pip install .
 
