@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "13972408951339421339"
+      "templateHash": "2584447233405726064"
     }
   },
   "parameters": {
@@ -466,7 +466,7 @@
       "apiVersion": "2023-02-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'servicebus-connection')]",
       "properties": {
-        "value": "[if(parameters('enablePipelines'), listOutputsWithSecureValues('serviceBus', '2025-04-01').pipelineWorkerConnectionString, '')]"
+        "value": "[listOutputsWithSecureValues('serviceBus', '2025-04-01').pipelineWorkerConnectionString]"
       },
       "dependsOn": [
         "keyVault",
@@ -529,11 +529,132 @@
       "apiVersion": "2023-02-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'swa-deployment-token')]",
       "properties": {
-        "value": "[if(parameters('enableFrontend'), reference('staticWebApp').outputs.deploymentToken.value, '')]"
+        "value": "[reference('staticWebApp').outputs.deploymentToken.value]"
       },
       "dependsOn": [
         "keyVault",
         "staticWebApp"
+      ]
+    },
+    "containerRegistry": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "containerRegistryDeployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "managedIdentityPrincipalId": {
+            "value": "[reference('managedIdentity').principalId]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.38.33.27573",
+              "templateHash": "17310441352212790592"
+            }
+          },
+          "parameters": {
+            "projectName": {
+              "type": "string",
+              "metadata": {
+                "description": "Project name for resource naming"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "managedIdentityPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Managed Identity Principal ID for AcrPull role"
+              }
+            }
+          },
+          "variables": {
+            "acrName": "[format('cr{0}{1}2024', parameters('projectName'), parameters('environment'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ContainerRegistry/registries",
+              "apiVersion": "2023-07-01",
+              "name": "[variables('acrName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "adminUserEnabled": true,
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', variables('acrName'))]",
+              "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), parameters('managedIdentityPrincipalId'), 'AcrPull')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+                "principalId": "[parameters('managedIdentityPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "registryName": {
+              "type": "string",
+              "value": "[variables('acrName')]"
+            },
+            "registryLoginServer": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-07-01').loginServer]"
+            },
+            "registryId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "managedIdentity"
       ]
     },
     "serviceBus": {
@@ -1776,7 +1897,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.38.33.27573",
-              "templateHash": "6266562385763585414"
+              "templateHash": "9706358877054086335"
             }
           },
           "parameters": {
@@ -1982,7 +2103,7 @@
             {
               "type": "Microsoft.OperationalInsights/workspaces/savedSearches",
               "apiVersion": "2020-08-01",
-              "name": "[format('{0}/pipeline-failures', take(variables('resourceSuffix'), 20))]",
+              "name": "[format('{0}/{1}', last(split(parameters('logAnalyticsWorkspaceId'), '/')), format('pipeline-failures-{0}', variables('resourceSuffix')))]",
               "properties": {
                 "category": "BuildFlow",
                 "displayName": "Pipeline Failures (Last 24h)",
@@ -1993,7 +2114,7 @@
             {
               "type": "Microsoft.OperationalInsights/workspaces/savedSearches",
               "apiVersion": "2020-08-01",
-              "name": "[format('{0}/api-requests', take(variables('resourceSuffix'), 20))]",
+              "name": "[format('{0}/{1}', last(split(parameters('logAnalyticsWorkspaceId'), '/')), format('api-requests-{0}', variables('resourceSuffix')))]",
               "properties": {
                 "category": "BuildFlow",
                 "displayName": "API Requests Summary (Last 1h)",
@@ -2004,7 +2125,7 @@
             {
               "type": "Microsoft.OperationalInsights/workspaces/savedSearches",
               "apiVersion": "2020-08-01",
-              "name": "[format('{0}/job-executions', take(variables('resourceSuffix'), 20))]",
+              "name": "[format('{0}/{1}', last(split(parameters('logAnalyticsWorkspaceId'), '/')), format('job-executions-{0}', variables('resourceSuffix')))]",
               "properties": {
                 "category": "BuildFlow",
                 "displayName": "Container App Job Executions",
@@ -2017,7 +2138,7 @@
               "apiVersion": "2022-04-01",
               "name": "[guid(resourceGroup().id, 'buildflow-dashboard')]",
               "location": "[parameters('location')]",
-              "tags": "[union(parameters('tags'), createObject('hidden-title', 'BuildFlow Dashboard'))]",
+              "tags": "[union(parameters('tags'), createObject('hidden-title', 'BuildFlow Operations Dashboard'))]",
               "kind": "shared",
               "properties": {
                 "displayName": "BuildFlow Operations Dashboard",
@@ -2093,7 +2214,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.38.33.27573",
-              "templateHash": "1215134280741953637"
+              "templateHash": "5130877568698815275"
             }
           },
           "parameters": {
@@ -2112,7 +2233,7 @@
             "location": {
               "type": "string",
               "metadata": {
-                "description": "Azure region"
+                "description": "Azure region - Note: SWA only supports limited regions"
               }
             },
             "tags": {
@@ -2130,14 +2251,15 @@
             }
           },
           "variables": {
-            "swaName": "[format('swa-{0}-{1}-{2}', parameters('projectName'), parameters('environment'), uniqueString(resourceGroup().id))]"
+            "swaName": "[format('swa-{0}-{1}-{2}', parameters('projectName'), parameters('environment'), uniqueString(resourceGroup().id))]",
+            "swaLocation": "eastasia"
           },
           "resources": [
             {
               "type": "Microsoft.Web/staticSites",
               "apiVersion": "2023-01-01",
               "name": "[variables('swaName')]",
-              "location": "[parameters('location')]",
+              "location": "[variables('swaLocation')]",
               "tags": "[parameters('tags')]",
               "sku": {
                 "name": "[if(equals(parameters('environment'), 'prod'), 'Standard', 'Free')]",
@@ -2150,19 +2272,6 @@
                   "skipGithubActionWorkflowGeneration": true
                 }
               }
-            },
-            {
-              "condition": "[not(empty(parameters('apiBackendUrl')))]",
-              "type": "Microsoft.Web/staticSites/linkedBackends",
-              "apiVersion": "2023-01-01",
-              "name": "[format('{0}/{1}', variables('swaName'), 'api-backend')]",
-              "properties": {
-                "backendResourceId": "",
-                "region": "[parameters('location')]"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Web/staticSites', variables('swaName'))]"
-              ]
             }
           ],
           "outputs": {
@@ -2250,6 +2359,14 @@
     "staticWebAppUrl": {
       "type": "string",
       "value": "[if(parameters('enableFrontend'), reference('staticWebApp').outputs.staticWebAppUrl.value, '')]"
+    },
+    "containerRegistryName": {
+      "type": "string",
+      "value": "[reference('containerRegistry').outputs.registryName.value]"
+    },
+    "containerRegistryLoginServer": {
+      "type": "string",
+      "value": "[reference('containerRegistry').outputs.registryLoginServer.value]"
     }
   }
 }

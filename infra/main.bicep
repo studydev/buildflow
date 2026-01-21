@@ -356,7 +356,7 @@ resource serviceBusConnectionKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' =
   parent: keyVault
   name: 'servicebus-connection'
   properties: {
-    value: enablePipelines ? serviceBus.outputs.pipelineWorkerConnectionString : ''
+    value: serviceBus.outputs.pipelineWorkerConnectionString
   }
 }
 
@@ -450,7 +450,7 @@ resource appInsightsConnectionKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' 
   parent: keyVault
   name: 'appinsights-connection'
   properties: {
-    value: monitoring.outputs.appInsightsConnectionString
+    value: monitoring!.outputs.appInsightsConnectionString
   }
 }
 
@@ -458,16 +458,16 @@ resource appInsightsConnectionKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' 
 // Pipeline Infrastructure Outputs
 // ============================================================================
 
-output serviceBusName string = enablePipelines ? serviceBus.outputs.serviceBusName : ''
-output serviceBusEndpoint string = enablePipelines ? serviceBus.outputs.serviceBusEndpoint : ''
+output serviceBusName string = enablePipelines ? serviceBus!.outputs.serviceBusName : ''
+output serviceBusEndpoint string = enablePipelines ? serviceBus!.outputs.serviceBusEndpoint : ''
 output storageAccountName string = storage.outputs.storageAccountName
 output storageBlobEndpoint string = storage.outputs.blobEndpoint
 output searchServiceName string = search.outputs.searchServiceName
 output searchEndpoint string = search.outputs.searchEndpoint
 
 // Monitoring outputs
-output appInsightsName string = enableMonitoring ? monitoring.outputs.appInsightsName : ''
-output appInsightsConnectionString string = enableMonitoring ? monitoring.outputs.appInsightsConnectionString : ''
+output appInsightsName string = enableMonitoring ? monitoring!.outputs.appInsightsName : ''
+output appInsightsConnectionString string = enableMonitoring ? monitoring!.outputs.appInsightsConnectionString : ''
 
 // ============================================================================
 // Frontend Static Web App (T901)
@@ -489,13 +489,13 @@ resource swaDeploymentTokenKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = i
   parent: keyVault
   name: 'swa-deployment-token'
   properties: {
-    value: enableFrontend ? staticWebApp.outputs.deploymentToken : ''
+    value: staticWebApp!.outputs.deploymentToken
   }
 }
 
 // Frontend outputs
-output staticWebAppName string = enableFrontend ? staticWebApp.outputs.staticWebAppName : ''
-output staticWebAppUrl string = enableFrontend ? staticWebApp.outputs.staticWebAppUrl : ''
+output staticWebAppName string = enableFrontend ? staticWebApp!.outputs.staticWebAppName : ''
+output staticWebAppUrl string = enableFrontend ? staticWebApp!.outputs.staticWebAppUrl : ''
 
 // Container Registry outputs
 output containerRegistryName string = containerRegistry.outputs.registryName
