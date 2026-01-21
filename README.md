@@ -1,25 +1,26 @@
-# BuildFlow
+# NexusSkill
 
 Microsoft & Azure 콘텐츠 학습 플랫폼
 
-[![Backend CI](https://github.com/studydev/buildflow/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/studydev/buildflow/actions/workflows/backend-ci.yml)
-[![Frontend CI](https://github.com/studydev/buildflow/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/studydev/buildflow/actions/workflows/frontend-ci.yml)
-[![Deploy to Dev](https://github.com/studydev/buildflow/actions/workflows/deploy-dev.yml/badge.svg)](https://github.com/studydev/buildflow/actions/workflows/deploy-dev.yml)
+> 📦 **코드명:** BuildFlow
 
-## 🌐 데모 사이트
+[![Backend CI](https://github.com/studydev/buildflow/actions/workflows/backend-ci.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/studydev/buildflow/actions/workflows/frontend-ci.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/frontend-ci.yml)
+[![Deploy to Dev](https://github.com/studydev/buildflow/actions/workflows/deploy-dev.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/deploy-dev.yml)
+[![Deploy Frontend](https://github.com/studydev/buildflow/actions/workflows/deploy-frontend.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/deploy-frontend.yml)
 
-**Live Demo:** https://gentle-island-011f94300.1.azurestaticapps.net/
+🌐 [Demo Site](https://gentle-island-011f94300.1.azurestaticapps.net/)
 
 ## 🎯 프로젝트 개요
 
-BuildFlow는 GitHub 저장소를 분석하여 Microsoft 및 Azure 클라우드 개발 학습 콘텐츠를 자동으로 큐레이션하고, AI 기반 검색 및 추천 기능을 제공하는 플랫폼입니다.
+NexusSkill은 GitHub 저장소를 분석하여 Microsoft 및 Azure 클라우드 개발 학습 콘텐츠를 자동으로 큐레이션하고, AI 기반 검색 및 추천 기능을 제공하는 플랫폼입니다.
 
 ### 주요 기능
 
 | 기능 | 설명 | 상태 |
 |------|------|------|
 | 🔍 GitHub 저장소 분석 | README, 메타데이터, 커밋 활동 자동 추출 | ✅ 완료 |
-| 🤖 AI 기반 콘텐츠 강화 | GPT-4o를 활용한 요약, 난이도, 학습 성과 생성 | ✅ 완료 |
+| 🤖 AI 기반 콘텐츠 강화 | GPT-5.2를 활용한 요약, 난이도, 학습 성과 생성 | ✅ 완료 |
 | 🌐 다국어 지원 | 한국어 자동 번역 (Localization Pipeline) | ⏳ 예정 |
 | 🖼️ 자산 자동 생성 | 썸네일, OG 이미지 자동 생성 | ⏳ 예정 |
 | 🔎 하이브리드 검색 | Azure AI Search 기반 키워드 + 벡터 검색 | ⏳ 예정 |
@@ -29,7 +30,7 @@ BuildFlow는 GitHub 저장소를 분석하여 Microsoft 및 Azure 클라우드 �
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                          BuildFlow                               │
+│                         NexusSkill                               │
 ├──────────────────────┬──────────────────────────────────────────┤
 │  Frontend            │  Vue 3 + TypeScript + Vite               │
 │  (Azure SWA)         │  Pinia 상태관리, Tailwind CSS            │
