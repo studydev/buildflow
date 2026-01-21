@@ -2,8 +2,14 @@
 
 Microsoft & Azure 콘텐츠 학습 플랫폼
 
-[![Deploy to Dev](https://github.com/buildflow/buildflow/actions/workflows/deploy-dev.yml/badge.svg)](https://github.com/buildflow/buildflow/actions/workflows/deploy-dev.yml)
-[![Deploy to Prod](https://github.com/buildflow/buildflow/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/buildflow/buildflow/actions/workflows/deploy-prod.yml)
+[![Backend CI](https://github.com/studydev/buildflow/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/studydev/buildflow/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/studydev/buildflow/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/studydev/buildflow/actions/workflows/frontend-ci.yml)
+[![Deploy to Dev](https://github.com/studydev/buildflow/actions/workflows/deploy-dev.yml/badge.svg)](https://github.com/studydev/buildflow/actions/workflows/deploy-dev.yml)
+[![Deploy to Prod](https://github.com/studydev/buildflow/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/studydev/buildflow/actions/workflows/deploy-prod.yml)
+
+## 🌐 데모 사이트
+
+**Live Demo:** https://gentle-island-011f94300.1.azurestaticapps.net/
 
 ## 🎯 프로젝트 개요
 
@@ -83,10 +89,90 @@ buildflow/
 │   ├── parameters.prod.json   # Prod 환경 파라미터
 │   └── modules/               # Bicep 모듈
 └── .github/workflows/         # CI/CD
+    ├── backend-ci.yml         # Backend CI (lint + test)
+    ├── frontend-ci.yml        # Frontend CI (lint + test + build)
     ├── deploy-dev.yml         # Backend Dev 배포 (develop 브랜치)
     ├── deploy-prod.yml        # Backend Prod 배포 (main 브랜치)
     └── deploy-frontend.yml    # Frontend SWA 배포
 ```
+
+## 🔄 CI/CD 워크플로우
+
+### 워크플로우 구조
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         GitHub Actions CI/CD                             │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   [develop 브랜치 push - backend/** 변경]                                │
+│                    │                                                     │
+│                    ▼                                                     │
+│   ┌────────────────────────────────┐                                     │
+│   │         Backend CI             │                                     │
+│   │  ┌──────────┐   ┌──────────┐   │                                     │
+│   │  │   Lint   │ → │   Test   │   │                                     │
+│   │  │  (Ruff)  │   │ (pytest) │   │                                     │
+│   │  └──────────┘   └──────────┘   │                                     │
+│   └────────────────────────────────┘                                     │
+│                    │                                                     │
+│                    │ workflow_run (success)                              │
+│                    ▼                                                     │
+│   ┌────────────────────────────────────────────────────────────────┐     │
+│   │                      Deploy to Dev                              │     │
+│   │                                                                 │     │
+│   │  ┌──────────┐   ┌─────────────┐   ┌───────────┐   ┌──────────┐ │     │
+│   │  │ Check CI │ → │ Deploy Infra│ → │ Build API │ → │  Deploy  │ │     │
+│   │  │  Status  │   │   (Bicep)   │   │ (Docker)  │   │   API    │ │     │
+│   │  └──────────┘   └─────────────┘   └───────────┘   └──────────┘ │     │
+│   │                                          │                      │     │
+│   │                                   ┌──────┴────────┐             │     │
+│   │                                   │Build Pipeline │             │     │
+│   │                                   │   (Docker)    │             │     │
+│   │                                   └───────────────┘             │     │
+│   └────────────────────────────────────────────────────────────────┘     │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   [develop 브랜치 push - frontend/** 변경]                               │
+│                    │                                                     │
+│                    ▼                                                     │
+│   ┌────────────────────────────────────────────┐                         │
+│   │              Frontend CI                    │                         │
+│   │  ┌──────────┐  ┌──────────┐  ┌──────────┐  │                         │
+│   │  │   Lint   │→ │   Test   │→ │  Build   │  │                         │
+│   │  │ (ESLint) │  │ (Vitest) │  │  (Vite)  │  │                         │
+│   │  └──────────┘  └──────────┘  └──────────┘  │                         │
+│   └────────────────────────────────────────────┘                         │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   [main 브랜치 push]                                                     │
+│                    │                                                     │
+│                    ▼                                                     │
+│   ┌────────────────────────────────────────────────────────────────┐     │
+│   │                      Deploy to Prod                             │     │
+│   │  (main 브랜치에서 프로덕션 환경으로 배포)                         │     │
+│   └────────────────────────────────────────────────────────────────┘     │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 워크플로우 상세
+
+| 워크플로우 | 트리거 | 조건 | 설명 |
+|-----------|--------|------|------|
+| **Backend CI** | `push`, `pull_request` | `backend/**` 변경 | Ruff 린트 + pytest 테스트 |
+| **Frontend CI** | `push`, `pull_request` | `frontend/**` 변경 | ESLint + Vitest + Vite 빌드 |
+| **Deploy to Dev** | `workflow_run` | Backend CI 성공 시 | 인프라 → 도커 빌드 → 컨테이너 앱 배포 |
+| **Deploy to Prod** | `push` to `main` | - | 프로덕션 환경 배포 |
+| **Deploy Frontend** | `push` | `frontend/**` 변경 | Azure Static Web Apps 배포 |
+
+### CI 실패 시 동작
+
+- **Backend CI 실패** → Deploy to Dev가 트리거되지 않음 (코드 배포 차단)
+- **Frontend CI 실패** → PR에서 경고 표시, 프론트엔드 배포와 독립적
+- **수동 배포** → `workflow_dispatch`로 CI 스킵하고 긴급 배포 가능
 
 ## 🚀 시작하기
 
