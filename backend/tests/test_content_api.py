@@ -1,10 +1,19 @@
 """Tests for Content API endpoints."""
 
+import os
+
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 
 client = TestClient(app)
+
+# Skip tests that require actual Cosmos DB data
+skip_without_cosmos = pytest.mark.skipif(
+    os.environ.get("COSMOS_ENDPOINT") is None,
+    reason="Requires Cosmos DB connection with seeded data"
+)
 
 
 class TestListContent:
@@ -156,6 +165,7 @@ class TestSearchContent:
 
         assert data_lower["data"]["total"] == data_upper["data"]["total"]
 
+    @skip_without_cosmos
     def test_search_by_description(self):
         """Test search finds content by description."""
         response = client.get("/api/v1/content/search?q=containerized")
@@ -166,6 +176,7 @@ class TestSearchContent:
         # Should find AKS workshop which has "containerized" in description
         assert data["data"]["total"] >= 1
 
+    @skip_without_cosmos
     def test_search_by_category(self):
         """Test search finds content by category."""
         response = client.get("/api/v1/content/search?q=Kubernetes")
@@ -179,6 +190,7 @@ class TestSearchContent:
 class TestGetContent:
     """Tests for GET /api/v1/content/{id} endpoint."""
 
+    @skip_without_cosmos
     def test_get_content_success(self):
         """Test successful content retrieval by ID."""
         response = client.get("/api/v1/content/1")
@@ -201,6 +213,7 @@ class TestGetContent:
         assert data["success"] is False
         assert "error" in data
 
+    @skip_without_cosmos
     def test_get_content_structure(self):
         """Test that retrieved content has correct structure."""
         response = client.get("/api/v1/content/1")
@@ -220,6 +233,7 @@ class TestGetContent:
         assert "view_count" in item
         assert "bookmark_count" in item
 
+    @skip_without_cosmos
     def test_get_different_content_items(self):
         """Test retrieving different content items."""
         response1 = client.get("/api/v1/content/1")

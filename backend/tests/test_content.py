@@ -270,7 +270,8 @@ class TestContentServiceCreateFromAnalysis:
         assert content.description == "Learn to deploy apps on AKS"
         assert content.source_url == "https://github.com/Azure-Samples/aks-workshop"
         assert content.content_type == ContentType.WORKSHOP
-        assert content.status == ContentStatus.DRAFT
+        # Content is now automatically published after analysis
+        assert content.status == ContentStatus.PUBLISHED
         assert "Azure" in content.categories
         assert "Kubernetes" in content.categories
         assert content.level == "intermediate"
