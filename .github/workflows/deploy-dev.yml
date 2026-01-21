@@ -145,10 +145,9 @@ jobs:
   deploy-infrastructure:
     name: Deploy Infrastructure
     runs-on: ubuntu-latest
-    if: github.event.inputs.deploy_infra != 'false'
     needs: [build-api, build-pipeline]
-    # Run even if build jobs are skipped
-    if: always() && (needs.build-api.result == 'success' || needs.build-api.result == 'skipped') && (needs.build-pipeline.result == 'success' || needs.build-pipeline.result == 'skipped')
+    # Run even if build jobs are skipped, but only if deploy_infra is not false
+    if: always() && github.event.inputs.deploy_infra != 'false' && (needs.build-api.result == 'success' || needs.build-api.result == 'skipped') && (needs.build-pipeline.result == 'success' || needs.build-pipeline.result == 'skipped')
     
     steps:
       - name: Checkout code
