@@ -41,10 +41,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy dependency files
+# Copy dependency files and source code for building
 COPY pyproject.toml README.md ./
+COPY app/ ./app/
 
-# Install dependencies directly using pip with pyproject.toml
+# Install the package with dependencies
 RUN pip install --upgrade pip && \
     pip install .
 
