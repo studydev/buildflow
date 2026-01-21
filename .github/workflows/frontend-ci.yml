@@ -2,7 +2,7 @@ name: Frontend CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'frontend/**'
       - 'package.json'
@@ -10,7 +10,7 @@ on:
       - 'tsconfig*.json'
       - '.github/workflows/frontend-ci.yml'
   pull_request:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'frontend/**'
       - 'package.json'
