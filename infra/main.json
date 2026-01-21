@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "2584447233405726064"
+      "templateHash": "8132676565160790052"
     }
   },
   "parameters": {
@@ -1880,9 +1880,6 @@
           "logAnalyticsWorkspaceId": {
             "value": "[resourceId('Microsoft.OperationalInsights/workspaces', format('log-{0}', variables('resourceSuffix')))]"
           },
-          "containerAppName": {
-            "value": "[variables('containerAppName')]"
-          },
           "alertEmail": {
             "value": "[parameters('alertEmail')]"
           },
@@ -1897,7 +1894,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.38.33.27573",
-              "templateHash": "9706358877054086335"
+              "templateHash": "18117655072665208650"
             }
           },
           "parameters": {
@@ -1929,13 +1926,6 @@
               "type": "string",
               "metadata": {
                 "description": "Log Analytics Workspace ID (existing)"
-              }
-            },
-            "containerAppName": {
-              "type": "string",
-              "defaultValue": "",
-              "metadata": {
-                "description": "Container App name to monitor"
               }
             },
             "alertEmail": {
@@ -2197,14 +2187,8 @@
           "environment": {
             "value": "[parameters('environment')]"
           },
-          "location": {
-            "value": "[parameters('location')]"
-          },
           "tags": {
             "value": "[variables('tags')]"
-          },
-          "apiBackendUrl": {
-            "value": "[format('https://{0}', reference('apiContainerApp').configuration.ingress.fqdn)]"
           }
         },
         "template": {
@@ -2214,7 +2198,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.38.33.27573",
-              "templateHash": "5130877568698815275"
+              "templateHash": "18109556016558146240"
             }
           },
           "parameters": {
@@ -2230,23 +2214,10 @@
                 "description": "Environment name"
               }
             },
-            "location": {
-              "type": "string",
-              "metadata": {
-                "description": "Azure region - Note: SWA only supports limited regions"
-              }
-            },
             "tags": {
               "type": "object",
               "metadata": {
                 "description": "Resource tags"
-              }
-            },
-            "apiBackendUrl": {
-              "type": "string",
-              "defaultValue": "",
-              "metadata": {
-                "description": "API backend URL for proxying"
               }
             }
           },
@@ -2293,10 +2264,7 @@
             }
           }
         }
-      },
-      "dependsOn": [
-        "apiContainerApp"
-      ]
+      }
     }
   },
   "outputs": {

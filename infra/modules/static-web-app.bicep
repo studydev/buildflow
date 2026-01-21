@@ -7,14 +7,8 @@ param projectName string
 @description('Environment name')
 param environment string
 
-@description('Azure region - Note: SWA only supports limited regions')
-param location string
-
 @description('Resource tags')
 param tags object
-
-@description('API backend URL for proxying')
-param apiBackendUrl string = ''
 
 // Variables
 var swaName = 'swa-${projectName}-${environment}-${uniqueString(resourceGroup().id)}'

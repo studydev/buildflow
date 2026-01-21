@@ -356,6 +356,7 @@ resource serviceBusConnectionKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' =
   parent: keyVault
   name: 'servicebus-connection'
   properties: {
+    #disable-next-line BCP318
     value: serviceBus.outputs.pipelineWorkerConnectionString
   }
 }
@@ -364,6 +365,7 @@ resource serviceBusApiConnectionKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01
   parent: keyVault
   name: 'servicebus-api-connection'
   properties: {
+    #disable-next-line BCP318
     value: serviceBus.outputs.apiSendConnectionString
   }
 }
@@ -422,7 +424,9 @@ module containerAppsJobs 'modules/container-apps-jobs.bicep' = if (enablePipelin
     managedIdentityId: managedIdentity.id
     containerRegistryLoginServer: containerRegistryLoginServer
     imageTag: pipelineImageTag
+    #disable-next-line BCP318
     serviceBusName: serviceBus.outputs.serviceBusName
+    #disable-next-line BCP318
     serviceBusConnectionString: serviceBus.outputs.pipelineWorkerConnectionString
   }
 }
@@ -439,7 +443,6 @@ module monitoring 'modules/monitoring.bicep' = if (enableMonitoring) {
     location: location
     tags: tags
     logAnalyticsWorkspaceId: logAnalytics.id
-    containerAppName: containerAppName
     alertEmail: alertEmail
     enableDetailedAlerts: environment == 'prod'
   }
@@ -478,9 +481,7 @@ module staticWebApp 'modules/static-web-app.bicep' = if (enableFrontend) {
   params: {
     projectName: projectName
     environment: environment
-    location: location
     tags: tags
-    apiBackendUrl: 'https://${apiContainerApp.properties.configuration.ingress.fqdn}'
   }
 }
 

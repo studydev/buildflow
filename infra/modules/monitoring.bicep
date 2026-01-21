@@ -24,9 +24,6 @@ param tags object
 @description('Log Analytics Workspace ID (existing)')
 param logAnalyticsWorkspaceId string
 
-@description('Container App name to monitor')
-param containerAppName string = ''
-
 @description('Action Group email for alerts')
 param alertEmail string = ''
 
