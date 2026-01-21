@@ -1,0 +1,15 @@
+# Core
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic[email]>=2.10.0
+pydantic-settings>=2.6.0
+
+# Database
+azure-cosmos>=4.9.0
+
+# Security
+PyJWT>=2.10.0
+cryptography>=44.0.0
+
+# Utilities
+python-dotenv>=1.0.1
