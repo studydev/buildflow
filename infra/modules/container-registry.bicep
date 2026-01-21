@@ -16,26 +16,20 @@ param tags object
 @description('Managed Identity Principal ID for AcrPull role')
 param managedIdentityPrincipalId string
 
-// Variables
-var acrName = replace('cr${projectName}${environment}${uniqueString(resourceGroup().id)}', '-', '')
+// Variables - Use fixed name pattern for consistency
+var acrName = 'cr${projectName}${environment}2024'
 
 // Azure Container Registry
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
-  name: take(acrName, 50)
+  name: acrName
   location: location
   tags: tags
   sku: {
-    name: environment == 'prod' ? 'Standard' : 'Basic'
+    name: 'Standard'
   }
   properties: {
     adminUserEnabled: true
     publicNetworkAccess: 'Enabled'
-    policies: {
-      retentionPolicy: {
-        days: environment == 'prod' ? 30 : 7
-        status: 'enabled'
-      }
-    }
   }
 }
 
