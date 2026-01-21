@@ -1,6 +1,5 @@
 """Pytest configuration and fixtures."""
 
-import os
 import subprocess
 from pathlib import Path
 
