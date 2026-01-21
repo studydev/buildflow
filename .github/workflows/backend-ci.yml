@@ -65,13 +65,18 @@ jobs:
           pip install .
           pip install pytest pytest-cov pytest-asyncio httpx
 
+      - name: Generate test JWT keys
+        run: |
+          mkdir -p keys
+          openssl genrsa -out keys/private.pem 2048
+          openssl rsa -in keys/private.pem -pubout -out keys/public.pem
+          echo "Generated test RSA keys for JWT"
+
       - name: Run tests
         run: |
           pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
         env:
           ENV: test
-          JWT_SECRET: test-secret-key-for-ci
-          JWT_ALGORITHM: HS256
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
