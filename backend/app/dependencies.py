@@ -1,12 +1,14 @@
 """FastAPI dependencies for authentication and authorization."""
 
 import logging
+from datetime import datetime, timezone
 from typing import Optional
 
 import jwt
-from fastapi import Depends, Request
+from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.config import get_settings
 from app.core.exceptions import AuthenticationError, ForbiddenError
 from app.core.security import TokenPayload, verify_access_token
 from app.models.enums import UserRole
@@ -14,6 +16,9 @@ from app.models.user import User, UserPublic
 from app.repositories.user_repo import get_user_repository
 
 logger = logging.getLogger(__name__)
+
+# JWT Algorithm
+ALGORITHM = "RS256"
 
 # HTTP Bearer token extractor
 oauth2_scheme = HTTPBearer(auto_error=False)
@@ -82,6 +87,46 @@ async def get_current_user(
             role=UserRole(token.role),
             created_at=datetime.now(timezone.utc),
         )
+
+
+async def get_current_user_optional(
+    authorization: str = Header(None, alias="Authorization"),
+) -> Optional[UserPublic]:
+    """
+    Get the current user if authenticated, otherwise return None.
+
+    This is for endpoints where authentication is optional.
+    """
+    if not authorization:
+        return None
+
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            return None
+
+        payload = jwt.decode(
+            token,
+            get_settings().jwt_secret_key,
+            algorithms=[ALGORITHM],
+        )
+
+        token_payload = TokenPayload(
+            sub=payload.get("sub"),
+            email=payload.get("email", ""),
+            role=payload.get("role", "user"),
+            exp=payload.get("exp"),
+        )
+
+        return UserPublic(
+            id=token_payload.sub,
+            email=token_payload.email,
+            display_name=None,
+            role=UserRole(token_payload.role),
+            created_at=datetime.now(timezone.utc),
+        )
+    except Exception:
+        return None
 
 
 async def get_current_active_user(
