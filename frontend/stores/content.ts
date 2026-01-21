@@ -52,7 +52,7 @@ export interface ContentListResponse {
 
 // New search types for T406
 export type SearchMode = 'hybrid' | 'keyword' | 'vector'
-export type SortOption = 'relevance' | 'popularity' | 'recent'
+export type SortOption = 'relevance' | 'popularity' | 'recent' | 'stars'
 
 export interface SearchParams {
   q: string

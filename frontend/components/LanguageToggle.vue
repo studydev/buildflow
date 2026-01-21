@@ -5,7 +5,7 @@ import { useContentStore } from '@/stores/content'
 const contentStore = useContentStore()
 
 // Language options
-const languages = [
+const languages: { code: 'en' | 'ko'; label: string; name: string }[] = [
   { code: 'en', label: 'EN', name: 'English' },
   { code: 'ko', label: 'KR', name: '한국어' },
 ]
@@ -13,12 +13,8 @@ const languages = [
 // Get/set current language
 const currentLanguage = computed({
   get: () => contentStore.displayLanguage,
-  set: (val) => { contentStore.displayLanguage = val }
+  set: (val: 'en' | 'ko') => { contentStore.displayLanguage = val }
 })
-
-function toggleLanguage() {
-  currentLanguage.value = currentLanguage.value === 'en' ? 'ko' : 'en'
-}
 </script>
 
 <template>

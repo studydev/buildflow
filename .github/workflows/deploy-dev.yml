@@ -1,7 +1,7 @@
 # BuildFlow - Dev Environment Deployment
 # Per tasks.md T801: GitHub Actions for Dev
 #
-# Trigger: Push to develop branch
+# Trigger: After Backend CI succeeds on develop branch
 # Order: Infrastructure first, then Build, then Deploy
 # - Deploy infrastructure via Bicep (creates ACR)
 # - Build and push API Docker image
@@ -11,13 +11,15 @@
 name: Deploy to Dev
 
 on:
-  push:
+  # Triggered when Backend CI workflow completes on develop branch
+  workflow_run:
+    workflows: ["Backend CI"]
+    types:
+      - completed
     branches:
       - develop
-    paths:
-      - 'backend/**'
-      - 'infra/**'
-      - '.github/workflows/deploy-dev.yml'
+  
+  # Manual trigger for emergency deployments
   workflow_dispatch:
     inputs:
       deploy_infra:
@@ -46,13 +48,39 @@ env:
 
 jobs:
   # ==========================================================================
+  # Pre-check: Only deploy if CI passed (skip if workflow_dispatch)
+  # ==========================================================================
+  
+  check-ci:
+    name: Check CI Status
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    steps:
+      - name: Check if should deploy
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ Manual trigger - deploying"
+          elif [ "${{ github.event.workflow_run.conclusion }}" == "success" ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ Backend CI passed - deploying"
+          else
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "❌ Backend CI failed - skipping deployment"
+          fi
+
+  # ==========================================================================
   # Deploy Infrastructure FIRST (creates ACR)
   # ==========================================================================
   
   deploy-infrastructure:
     name: Deploy Infrastructure
     runs-on: ubuntu-latest
-    if: github.event.inputs.deploy_infra != 'false'
+    needs: check-ci
+    if: needs.check-ci.outputs.should_deploy == 'true' && github.event.inputs.deploy_infra != 'false'
     outputs:
       acr_name: ${{ steps.get-acr.outputs.acr_name }}
       acr_login_server: ${{ steps.get-acr.outputs.acr_login_server }}

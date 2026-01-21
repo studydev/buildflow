@@ -16,8 +16,6 @@ import { ref, computed } from 'vue'
 import { apiRequest, APIError } from '@/lib/api'
 import type {
   PipelineRun,
-  PipelineType,
-  PipelineStatus,
   EnqueuePipelineRequest,
   EnqueuePipelineResponse,
   PipelineHistoryResponse,
@@ -547,8 +545,8 @@ export const useAnalysisStore = defineStore('analysis', () => {
       
       // Update local state
       const index = pipelineRuns.value.findIndex(r => r.id === runId)
-      if (index !== -1) {
-        pipelineRuns.value[index].status = 'cancelled' as unknown as import('@/types/pipeline').PipelineStatus
+      if (index !== -1 && pipelineRuns.value[index]) {
+        pipelineRuns.value[index]!.status = 'cancelled' as unknown as import('@/types/pipeline').PipelineStatus
       }
       
       return true

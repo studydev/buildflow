@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAnalysisStore } from '@/stores/analysis'
 import { useContentStore, type ContentItem as StoreContentItem } from '@/stores/content'
 import type { AnalysisRequest } from '@/stores/analysis'
@@ -21,7 +20,6 @@ import {
   getStatusText,
   getStatusColorClass,
   getPipelineTypeText,
-  type PipelineRun,
 } from '@/types/pipeline'
 
 // Analysis Store
@@ -29,9 +27,6 @@ const analysisStore = useAnalysisStore()
 
 // Content Store (for real API operations)
 const contentStore = useContentStore()
-
-// Router
-const router = useRouter()
 
 // Edit Modal State
 const isEditModalOpen = ref(false)
@@ -154,7 +149,7 @@ const contentPipelineRuns = computed(() => {
 
 const latestPipelineRun = computed(() => {
   if (contentPipelineRuns.value.length === 0) return null
-  return contentPipelineRuns.value.sort((a, b) => 
+  return [...contentPipelineRuns.value].sort((a, b) => 
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   )[0]
 })

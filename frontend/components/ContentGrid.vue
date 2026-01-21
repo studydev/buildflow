@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
 import { useContentStore } from '@/stores/content'
-import LanguageToggle from '@/components/LanguageToggle.vue'
 
 const contentStore = useContentStore()
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import ContentGrid from '@/components/ContentGrid.vue'
 import LanguageToggle from '@/components/LanguageToggle.vue'
-import { useContentStore } from '@/stores/content'
+import { useContentStore, type SortOption } from '@/stores/content'
 import { useRoute, useRouter } from 'vue-router'
 
 const contentStore = useContentStore()
@@ -100,7 +100,7 @@ function handleSearchInput(event: Event) {
 
 function executeSearch() {
   contentStore.advancedSearch({
-    query: searchInput.value,
+    q: searchInput.value,
     mode: selectedSearchMode.value,
     categories: contentStore.selectedCategory ? [contentStore.selectedCategory] : undefined,
     technologies: contentStore.selectedTechnologies.length > 0 ? contentStore.selectedTechnologies : undefined,
@@ -139,7 +139,7 @@ function initFromUrl() {
   if (q.tech) contentStore.selectedTechnologies = String(q.tech).split(',')
   if (q.difficulty) contentStore.selectedDifficulty = q.difficulty as 'beginner' | 'intermediate' | 'advanced'
   if (q.minStars) contentStore.minStars = Number(q.minStars)
-  if (q.sort) contentStore.sortOption = q.sort as 'relevance' | 'popularity' | 'stars' | 'recent'
+  if (q.sort) contentStore.sortOption = q.sort as SortOption
   
   // If there are search params, show advanced filters and execute search
   if (Object.keys(q).length > 0) {
@@ -360,7 +360,7 @@ initFromUrl()
               <button
                 v-for="option in sortOptions"
                 :key="option.value"
-                @click="selectedSortOption = option.value as 'relevance' | 'popularity' | 'stars' | 'recent'"
+                @click="selectedSortOption = option.value as SortOption"
                 :class="[
                   'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                   selectedSortOption === option.value
