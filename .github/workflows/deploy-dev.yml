@@ -140,8 +140,7 @@ jobs:
           tags: |
             ${{ needs.deploy-infrastructure.outputs.acr_login_server }}/${{ env.API_IMAGE_NAME }}:${{ github.sha }}
             ${{ needs.deploy-infrastructure.outputs.acr_login_server }}/${{ env.API_IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true
   
   # ==========================================================================
   # Build Pipeline Image (after infrastructure)
