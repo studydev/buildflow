@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "prod"
+    },
+    "projectName": {
+      "value": "buildflow"
+    },
+    "apiImage": {
+      "value": "crbuildflowprod.azurecr.io/buildflow-api:latest"
+    },
+    "jwtSecret": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/rg-buildflow-prod/providers/Microsoft.KeyVault/vaults/{keyvault-name}"
+        },
+        "secretName": "jwt-secret"
+      }
+    },
+    "githubToken": {
+      "value": ""
+    },
+    "azureOpenAiKey": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/rg-buildflow-prod/providers/Microsoft.KeyVault/vaults/{keyvault-name}"
+        },
+        "secretName": "azure-openai-key"
+      }
+    },
+    "azureOpenAiEndpoint": {
+      "value": "https://genai-thon-04.openai.azure.com/"
+    },
+    "azureOpenAiDeployment": {
+      "value": "gpt-5.2"
+    },
+    "containerRegistryLoginServer": {
+      "value": "crbuildflowprod.azurecr.io"
+    },
+    "pipelineImageTag": {
+      "value": "latest"
+    },
+    "enableMonitoring": {
+      "value": true
+    },
+    "enablePipelines": {
+      "value": false
+    },
+    "enableFrontend": {
+      "value": true
+    },
+    "alertEmail": {
+      "value": "admin@buildflow.dev"
+    }
+  }
+}

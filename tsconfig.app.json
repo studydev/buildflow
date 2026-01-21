@@ -3,7 +3,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./frontend/*"]
     },
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "target": "ES2020",
@@ -21,5 +21,5 @@
     "noUncheckedSideEffectImports": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
+  "include": ["frontend/**/*.ts", "frontend/**/*.tsx", "frontend/**/*.vue"]
 }

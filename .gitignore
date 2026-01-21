@@ -22,3 +22,41 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+.pytest_cache/
+*.egg-info/
+.eggs/
+poetry.lock
+
+# Environment files
+.env
+.env.local
+.env.*.local
+backend/.env
+backend/.env.local
+
+# Keys and secrets
+keys/
+*.pem
+*.key
+
+# Build outputs
+build/
+*.egg
+
+# Azure
+.azure/
+
+# Temporary files
+*.tmp
+*.temp
+.specify/memory/

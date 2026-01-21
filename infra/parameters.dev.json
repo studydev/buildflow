@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "dev"
+    },
+    "projectName": {
+      "value": "buildflow"
+    },
+    "apiImage": {
+      "value": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+    },
+    "jwtSecret": {
+      "value": "dev-jwt-secret-change-me-in-production-32chars!"
+    },
+    "githubToken": {
+      "value": ""
+    },
+    "azureOpenAiKey": {
+      "value": ""
+    },
+    "azureOpenAiEndpoint": {
+      "value": "https://genai-thon-04.openai.azure.com/"
+    },
+    "azureOpenAiDeployment": {
+      "value": "gpt-5.2"
+    },
+    "containerRegistryLoginServer": {
+      "value": ""
+    },
+    "pipelineImageTag": {
+      "value": "latest"
+    },
+    "enableMonitoring": {
+      "value": true
+    },
+    "enablePipelines": {
+      "value": true
+    },
+    "enableFrontend": {
+      "value": true
+    }
+  }
+}

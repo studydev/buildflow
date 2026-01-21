@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  # Cosmos DB Emulator for local development
+  # Note: The official Azure Cosmos DB Emulator has limited ARM64 support
+  # For M1/M2 Macs, consider using the Linux emulator or Azure Cosmos DB serverless
+  cosmosdb:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+    container_name: buildflow-cosmosdb
+    platform: linux/amd64
+    mem_limit: 3g
+    cpu_count: 2
+    environment:
+      - AZURE_COSMOS_EMULATOR_PARTITION_COUNT=10
+      - AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE=true
+      - AZURE_COSMOS_EMULATOR_IP_ADDRESS_OVERRIDE=127.0.0.1
+    ports:
+      - "8081:8081"      # Cosmos DB endpoint
+      - "10251:10251"    # Direct mode
+      - "10252:10252"
+      - "10253:10253"
+      - "10254:10254"
+    volumes:
+      - cosmosdb_data:/tmp/cosmos/appdata
+    healthcheck:
+      test: ["CMD", "curl", "-fk", "https://localhost:8081/_explorer/emulator.pem"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  cosmosdb_data:
+    driver: local

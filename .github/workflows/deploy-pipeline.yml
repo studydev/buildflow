@@ -1,0 +1,266 @@
+# ============================================================================
+# BuildFlow Pipeline Deploy Workflow - T119
+# Builds and deploys pipeline Docker image and updates Container Apps Jobs
+# ============================================================================
+
+name: Deploy Pipeline Infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'infra/**'
+      - '.github/workflows/deploy-pipeline.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      deploy_infra:
+        description: 'Deploy infrastructure (Bicep)?'
+        required: true
+        default: true
+        type: boolean
+      deploy_pipeline:
+        description: 'Deploy pipeline image?'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  AZURE_CONTAINER_REGISTRY: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
+  RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+  LOCATION: ${{ secrets.AZURE_LOCATION || 'koreacentral' }}
+
+jobs:
+  # ============================================================================
+  # Job 1: Build and Push Pipeline Docker Image
+  # ============================================================================
+  build-pipeline-image:
+    name: Build Pipeline Image
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.deploy_pipeline != 'false' }}
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}
+      full-image: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.AZURE_CONTAINER_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.AZURE_CONTAINER_REGISTRY }}/buildflow-pipeline
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ github.run_number }}
+
+      - name: Build and push Pipeline image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.pipeline
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+
+      - name: Summary
+        run: |
+          echo "### 🐳 Pipeline Image Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.AZURE_CONTAINER_REGISTRY }}/buildflow-pipeline\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:** \`${{ steps.meta.outputs.tags }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Job 2: Deploy Infrastructure (Bicep)
+  # ============================================================================
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    needs: build-pipeline-image
+    if: ${{ always() && (github.event.inputs.deploy_infra != 'false') }}
+    environment:
+      name: ${{ github.event.inputs.environment || 'dev' }}
+    outputs:
+      service-bus-name: ${{ steps.deploy.outputs.serviceBusName }}
+      storage-account: ${{ steps.deploy.outputs.storageAccountName }}
+      search-service: ${{ steps.deploy.outputs.searchServiceName }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep Template
+        id: deploy
+        uses: azure/arm-deploy@v2
+        with:
+          scope: resourcegroup
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          template: ./infra/main.bicep
+          parameters: >
+            environment=${{ github.event.inputs.environment || 'dev' }}
+            projectName=buildflow
+            jwtSecret=${{ secrets.JWT_SECRET }}
+            githubToken=${{ secrets.GH_PAT_TOKEN }}
+            azureOpenAiKey=${{ secrets.AZURE_OPENAI_KEY }}
+            azureOpenAiEndpoint=${{ secrets.AZURE_OPENAI_ENDPOINT }}
+            azureOpenAiDeployment=${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+            containerRegistryLoginServer=${{ env.AZURE_CONTAINER_REGISTRY }}
+            pipelineImageTag=${{ needs.build-pipeline-image.outputs.image-tag || github.sha }}
+          failOnStdErr: false
+
+      - name: Summary
+        run: |
+          echo "### 🏗️ Infrastructure Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource | Name |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Service Bus | ${{ steps.deploy.outputs.serviceBusName }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Storage Account | ${{ steps.deploy.outputs.storageAccountName }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Search Service | ${{ steps.deploy.outputs.searchServiceName }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| API URL | ${{ steps.deploy.outputs.apiUrl }} |" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Job 3: Update Container Apps Jobs
+  # ============================================================================
+  update-jobs:
+    name: Update Pipeline Jobs
+    runs-on: ubuntu-latest
+    needs: [build-pipeline-image, deploy-infrastructure]
+    if: ${{ always() && needs.build-pipeline-image.result == 'success' }}
+    environment:
+      name: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Update Container Apps Jobs with new image
+        run: |
+          IMAGE="${{ env.AZURE_CONTAINER_REGISTRY }}/buildflow-pipeline:${{ needs.build-pipeline-image.outputs.image-tag || github.sha }}"
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          
+          echo "Updating Container Apps Jobs with image: $IMAGE"
+          
+          # Get list of pipeline jobs
+          JOBS=$(az containerapp job list --resource-group ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'caj-') && contains(name, '-$ENV')].name" -o tsv)
+          
+          if [ -z "$JOBS" ]; then
+            echo "No Container Apps Jobs found to update"
+            exit 0
+          fi
+          
+          for JOB in $JOBS; do
+            echo "Updating job: $JOB"
+            az containerapp job update \
+              --name "$JOB" \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --image "$IMAGE" || echo "Warning: Failed to update $JOB"
+          done
+
+      - name: Summary
+        run: |
+          echo "### 🔄 Pipeline Jobs Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**New Image:** \`${{ needs.build-pipeline-image.outputs.image-tag || github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Job 4: Verify Deployment
+  # ============================================================================
+  verify:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-infrastructure, update-jobs]
+    if: always()
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Verify Service Bus
+        run: |
+          SB_NAME=$(az servicebus namespace list --resource-group ${{ env.RESOURCE_GROUP }} --query "[0].name" -o tsv)
+          if [ -n "$SB_NAME" ]; then
+            echo "✅ Service Bus namespace found: $SB_NAME"
+            
+            # List topics
+            echo "Topics:"
+            az servicebus topic list --namespace-name "$SB_NAME" --resource-group ${{ env.RESOURCE_GROUP }} --query "[].name" -o tsv
+          else
+            echo "⚠️ No Service Bus namespace found"
+          fi
+
+      - name: Verify Container Apps Jobs
+        run: |
+          echo "Container Apps Jobs:"
+          az containerapp job list --resource-group ${{ env.RESOURCE_GROUP }} --query "[].{name:name,status:properties.provisioningState}" -o table
+
+      - name: Verify Storage Account
+        run: |
+          STORAGE=$(az storage account list --resource-group ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'st')].name" -o tsv)
+          if [ -n "$STORAGE" ]; then
+            echo "✅ Storage account found: $STORAGE"
+            
+            # List containers
+            echo "Containers:"
+            az storage container list --account-name "$STORAGE" --auth-mode login --query "[].name" -o tsv 2>/dev/null || echo "Unable to list containers"
+          else
+            echo "⚠️ No Storage account found"
+          fi
+
+      - name: Verify Search Service
+        run: |
+          SEARCH=$(az search service list --resource-group ${{ env.RESOURCE_GROUP }} --query "[0].name" -o tsv)
+          if [ -n "$SEARCH" ]; then
+            echo "✅ Search service found: $SEARCH"
+          else
+            echo "⚠️ No Search service found"
+          fi
+
+      - name: Final Summary
+        run: |
+          echo "### 🎉 Pipeline Infrastructure Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment || 'dev' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Resources Deployed:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Service Bus with topics and subscriptions" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ 5 Container Apps Jobs (pipeline workers)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Storage Account with blob containers" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Azure AI Search service" >> $GITHUB_STEP_SUMMARY

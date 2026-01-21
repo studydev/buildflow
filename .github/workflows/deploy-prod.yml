@@ -1,0 +1,308 @@
+# BuildFlow - Prod Environment Deployment
+# Per tasks.md T804: GitHub Actions for Prod
+#
+# Trigger: Push to main branch (with environment approval)
+# Actions:
+# - Build and push API Docker image only (NO pipeline image)
+# - Deploy infrastructure via Bicep (read-only mode)
+# - Deploy Container App
+#
+# NOTE: Prod has NO Service Bus, NO Container Apps Jobs
+# Content is promoted from Dev via admin API
+
+name: Deploy to Prod
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'infra/**'
+      - '.github/workflows/deploy-prod.yml'
+  workflow_dispatch:
+    inputs:
+      deploy_infra:
+        description: 'Deploy infrastructure (Bicep)'
+        required: false
+        default: 'true'
+        type: boolean
+      deploy_api:
+        description: 'Deploy API container'
+        required: false
+        default: 'true'
+        type: boolean
+
+env:
+  AZURE_RESOURCE_GROUP: rg-buildflow-prod
+  AZURE_LOCATION: koreacentral
+  PROJECT_NAME: buildflow
+  ENVIRONMENT: prod
+  REGISTRY_NAME: crbuildflowprod
+  API_IMAGE_NAME: buildflow-api
+
+jobs:
+  # ==========================================================================
+  # Build API
+  # ==========================================================================
+  
+  build-api:
+    name: Build API Image
+    runs-on: ubuntu-latest
+    if: github.event.inputs.deploy_api != 'false'
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_PROD }}
+      
+      - name: Login to ACR
+        run: |
+          az acr login --name ${{ env.REGISTRY_NAME }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.API_IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=semver,pattern={{version}}
+            type=raw,value=latest
+      
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            ENV=prod
+
+  # ==========================================================================
+  # Deploy Infrastructure (Requires Approval)
+  # ==========================================================================
+  
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    needs: [build-api]
+    if: always() && (needs.build-api.result == 'success' || needs.build-api.result == 'skipped') && github.event.inputs.deploy_infra != 'false'
+    environment:
+      name: production
+      url: ${{ steps.get-url.outputs.api_url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_PROD }}
+      
+      - name: Create Resource Group
+        run: |
+          az group create \
+            --name ${{ env.AZURE_RESOURCE_GROUP }} \
+            --location ${{ env.AZURE_LOCATION }} \
+            --tags project=${{ env.PROJECT_NAME }} environment=${{ env.ENVIRONMENT }}
+      
+      - name: Deploy Bicep template (Read-Only Mode)
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
+          template: ./infra/main.bicep
+          parameters: >
+            environment=${{ env.ENVIRONMENT }}
+            projectName=${{ env.PROJECT_NAME }}
+            jwtSecret=${{ secrets.JWT_SECRET_PROD }}
+            githubToken=
+            azureOpenAiKey=${{ secrets.AZURE_OPENAI_KEY }}
+            azureOpenAiEndpoint=${{ secrets.AZURE_OPENAI_ENDPOINT }}
+            azureOpenAiDeployment=${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+            containerRegistryLoginServer=${{ env.REGISTRY_NAME }}.azurecr.io
+            pipelineImageTag=latest
+            enableMonitoring=true
+            enablePipelines=false
+            alertEmail=${{ secrets.ALERT_EMAIL }}
+          failOnStdErr: false
+      
+      - name: Get API URL
+        id: get-url
+        run: |
+          API_URL=$(az containerapp show \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name $(az containerapp list --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "[?contains(name, 'ca-')].name" --output tsv | head -n 1) \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv)
+          echo "api_url=https://$API_URL" >> $GITHUB_OUTPUT
+
+  # ==========================================================================
+  # Deploy Container App
+  # ==========================================================================
+  
+  deploy-api:
+    name: Deploy API Container
+    runs-on: ubuntu-latest
+    needs: [build-api, deploy-infrastructure]
+    if: always() && needs.build-api.result == 'success' && needs.deploy-infrastructure.result == 'success'
+    environment:
+      name: production
+    
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_PROD }}
+      
+      - name: Get Container App name
+        id: get-app
+        run: |
+          APP_NAME=$(az containerapp list \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query "[?contains(name, 'ca-')].name" \
+            --output tsv | head -n 1)
+          echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
+      
+      - name: Update Container App
+        run: |
+          az containerapp update \
+            --name ${{ steps.get-app.outputs.app_name }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --image ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.API_IMAGE_NAME }}:${{ github.sha }}
+
+  # ==========================================================================
+  # Post-Deployment Validation
+  # ==========================================================================
+  
+  validate:
+    name: Validate Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-api]
+    if: always() && needs.deploy-api.result == 'success'
+    
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_PROD }}
+      
+      - name: Get API URL
+        id: get-url
+        run: |
+          API_URL=$(az containerapp show \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name $(az containerapp list --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "[?contains(name, 'ca-')].name" --output tsv | head -n 1) \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv)
+          echo "api_url=https://$API_URL" >> $GITHUB_OUTPUT
+      
+      - name: Health Check
+        run: |
+          echo "Checking API health at ${{ steps.get-url.outputs.api_url }}/health"
+          
+          # Wait for deployment to stabilize
+          sleep 60
+          
+          # Check health endpoint with more retries for prod
+          for i in {1..10}; do
+            if curl -sf "${{ steps.get-url.outputs.api_url }}/health" > /dev/null; then
+              echo "✅ Health check passed!"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 15s..."
+            sleep 15
+          done
+          
+          echo "❌ Health check failed after 10 attempts"
+          exit 1
+      
+      - name: Smoke Tests
+        run: |
+          API_URL="${{ steps.get-url.outputs.api_url }}"
+          
+          echo "Running smoke tests..."
+          
+          # Test search endpoint
+          if curl -sf "$API_URL/api/v1/search?q=test" > /dev/null; then
+            echo "✅ Search endpoint OK"
+          else
+            echo "❌ Search endpoint failed"
+            exit 1
+          fi
+          
+          # Test content endpoint
+          if curl -sf "$API_URL/api/v1/content" > /dev/null; then
+            echo "✅ Content endpoint OK"
+          else
+            echo "❌ Content endpoint failed"
+            exit 1
+          fi
+          
+          echo "All smoke tests passed!"
+      
+      - name: Post deployment summary
+        run: |
+          echo "## 🚀 Production Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**API URL:** ${{ steps.get-url.outputs.api_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ env.ENVIRONMENT }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ⚠️ Important Notes" >> $GITHUB_STEP_SUMMARY
+          echo "- Production is **read-only** - no pipeline processing" >> $GITHUB_STEP_SUMMARY
+          echo "- Content must be promoted from Dev via Admin API" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # Notify on Failure
+  # ==========================================================================
+  
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [build-api, deploy-infrastructure, deploy-api, validate]
+    if: failure()
+    
+    steps:
+      - name: Create failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 Production Deployment Failed - ${new Date().toISOString().split('T')[0]}`;
+            const body = `
+            ## Deployment Failure Report
+            
+            **Workflow Run:** [${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            **Commit:** ${context.sha}
+            **Branch:** ${context.ref}
+            
+            ### Jobs Status
+            - Build API: ${{ needs.build-api.result }}
+            - Deploy Infrastructure: ${{ needs.deploy-infrastructure.result }}
+            - Deploy API: ${{ needs.deploy-api.result }}
+            - Validate: ${{ needs.validate.result }}
+            
+            Please investigate and retry if needed.
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['deployment', 'production', 'failure']
+            });
