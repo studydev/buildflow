@@ -9,12 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files and source code for building
-COPY pyproject.toml README.md ./
-COPY app/ ./app/
-
-# Install the package with dependencies
-RUN pip install --no-cache-dir --user .
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Production stage
 FROM python:3.9-slim AS production
