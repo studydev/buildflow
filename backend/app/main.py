@@ -276,6 +276,19 @@ def register_routes(app: FastAPI) -> None:
             "health": f"{settings.api_v1_prefix}/health",
         }
 
+    @app.get("/health", include_in_schema=False)
+    async def root_health_check(request: Request) -> JSONResponse:
+        """
+        Root-level health check endpoint for Azure Container Apps probes.
+        """
+        correlation_id = getattr(request.state, "correlation_id", str(uuid4()))
+        response = APIResponse(
+            success=True,
+            data=HealthData(status="healthy"),
+            meta=Meta.create(correlation_id),
+        )
+        return JSONResponse(content=response.model_dump())
+
     # Test endpoint to verify error handling (development only)
     if settings.debug:
         from app.core.exceptions import NotFoundError, ValidationError
