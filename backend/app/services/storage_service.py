@@ -5,18 +5,17 @@ Per tasks.md T600: Implements upload/download/delete for generated assets.
 
 import logging
 from datetime import datetime, timedelta
-from typing import Optional, BinaryIO
+from typing import BinaryIO, Optional
 from uuid import UUID
 
+from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from azure.storage.blob import (
+    BlobSasPermissions,
     BlobServiceClient,
     ContainerClient,
-    BlobClient,
-    generate_blob_sas,
-    BlobSasPermissions,
     ContentSettings,
+    generate_blob_sas,
 )
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 
 from app.config import get_settings
 
@@ -59,7 +58,7 @@ CONTENT_TYPE_MAP = {
 class StorageService:
     """
     Service for Azure Blob Storage operations.
-    
+
     Provides:
     - upload_blob(): Upload file to blob storage
     - download_blob(): Download blob content
@@ -68,7 +67,7 @@ class StorageService:
     - delete_blob(): Remove blob from storage
     - list_blobs(): List blobs in a container/prefix
     """
-    
+
     def __init__(
         self,
         connection_string: Optional[str] = None,
@@ -77,7 +76,7 @@ class StorageService:
     ):
         """
         Initialize storage service.
-        
+
         Can be initialized with connection string or account name/key.
         Falls back to settings if not provided.
         """
@@ -90,10 +89,10 @@ class StorageService:
         self.account_key = account_key or getattr(
             settings, 'azure_storage_account_key', None
         )
-        
+
         self._client: Optional[BlobServiceClient] = None
         self._containers: dict[str, ContainerClient] = {}
-    
+
     @property
     def client(self) -> BlobServiceClient:
         """Get or create blob service client."""
@@ -113,23 +112,23 @@ class StorageService:
                     "Storage not configured. Provide connection_string or account_name/key."
                 )
         return self._client
-    
+
     def get_container_client(self, container_name: str) -> ContainerClient:
         """Get container client, creating container if needed."""
         if container_name not in self._containers:
             container_client = self.client.get_container_client(container_name)
-            
+
             # Ensure container exists
             try:
                 container_client.create_container()
                 logger.info(f"Created container: {container_name}")
             except ResourceExistsError:
                 pass  # Container already exists
-            
+
             self._containers[container_name] = container_client
-        
+
         return self._containers[container_name]
-    
+
     async def upload_blob(
         self,
         container_name: str,
@@ -141,7 +140,7 @@ class StorageService:
     ) -> str:
         """
         Upload data to blob storage.
-        
+
         Args:
             container_name: Target container name
             blob_path: Path within container (e.g., "{content_id}/thumbnail.png")
@@ -149,36 +148,36 @@ class StorageService:
             content_type: MIME type (auto-detected from extension if not provided)
             metadata: Optional metadata dict
             overwrite: Whether to overwrite existing blob
-            
+
         Returns:
             Full blob URL
         """
         try:
             container_client = self.get_container_client(container_name)
             blob_client = container_client.get_blob_client(blob_path)
-            
+
             # Auto-detect content type from extension
             if content_type is None:
                 ext = blob_path.split('.')[-1].lower() if '.' in blob_path else None
                 content_type = CONTENT_TYPE_MAP.get(ext, "application/octet-stream")
-            
+
             content_settings = ContentSettings(content_type=content_type)
-            
+
             blob_client.upload_blob(
                 data,
                 overwrite=overwrite,
                 content_settings=content_settings,
                 metadata=metadata,
             )
-            
+
             logger.info(f"Uploaded blob: {container_name}/{blob_path}")
-            
+
             return blob_client.url
-            
+
         except Exception as e:
             logger.error(f"Failed to upload blob {blob_path}: {e}")
             raise StorageUploadError(f"Upload failed: {e}")
-    
+
     async def download_blob(
         self,
         container_name: str,
@@ -186,27 +185,27 @@ class StorageService:
     ) -> bytes:
         """
         Download blob content.
-        
+
         Args:
             container_name: Container name
             blob_path: Path within container
-            
+
         Returns:
             Blob content as bytes
         """
         try:
             container_client = self.get_container_client(container_name)
             blob_client = container_client.get_blob_client(blob_path)
-            
+
             download_stream = blob_client.download_blob()
             return download_stream.readall()
-            
+
         except ResourceNotFoundError:
             raise BlobNotFoundError(f"Blob not found: {container_name}/{blob_path}")
         except Exception as e:
             logger.error(f"Failed to download blob {blob_path}: {e}")
             raise StorageError(f"Download failed: {e}")
-    
+
     def get_blob_url(
         self,
         container_name: str,
@@ -214,20 +213,20 @@ class StorageService:
     ) -> str:
         """
         Get the direct URL of a blob.
-        
+
         Note: This URL requires authentication unless the container is public.
-        
+
         Args:
             container_name: Container name
             blob_path: Path within container
-            
+
         Returns:
             Blob URL
         """
         container_client = self.get_container_client(container_name)
         blob_client = container_client.get_blob_client(blob_path)
         return blob_client.url
-    
+
     def get_sas_url(
         self,
         container_name: str,
@@ -237,26 +236,26 @@ class StorageService:
     ) -> str:
         """
         Generate a SAS URL with time-limited access.
-        
+
         Args:
             container_name: Container name
             blob_path: Path within container
             expiry_hours: Hours until SAS expires (default: 24)
             permissions: SAS permissions (r=read, w=write, d=delete)
-            
+
         Returns:
             SAS URL
         """
         if not self.account_name or not self.account_key:
             raise StorageError("Account name and key required for SAS generation")
-        
+
         # Build permissions
         sas_permissions = BlobSasPermissions(
             read='r' in permissions,
             write='w' in permissions,
             delete='d' in permissions,
         )
-        
+
         # Generate SAS token
         sas_token = generate_blob_sas(
             account_name=self.account_name,
@@ -266,10 +265,10 @@ class StorageService:
             permission=sas_permissions,
             expiry=datetime.utcnow() + timedelta(hours=expiry_hours),
         )
-        
+
         blob_url = f"https://{self.account_name}.blob.core.windows.net/{container_name}/{blob_path}"
         return f"{blob_url}?{sas_token}"
-    
+
     async def delete_blob(
         self,
         container_name: str,
@@ -277,29 +276,29 @@ class StorageService:
     ) -> bool:
         """
         Delete a blob from storage.
-        
+
         Args:
             container_name: Container name
             blob_path: Path within container
-            
+
         Returns:
             True if deleted, False if not found
         """
         try:
             container_client = self.get_container_client(container_name)
             blob_client = container_client.get_blob_client(blob_path)
-            
+
             blob_client.delete_blob()
             logger.info(f"Deleted blob: {container_name}/{blob_path}")
             return True
-            
+
         except ResourceNotFoundError:
             logger.warning(f"Blob not found for deletion: {container_name}/{blob_path}")
             return False
         except Exception as e:
             logger.error(f"Failed to delete blob {blob_path}: {e}")
             raise StorageError(f"Delete failed: {e}")
-    
+
     async def list_blobs(
         self,
         container_name: str,
@@ -308,18 +307,18 @@ class StorageService:
     ) -> list[dict[str, str]]:
         """
         List blobs in a container.
-        
+
         Args:
             container_name: Container name
             prefix: Optional path prefix to filter by
             max_results: Maximum number of results
-            
+
         Returns:
             List of blob info dicts with 'name', 'url', 'size', 'last_modified'
         """
         try:
             container_client = self.get_container_client(container_name)
-            
+
             blobs = []
             for blob in container_client.list_blobs(name_starts_with=prefix):
                 if len(blobs) >= max_results:
@@ -331,13 +330,13 @@ class StorageService:
                     "last_modified": blob.last_modified.isoformat() if blob.last_modified else None,
                     "content_type": blob.content_settings.content_type if blob.content_settings else None,
                 })
-            
+
             return blobs
-            
+
         except Exception as e:
             logger.error(f"Failed to list blobs: {e}")
             raise StorageError(f"List failed: {e}")
-    
+
     async def blob_exists(
         self,
         container_name: str,
@@ -350,7 +349,7 @@ class StorageService:
             return blob_client.exists()
         except Exception:
             return False
-    
+
     def build_asset_path(
         self,
         content_id: str | UUID,
@@ -359,14 +358,14 @@ class StorageService:
     ) -> str:
         """
         Build standard asset path per design.md §3.4.
-        
+
         Path format: /{content_id}/{asset_type}.{format}
-        
+
         Args:
             content_id: Content UUID
             asset_type: Asset type (thumbnail, preview, og_image)
             format: File format (png, jpg, webp)
-            
+
         Returns:
             Blob path string
         """

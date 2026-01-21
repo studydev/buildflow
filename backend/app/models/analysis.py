@@ -11,11 +11,11 @@ from app.models.enums import AnalysisStatus
 @dataclass
 class StatusHistoryEntry:
     """Entry in the status history."""
-    
+
     status: AnalysisStatus
     timestamp: datetime
     message: Optional[str] = None
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -23,7 +23,7 @@ class StatusHistoryEntry:
             "timestamp": self.timestamp.isoformat(),
             "message": self.message,
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "StatusHistoryEntry":
         """Create from dictionary."""
@@ -37,31 +37,31 @@ class StatusHistoryEntry:
 @dataclass
 class AnalysisResult:
     """Result of content analysis."""
-    
+
     # 기본 정보
     title: Optional[str] = None
     title_kr: Optional[str] = None  # 한국어 제목
     description: Optional[str] = None
     description_kr: Optional[str] = None  # 한국어 설명
     topic: Optional[str] = None  # 주제/토픽 요약
-    
+
     # 분류 정보
     content_type: Optional[str] = None
     categories: list[str] = field(default_factory=list)
     level: Optional[str] = None
     duration_minutes: Optional[int] = None
-    
+
     # 기술 스택
     technologies: list[str] = field(default_factory=list)
     prerequisites: list[str] = field(default_factory=list)
-    
+
     # 학습 정보
     learning_objectives: list[str] = field(default_factory=list)
     lab_modules: list[str] = field(default_factory=list)  # 실습 모듈 목록
-    
+
     # 메타데이터
     raw_metadata: dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -80,7 +80,7 @@ class AnalysisResult:
             "lab_modules": self.lab_modules,
             "raw_metadata": self.raw_metadata,
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "AnalysisResult":
         """Create from dictionary."""
@@ -106,10 +106,10 @@ class AnalysisResult:
 class AnalysisRequest:
     """
     Model for content analysis requests.
-    
+
     Partition key: user_id (for user-centric queries)
     """
-    
+
     id: str = field(default_factory=lambda: str(uuid4()))
     user_id: str = ""  # Partition key
     source_url: str = ""
@@ -122,7 +122,7 @@ class AnalysisRequest:
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
     completed_at: Optional[datetime] = None
-    
+
     def __post_init__(self):
         """Add initial status to history if empty."""
         if not self.status_history:
@@ -133,7 +133,7 @@ class AnalysisRequest:
                     message="Request created",
                 )
             )
-    
+
     def update_status(
         self,
         new_status: AnalysisStatus,
@@ -142,7 +142,7 @@ class AnalysisRequest:
     ) -> None:
         """
         Update the request status.
-        
+
         Args:
             new_status: New status
             message: Optional status message
@@ -150,10 +150,10 @@ class AnalysisRequest:
         """
         self.status = new_status
         self.updated_at = datetime.utcnow()
-        
+
         if progress is not None:
             self.progress = progress
-        
+
         self.status_history.append(
             StatusHistoryEntry(
                 status=new_status,
@@ -161,12 +161,12 @@ class AnalysisRequest:
                 message=message,
             )
         )
-        
+
         if new_status in (AnalysisStatus.COMPLETED, AnalysisStatus.FAILED):
             self.completed_at = self.updated_at
             if new_status == AnalysisStatus.COMPLETED:
                 self.progress = 100
-    
+
     def set_result(self, result: AnalysisResult) -> None:
         """Set the analysis result and mark as completed."""
         self.result = result
@@ -175,7 +175,7 @@ class AnalysisRequest:
             message="Analysis completed successfully",
             progress=100,
         )
-    
+
     def set_error(self, error_message: str) -> None:
         """Set error and mark as failed."""
         self.error_message = error_message
@@ -183,7 +183,7 @@ class AnalysisRequest:
             AnalysisStatus.FAILED,
             message=error_message,
         )
-    
+
     def to_cosmos_item(self) -> dict[str, Any]:
         """Convert to Cosmos DB item."""
         return {
@@ -203,7 +203,7 @@ class AnalysisRequest:
             "type": "analysis_request",
             "partition_key": self.user_id,
         }
-    
+
     @classmethod
     def from_cosmos_item(cls, item: dict[str, Any]) -> "AnalysisRequest":
         """Create from Cosmos DB item."""
@@ -211,11 +211,11 @@ class AnalysisRequest:
             StatusHistoryEntry.from_dict(entry)
             for entry in item.get("status_history", [])
         ]
-        
+
         result = None
         if item.get("result"):
             result = AnalysisResult.from_dict(item["result"])
-        
+
         return cls(
             id=item["id"],
             user_id=item["user_id"],
@@ -235,7 +235,7 @@ class AnalysisRequest:
 @dataclass
 class AnalysisRequestPublic:
     """Public representation of an analysis request (for API responses)."""
-    
+
     id: str
     source_url: str
     status: str
@@ -246,7 +246,7 @@ class AnalysisRequestPublic:
     result: Optional[dict[str, Any]]
     content_ids: list[str]
     error_message: Optional[str]
-    
+
     @classmethod
     def from_request(cls, request: AnalysisRequest) -> "AnalysisRequestPublic":
         """Create from AnalysisRequest."""

@@ -3,12 +3,12 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 
 
 class ContentResponse(BaseModel):
     """Content item response for API."""
-    
+
     id: str
     title: str
     description: str
@@ -26,7 +26,7 @@ class ContentResponse(BaseModel):
 
 class ContentListResponse(BaseModel):
     """Paginated content list response."""
-    
+
     items: list[ContentResponse]
     total: int
     page: int
@@ -36,7 +36,7 @@ class ContentListResponse(BaseModel):
 
 class ContentCreateRequest(BaseModel):
     """Request to create new content."""
-    
+
     title: str = Field(..., min_length=1, max_length=200)
     description: str = Field(..., min_length=1, max_length=2000)
     source_url: str = Field(..., description="GitHub repository URL")
@@ -50,7 +50,7 @@ class ContentCreateRequest(BaseModel):
 
 class ContentUpdateRequest(BaseModel):
     """Request to update content."""
-    
+
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = Field(None, min_length=1, max_length=2000)
     categories: Optional[list[str]] = None
@@ -62,7 +62,7 @@ class ContentUpdateRequest(BaseModel):
 
 class ContentSearchParams(BaseModel):
     """Query parameters for content search."""
-    
+
     q: str = Field(..., min_length=1, max_length=100, description="Search query")
     page: int = Field(default=1, ge=1)
     limit: int = Field(default=20, ge=1, le=100)
@@ -70,7 +70,7 @@ class ContentSearchParams(BaseModel):
 
 class ContentListParams(BaseModel):
     """Query parameters for content listing."""
-    
+
     page: int = Field(default=1, ge=1)
     limit: int = Field(default=20, ge=1, le=100)
     category: Optional[str] = None

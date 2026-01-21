@@ -17,15 +17,14 @@ from pydantic import BaseModel, Field
 
 from app.dependencies import get_current_user_required
 from app.models.user import UserPublic
+from app.repositories import get_content_repo
 from app.schemas import APIResponse, Meta
 from app.services.promotion_service import (
-    PromotionService,
-    PromotionError,
     PromotionConfigError,
-    PromotionValidationError,
+    PromotionError,
+    PromotionService,
     get_promotion_service,
 )
-from app.repositories import get_content_repo
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +38,7 @@ router = APIRouter()
 
 class PromoteContentRequest(BaseModel):
     """Request to promote a single content item."""
-    
+
     content_id: str = Field(..., description="Content ID to promote")
     force: bool = Field(
         False,
@@ -49,7 +48,7 @@ class PromoteContentRequest(BaseModel):
 
 class BulkPromoteRequest(BaseModel):
     """Request to promote multiple content items."""
-    
+
     content_ids: List[str] = Field(
         ...,
         min_length=1,
@@ -64,14 +63,14 @@ class BulkPromoteRequest(BaseModel):
 
 class ValidationError(BaseModel):
     """Validation error detail."""
-    
+
     field: str
     message: str
 
 
 class ValidationResultResponse(BaseModel):
     """Validation result for promotion."""
-    
+
     is_valid: bool
     errors: List[str]
     warnings: List[str]
@@ -79,7 +78,7 @@ class ValidationResultResponse(BaseModel):
 
 class PromotionResultResponse(BaseModel):
     """Result of content promotion."""
-    
+
     success: bool
     content_id: str
     prod_content_id: Optional[str] = None
@@ -91,7 +90,7 @@ class PromotionResultResponse(BaseModel):
 
 class BulkPromotionResultResponse(BaseModel):
     """Result of bulk promotion."""
-    
+
     total: int
     successful: int
     failed: int
@@ -130,13 +129,13 @@ def require_admin(user: UserPublic) -> UserPublic:
     summary="Validate content for promotion",
     description="""
     Validate that a content item is ready for promotion to Production.
-    
+
     Checks:
     - Content status (must be PUBLISHED or APPROVED)
     - Enrichment completed
     - Required fields present
     - Recommended fields (warnings only)
-    
+
     **Admin access required.**
     """,
 )
@@ -146,22 +145,22 @@ async def validate_content_for_promotion(
     promotion: PromotionService = Depends(get_promotion),
 ) -> APIResponse[ValidationResultResponse]:
     """Validate content for promotion."""
-    
+
     require_admin(user)
-    
+
     # Get content
     content_repo = get_content_repo()
     content = await content_repo.get_by_id(content_id)
-    
+
     if not content:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Content not found",
         )
-    
+
     # Validate
     result = await promotion.validate_content(content)
-    
+
     return APIResponse(
         success=True,
         data=ValidationResultResponse(
@@ -185,13 +184,13 @@ async def validate_content_for_promotion(
     summary="Promote content to Production",
     description="""
     Promote a single content item from Dev to Production.
-    
+
     Steps:
     1. Validate content (unless force=true)
     2. Copy content to Prod Cosmos DB
     3. Copy assets to Prod Blob Storage
     4. Trigger indexing in Prod Search
-    
+
     **Admin access required.**
     """,
     responses={
@@ -207,21 +206,21 @@ async def promote_content(
     promotion: PromotionService = Depends(get_promotion),
 ) -> APIResponse[PromotionResultResponse]:
     """Promote content to Production."""
-    
+
     require_admin(user)
-    
+
     if not promotion.is_configured:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Promotion service is not configured. Prod credentials required.",
         )
-    
+
     try:
         result = await promotion.promote_content(
             content_id=request.content_id,
             force=request.force,
         )
-        
+
         if not result.success:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -230,7 +229,7 @@ async def promote_content(
                     "errors": result.errors,
                 },
             )
-        
+
         return APIResponse(
             success=True,
             data=PromotionResultResponse(
@@ -244,7 +243,7 @@ async def promote_content(
             ),
             meta=Meta(request_id=""),
         )
-        
+
     except PromotionConfigError as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -264,10 +263,10 @@ async def promote_content(
     summary="Bulk promote content to Production",
     description="""
     Promote multiple content items from Dev to Production.
-    
+
     Each content item is processed independently. Failed items do not
     prevent other items from being promoted.
-    
+
     **Admin access required.**
     """,
 )
@@ -277,21 +276,21 @@ async def promote_content_bulk(
     promotion: PromotionService = Depends(get_promotion),
 ) -> APIResponse[BulkPromotionResultResponse]:
     """Bulk promote content to Production."""
-    
+
     require_admin(user)
-    
+
     if not promotion.is_configured:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Promotion service is not configured. Prod credentials required.",
         )
-    
+
     try:
         result = await promotion.promote_bulk(
             content_ids=request.content_ids,
             force=request.force,
         )
-        
+
         return APIResponse(
             success=True,
             data=BulkPromotionResultResponse(
@@ -313,7 +312,7 @@ async def promote_content_bulk(
             ),
             meta=Meta(request_id=""),
         )
-        
+
     except PromotionError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -328,7 +327,7 @@ async def promote_content_bulk(
 
 class PromotableContentItem(BaseModel):
     """Content item ready for promotion."""
-    
+
     id: str
     title: str
     status: str
@@ -340,7 +339,7 @@ class PromotableContentItem(BaseModel):
 
 class PromotableContentListResponse(BaseModel):
     """List of content ready for promotion."""
-    
+
     items: List[PromotableContentItem]
     total: int
 
@@ -352,13 +351,13 @@ class PromotableContentListResponse(BaseModel):
     summary="List content candidates for promotion",
     description="""
     List all content items that are candidates for promotion to Production.
-    
+
     Returns content that is:
     - Published or Approved status
     - Has been enriched
-    
+
     Each item includes validation status (valid, has_warnings, has_errors).
-    
+
     **Admin access required.**
     """,
 )
@@ -369,34 +368,34 @@ async def list_promotable_content(
     promotion: PromotionService = Depends(get_promotion),
 ) -> APIResponse[PromotableContentListResponse]:
     """List content candidates for promotion."""
-    
+
     require_admin(user)
-    
+
     content_repo = get_content_repo()
-    
+
     # Get published/approved content
     # This is a simplified query - in production would use proper filtering
     all_content = await content_repo.get_all(limit=limit, offset=offset)
-    
+
     promotable_items: List[PromotableContentItem] = []
-    
+
     for content in all_content:
         # Check if eligible for promotion
         if content.status.value not in ["published", "approved"]:
             continue
         if not content.enrichment_version:
             continue
-        
+
         # Validate
         validation = await promotion.validate_content(content)
-        
+
         if validation.is_valid:
             validation_status = "valid"
         elif validation.warnings and not validation.errors:
             validation_status = "has_warnings"
         else:
             validation_status = "has_errors"
-        
+
         promotable_items.append(PromotableContentItem(
             id=content.id,
             title=content.title,
@@ -406,7 +405,7 @@ async def list_promotable_content(
             has_localization=bool(content.title_kr),
             validation_status=validation_status,
         ))
-    
+
     return APIResponse(
         success=True,
         data=PromotableContentListResponse(

@@ -31,7 +31,7 @@ async def get_me(
 ) -> JSONResponse:
     """
     Get the current user's profile.
-    
+
     Returns the authenticated user's information including:
     - User ID
     - Email
@@ -40,7 +40,7 @@ async def get_me(
     - Account creation date
     """
     correlation_id = request.state.correlation_id
-    
+
     response = APIResponse(
         success=True,
         data=UserResponse(
@@ -52,5 +52,5 @@ async def get_me(
         ),
         meta=Meta.create(correlation_id),
     )
-    
+
     return JSONResponse(content=response.model_dump(mode="json"))

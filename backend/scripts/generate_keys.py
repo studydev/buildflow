@@ -2,7 +2,7 @@
 
 Usage:
     python scripts/generate_keys.py
-    
+
 Generates:
     - keys/private.pem: RSA private key for signing tokens
     - keys/public.pem: RSA public key for verifying tokens
@@ -63,7 +63,7 @@ def generate_keys(output_dir: str = "keys") -> None:
     os.chmod(private_path, 0o600)
     os.chmod(public_path, 0o644)
 
-    print(f"Generated RSA key pair:")
+    print("Generated RSA key pair:")
     print(f"  Private key: {private_path}")
     print(f"  Public key:  {public_path}")
     print()

@@ -11,25 +11,25 @@ from app.models.enums import UserRole
 
 class User(BaseModel):
     """User entity stored in Cosmos DB."""
-    
+
     # Primary key and partition key
     id: str = Field(default_factory=lambda: str(uuid4()))
-    
+
     # User info
     email: EmailStr
     display_name: Optional[str] = None
-    
+
     # Role
     role: UserRole = UserRole.USER
-    
+
     # Metadata
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login_at: Optional[datetime] = None
-    
+
     # Status
     is_active: bool = True
-    
+
     def to_cosmos_item(self) -> dict:
         """Convert to Cosmos DB item format."""
         return {
@@ -44,7 +44,7 @@ class User(BaseModel):
             # Cosmos DB document type for querying
             "type": "user",
         }
-    
+
     @classmethod
     def from_cosmos_item(cls, item: dict) -> "User":
         """Create User from Cosmos DB item."""
@@ -62,7 +62,7 @@ class User(BaseModel):
             ),
             is_active=item.get("isActive", True),
         )
-    
+
     def update_login(self) -> "User":
         """Update last login timestamp."""
         now = datetime.now(timezone.utc)
@@ -72,7 +72,7 @@ class User(BaseModel):
                 "updated_at": now,
             }
         )
-    
+
     def promote_to_contributor(self) -> "User":
         """Promote user to contributor role."""
         return self.model_copy(
@@ -85,13 +85,13 @@ class User(BaseModel):
 
 class UserPublic(BaseModel):
     """Public user info (returned in API responses)."""
-    
+
     id: str
     email: EmailStr
     display_name: Optional[str] = None
     role: UserRole
     created_at: datetime
-    
+
     @classmethod
     def from_user(cls, user: User) -> "UserPublic":
         """Create from User model."""

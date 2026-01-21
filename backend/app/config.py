@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     servicebus_connection_string: Optional[str] = None
     servicebus_namespace: Optional[str] = None
     servicebus_topic_name: str = "pipeline-triggers"
-    
+
     # Pipeline Subscriptions (per design.md §6)
     servicebus_subscriptions: list[str] = [
         "analysis-sub",
@@ -73,7 +73,7 @@ class Settings(BaseSettings):
     pipeline_global_timeout_seconds: int = 600  # 10 minutes per design.md clarifications
     pipeline_max_retry_attempts: int = 3
     pipeline_retry_base_delay_seconds: int = 60
-    
+
     # Azure Blob Storage Settings (Milestone 6)
     azure_storage_connection_string: Optional[str] = None
     azure_storage_account_name: Optional[str] = None
@@ -83,12 +83,12 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.env == "production"
-    
+
     @property
     def servicebus_enabled(self) -> bool:
         """Check if Service Bus is configured."""
         return bool(self.servicebus_connection_string or self.servicebus_namespace)
-    
+
     @property
     def storage_enabled(self) -> bool:
         """Check if Blob Storage is configured."""

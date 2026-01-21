@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import jwt
 from pydantic import BaseModel
@@ -19,7 +19,7 @@ REFRESH_TOKEN = "refresh"
 
 class TokenPayload(BaseModel):
     """JWT token payload structure."""
-    
+
     sub: str  # Subject (user ID)
     email: str
     role: str  # "user" or "contributor"
@@ -31,7 +31,7 @@ class TokenPayload(BaseModel):
 
 class TokenPair(BaseModel):
     """Access and refresh token pair."""
-    
+
     access_token: str
     refresh_token: str
     token_type: str = "Bearer"
@@ -57,7 +57,7 @@ def _load_key(path: str) -> str:
 def get_private_key() -> str:
     """Get the private key for signing tokens."""
     global _private_key
-    
+
     if _private_key is None:
         settings = get_settings()
         if not settings.jwt_private_key_path:
@@ -66,14 +66,14 @@ def get_private_key() -> str:
                 "Run 'make keys' to generate RSA keys."
             )
         _private_key = _load_key(settings.jwt_private_key_path)
-    
+
     return _private_key
 
 
 def get_public_key() -> str:
     """Get the public key for verifying tokens."""
     global _public_key
-    
+
     if _public_key is None:
         settings = get_settings()
         if not settings.jwt_public_key_path:
@@ -82,7 +82,7 @@ def get_public_key() -> str:
                 "Run 'make keys' to generate RSA keys."
             )
         _public_key = _load_key(settings.jwt_public_key_path)
-    
+
     return _public_key
 
 
@@ -99,24 +99,24 @@ def create_access_token(
 ) -> str:
     """
     Create a JWT access token.
-    
+
     Args:
         user_id: The user's unique ID
         email: The user's email
         role: The user's role ("user" or "contributor")
         expires_delta: Custom expiration time (default: 15 minutes)
-    
+
     Returns:
         Encoded JWT token string
     """
     settings = get_settings()
-    
+
     if expires_delta is None:
         expires_delta = timedelta(minutes=settings.jwt_access_token_expire_minutes)
-    
+
     now = datetime.now(timezone.utc)
     expire = now + expires_delta
-    
+
     payload = {
         "sub": user_id,
         "email": email,
@@ -125,7 +125,7 @@ def create_access_token(
         "iat": now,
         "exp": expire,
     }
-    
+
     return jwt.encode(payload, get_private_key(), algorithm="RS256")
 
 
@@ -138,25 +138,25 @@ def create_refresh_token(
 ) -> str:
     """
     Create a JWT refresh token.
-    
+
     Args:
         user_id: The user's unique ID
         email: The user's email
         role: The user's role
         jti: JWT ID for token tracking (optional)
         expires_delta: Custom expiration time (default: 7 days)
-    
+
     Returns:
         Encoded JWT token string
     """
     settings = get_settings()
-    
+
     if expires_delta is None:
         expires_delta = timedelta(days=settings.jwt_refresh_token_expire_days)
-    
+
     now = datetime.now(timezone.utc)
     expire = now + expires_delta
-    
+
     payload = {
         "sub": user_id,
         "email": email,
@@ -165,10 +165,10 @@ def create_refresh_token(
         "iat": now,
         "exp": expire,
     }
-    
+
     if jti:
         payload["jti"] = jti
-    
+
     return jwt.encode(payload, get_private_key(), algorithm="RS256")
 
 
@@ -180,21 +180,21 @@ def create_token_pair(
 ) -> TokenPair:
     """
     Create a pair of access and refresh tokens.
-    
+
     Args:
         user_id: The user's unique ID
         email: The user's email
         role: The user's role
         refresh_jti: JWT ID for refresh token tracking
-    
+
     Returns:
         TokenPair with access and refresh tokens
     """
     settings = get_settings()
-    
+
     access_token = create_access_token(user_id, email, role)
     refresh_token = create_refresh_token(user_id, email, role, jti=refresh_jti)
-    
+
     return TokenPair(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -211,13 +211,13 @@ def create_token_pair(
 def decode_token(token: str) -> TokenPayload:
     """
     Decode and verify a JWT token.
-    
+
     Args:
         token: The JWT token string
-    
+
     Returns:
         TokenPayload with the decoded claims
-    
+
     Raises:
         jwt.ExpiredSignatureError: Token has expired
         jwt.InvalidTokenError: Token is invalid
@@ -227,7 +227,7 @@ def decode_token(token: str) -> TokenPayload:
         get_public_key(),
         algorithms=["RS256"],
     )
-    
+
     return TokenPayload(
         sub=payload["sub"],
         email=payload["email"],
@@ -242,42 +242,42 @@ def decode_token(token: str) -> TokenPayload:
 def verify_access_token(token: str) -> TokenPayload:
     """
     Verify an access token.
-    
+
     Args:
         token: The access token string
-    
+
     Returns:
         TokenPayload if valid
-    
+
     Raises:
         jwt.InvalidTokenError: If token is invalid or not an access token
     """
     payload = decode_token(token)
-    
+
     if payload.type != ACCESS_TOKEN:
         raise jwt.InvalidTokenError("Token is not an access token")
-    
+
     return payload
 
 
 def verify_refresh_token(token: str) -> TokenPayload:
     """
     Verify a refresh token.
-    
+
     Args:
         token: The refresh token string
-    
+
     Returns:
         TokenPayload if valid
-    
+
     Raises:
         jwt.InvalidTokenError: If token is invalid or not a refresh token
     """
     payload = decode_token(token)
-    
+
     if payload.type != REFRESH_TOKEN:
         raise jwt.InvalidTokenError("Token is not a refresh token")
-    
+
     return payload
 
 

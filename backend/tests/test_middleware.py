@@ -1,12 +1,10 @@
 """Test correlation ID middleware."""
 
-import logging
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from app.main import app
-
 
 client = TestClient(app)
 
@@ -20,7 +18,7 @@ class TestCorrelationIDMiddleware:
 
         assert response.status_code == 200
         assert "X-Correlation-ID" in response.headers
-        
+
         correlation_id = response.headers["X-Correlation-ID"]
         # Verify it's a valid UUID format (36 chars with hyphens)
         assert len(correlation_id) == 36
@@ -70,7 +68,7 @@ class TestCorrelationIDMiddleware:
     def test_logs_include_correlation_id(self):
         """Request logs should include correlation ID."""
         test_id = "log-test-correlation-id"
-        
+
         with patch("app.core.middleware.logger") as mock_logger:
             response = client.get(
                 "/api/v1/health",
@@ -78,11 +76,11 @@ class TestCorrelationIDMiddleware:
             )
 
             assert response.status_code == 200
-            
+
             # Check that logger.info was called with correlation_id in extra
             calls = mock_logger.info.call_args_list
             assert len(calls) >= 2  # At least start and complete logs
-            
+
             # Check that correlation_id is in the extra dict
             for call in calls:
                 extra = call.kwargs.get("extra", {})

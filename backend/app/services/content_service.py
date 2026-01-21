@@ -4,9 +4,9 @@ import logging
 from typing import Optional
 
 from app.models.analysis import AnalysisResult
-from app.models.content import Content, ContentPublic
+from app.models.content import Content
 from app.models.enums import ContentStatus, ContentType
-from app.repositories.content_repo import get_content_repo, ContentRepository
+from app.repositories.content_repo import ContentRepository, get_content_repo
 from app.schemas.content import (
     ContentCreateRequest,
     ContentListResponse,
@@ -19,18 +19,18 @@ logger = logging.getLogger(__name__)
 
 class ContentService:
     """Service for content-related business logic."""
-    
+
     def __init__(self, repo: Optional[ContentRepository] = None):
         """Initialize with content repository."""
         self._repo = repo
-    
+
     @property
     def repo(self) -> ContentRepository:
         """Lazy load repository."""
         if self._repo is None:
             self._repo = get_content_repo()
         return self._repo
-    
+
     async def create_from_analysis(
         self,
         contributor_id: str,
@@ -39,24 +39,24 @@ class ContentService:
     ) -> Content:
         """
         Create Content from analysis result.
-        
+
         Args:
             contributor_id: User ID of the contributor
             source_url: GitHub repository URL
             result: Extracted metadata from analysis
-            
+
         Returns:
             Created Content
         """
         from datetime import datetime
-        
+
         # Map content type from analysis result
         content_type = self._map_content_type(result.content_type)
-        
+
         # Use Korean title if available, otherwise use English title
         title = result.title_kr or result.title or "Untitled Content"
         description = result.description_kr or result.description or ""
-        
+
         # Determine icon based on content type
         icon_map = {
             ContentType.WORKSHOP: "🎓",
@@ -68,7 +68,7 @@ class ContentService:
             ContentType.OTHER: "📄",
         }
         icon = icon_map.get(content_type, "📄")
-        
+
         # Create content with PUBLISHED status so it shows immediately
         content = Content(
             contributor_id=contributor_id,
@@ -86,13 +86,13 @@ class ContentService:
             analysis_result=result.to_dict(),
             published_at=datetime.utcnow(),
         )
-        
+
         # Persist to database
         created = await self.repo.create(content)
         logger.info(f"Created content {created.id} from analysis for {source_url}")
-        
+
         return created
-    
+
     async def create(
         self,
         contributor_id: str,
@@ -100,16 +100,16 @@ class ContentService:
     ) -> Content:
         """
         Create new content manually.
-        
+
         Args:
             contributor_id: User ID of the contributor
             data: Content creation data
-            
+
         Returns:
             Created Content
         """
         content_type = self._map_content_type(data.content_type)
-        
+
         content = Content(
             contributor_id=contributor_id,
             title=data.title,
@@ -124,7 +124,7 @@ class ContentService:
             thumbnail_url=data.thumbnail_url,
             icon=data.icon,
         )
-        
+
         try:
             created = await self.repo.create(content)
             logger.info(f"Created content {created.id} for contributor {contributor_id}")
@@ -133,7 +133,7 @@ class ContentService:
             logger.warning(f"Failed to persist content to Cosmos, returning unpersisted: {e}")
             # For development without Cosmos
             return content
-    
+
     async def update(
         self,
         content_id: str,
@@ -141,11 +141,11 @@ class ContentService:
     ) -> Content:
         """
         Update existing content.
-        
+
         Args:
             content_id: Content unique identifier
             data: Content update data
-            
+
         Returns:
             Updated Content
         """
@@ -153,7 +153,7 @@ class ContentService:
         existing = await self.repo.get_by_id(content_id)
         if existing is None:
             raise ValueError(f"Content {content_id} not found")
-        
+
         # Update fields if provided
         if data.title is not None:
             existing.title = data.title
@@ -169,7 +169,7 @@ class ContentService:
             existing.thumbnail_url = data.thumbnail_url
         if data.icon is not None:
             existing.icon = data.icon
-        
+
         try:
             updated = await self.repo.update(existing)
             logger.info(f"Updated content {content_id}")
@@ -177,7 +177,7 @@ class ContentService:
         except Exception as e:
             logger.warning(f"Failed to persist content update to Cosmos: {e}")
             return existing
-    
+
     async def update_status(
         self,
         content_id: str,
@@ -185,33 +185,33 @@ class ContentService:
     ) -> Content:
         """
         Update content status (publish/archive).
-        
+
         Args:
             content_id: Content unique identifier
             new_status: New status value ('published' or 'archived')
-            
+
         Returns:
             Updated Content
         """
         from datetime import datetime
-        
+
         # Get existing content
         existing = await self.repo.get_by_id(content_id)
         if existing is None:
             raise ValueError(f"Content {content_id} not found")
-        
+
         # Map status string to enum
         status_mapping = {
             "published": ContentStatus.PUBLISHED,
             "archived": ContentStatus.ARCHIVED,
         }
-        
+
         existing.status = status_mapping[new_status]
-        
+
         # Set published_at timestamp when publishing
         if new_status == "published" and existing.published_at is None:
             existing.published_at = datetime.utcnow()
-        
+
         try:
             updated = await self.repo.update(existing)
             logger.info(f"Updated content {content_id} status to {new_status}")
@@ -219,22 +219,22 @@ class ContentService:
         except Exception as e:
             logger.warning(f"Failed to persist status update to Cosmos: {e}")
             return existing
-    
+
     def _map_content_type(self, type_str: Optional[str]) -> ContentType:
         """
         Map analysis result content type to ContentType enum.
-        
+
         Args:
             type_str: Content type string from analysis
-            
+
         Returns:
             ContentType enum value
         """
         if not type_str:
             return ContentType.TUTORIAL
-        
+
         type_lower = type_str.lower()
-        
+
         mapping = {
             "workshop": ContentType.WORKSHOP,
             "tutorial": ContentType.TUTORIAL,
@@ -246,9 +246,9 @@ class ContentService:
             "template": ContentType.TEMPLATE,
             "solution_idea": ContentType.SOLUTION_IDEA,
         }
-        
+
         return mapping.get(type_lower, ContentType.TUTORIAL)
-    
+
     async def list_published(
         self,
         page: int = 1,
@@ -257,19 +257,19 @@ class ContentService:
     ) -> ContentListResponse:
         """
         List published content with pagination.
-        
+
         Args:
             page: Page number (1-indexed)
             limit: Items per page
             category: Filter by category
-            
+
         Returns:
             Paginated content list response
         """
         from app.db.cosmos import is_mock_mode
-        
+
         offset = (page - 1) * limit
-        
+
         # In mock mode, combine mock data with dynamically created content
         if is_mock_mode():
             contents, total = self._get_combined_mock_content(limit, offset, category)
@@ -283,7 +283,7 @@ class ContentService:
             except Exception as e:
                 logger.warning(f"Failed to fetch from Cosmos, using mock data: {e}")
                 contents, total = self._get_combined_mock_content(limit, offset, category)
-        
+
         items = [
             ContentResponse(
                 id=c.id,
@@ -302,7 +302,7 @@ class ContentService:
             )
             for c in contents
         ]
-        
+
         return ContentListResponse(
             items=items,
             total=total,
@@ -310,7 +310,7 @@ class ContentService:
             limit=limit,
             has_more=(page * limit) < total,
         )
-    
+
     async def search(
         self,
         query: str,
@@ -319,19 +319,19 @@ class ContentService:
     ) -> ContentListResponse:
         """
         Search content by text.
-        
+
         Args:
             query: Search query
             page: Page number
             limit: Items per page
-            
+
         Returns:
             Paginated search results
         """
         from app.db.cosmos import is_mock_mode
-        
+
         offset = (page - 1) * limit
-        
+
         # In mock mode, use combined search
         if is_mock_mode():
             contents, total = self._search_mock_content(query, limit, offset)
@@ -345,7 +345,7 @@ class ContentService:
             except Exception as e:
                 logger.warning(f"Failed to search Cosmos, using mock data: {e}")
                 contents, total = self._search_mock_content(query, limit, offset)
-        
+
         items = [
             ContentResponse(
                 id=c.id,
@@ -364,7 +364,7 @@ class ContentService:
             )
             for c in contents
         ]
-        
+
         return ContentListResponse(
             items=items,
             total=total,
@@ -372,14 +372,14 @@ class ContentService:
             limit=limit,
             has_more=(page * limit) < total,
         )
-    
+
     async def get_by_id(self, content_id: str) -> Optional[Content]:
         """
         Get content by ID.
-        
+
         Args:
             content_id: Content ID
-            
+
         Returns:
             Content if found
         """
@@ -392,11 +392,11 @@ class ContentService:
                 if content.id == content_id:
                     return content
             return None
-    
+
     def _get_mock_content_list(self) -> list[Content]:
         """Generate mock content from pre-collected LAB data."""
         from datetime import datetime
-        
+
         # Pre-collected Ignite 2025 LAB content data
         return [
             Content(
@@ -1472,23 +1472,23 @@ class ContentService:
                 published_at=datetime.utcnow(),
             ),
         ]
-    
+
     def _get_dynamically_created_content(self) -> list[Content]:
         """Get content created from analysis (stored in mock container)."""
         from app.db.cosmos import _mock_data
-        
+
         contents = []
         container_data = _mock_data.get("contents", [])
-        
+
         for item in container_data:
             try:
                 content = Content.from_cosmos_item(item)
                 contents.append(content)
             except Exception as e:
                 logger.debug(f"Failed to parse content item: {e}")
-        
+
         return contents
-    
+
     def _get_combined_mock_content(
         self,
         limit: int,
@@ -1498,16 +1498,16 @@ class ContentService:
         """Get paginated content combining mock data with dynamically created content."""
         # Get static mock content
         mock_items = self._get_mock_content_list()
-        
+
         # Get dynamically created content from analysis
         dynamic_items = self._get_dynamically_created_content()
-        
+
         # Filter dynamic items to published only
         dynamic_items = [c for c in dynamic_items if c.status == ContentStatus.PUBLISHED]
-        
+
         # Combine: dynamic items first (newest), then mock items
         all_items = dynamic_items + mock_items
-        
+
         # Remove duplicates by source_url
         seen_urls = set()
         unique_items = []
@@ -1516,16 +1516,16 @@ class ContentService:
             if url not in seen_urls:
                 seen_urls.add(url)
                 unique_items.append(item)
-        
+
         # Apply category filter
         if category:
             unique_items = [c for c in unique_items if category in c.categories]
-        
+
         total = len(unique_items)
         paginated = unique_items[offset:offset + limit]
-        
+
         return paginated, total
-    
+
     def _get_mock_content(
         self,
         limit: int,
@@ -1534,15 +1534,15 @@ class ContentService:
     ) -> tuple[list[Content], int]:
         """Get paginated mock content."""
         items = self._get_mock_content_list()
-        
+
         if category:
             items = [c for c in items if category in c.categories]
-        
+
         total = len(items)
         items = items[offset:offset + limit]
-        
+
         return items, total
-    
+
     def _search_mock_content(
         self,
         query: str,
@@ -1554,18 +1554,18 @@ class ContentService:
         mock_items = self._get_mock_content_list()
         dynamic_items = self._get_dynamically_created_content()
         dynamic_items = [c for c in dynamic_items if c.status == ContentStatus.PUBLISHED]
-        
+
         all_items = dynamic_items + mock_items
-        
+
         query_lower = query.lower()
-        
+
         filtered = [
             c for c in all_items
             if query_lower in c.title.lower()
             or query_lower in c.description.lower()
             or any(query_lower in cat.lower() for cat in c.categories)
         ]
-        
+
         # Remove duplicates
         seen_urls = set()
         unique_items = []
@@ -1574,16 +1574,16 @@ class ContentService:
             if url not in seen_urls:
                 seen_urls.add(url)
                 unique_items.append(item)
-        
+
         total = len(unique_items)
         paginated = unique_items[offset:offset + limit]
-        
+
         return paginated, total
-    
+
     # =========================================================================
     # Pipeline Integration Methods (Milestone 2)
     # =========================================================================
-    
+
     async def update_raw_extraction_ref(
         self,
         content_id: str,
@@ -1591,13 +1591,13 @@ class ContentService:
     ) -> Content:
         """
         Update content with reference to RawExtraction.
-        
+
         Used by Analysis Pipeline (T201) to link content to its raw extraction.
-        
+
         Args:
             content_id: Content unique identifier
             raw_extraction_id: ID of the RawExtraction document
-            
+
         Returns:
             Updated Content
         """
@@ -1605,10 +1605,10 @@ class ContentService:
         existing = await self.repo.get_by_id(str(content_id))
         if existing is None:
             raise ValueError(f"Content {content_id} not found")
-        
+
         # Update raw_extraction_id reference
         existing.raw_extraction_id = raw_extraction_id
-        
+
         try:
             updated = await self.repo.update(existing)
             logger.info(
@@ -1618,17 +1618,17 @@ class ContentService:
         except Exception as e:
             logger.warning(f"Failed to update raw_extraction_id: {e}")
             return existing
-    
+
     async def create_skeleton(self, content: Content) -> Content:
         """
         Create a minimal content skeleton.
-        
+
         Used by Analysis Pipeline (T201) to create initial content
         before enrichment.
-        
+
         Args:
             content: Pre-populated Content model
-            
+
         Returns:
             Created Content
         """
@@ -1642,16 +1642,16 @@ class ContentService:
             logger.warning(f"Failed to create content skeleton: {e}")
             # Return the original content for development without Cosmos
             return content
-    
+
     async def get_by_source_url(self, source_url: str) -> Optional[Content]:
         """
         Get content by source URL.
-        
+
         Used to check if content already exists for a URL.
-        
+
         Args:
             source_url: GitHub repository URL
-            
+
         Returns:
             Content if found, None otherwise
         """

@@ -7,13 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from app.dependencies import get_current_user, require_contributor
-from app.models.enums import UserRole
+from app.dependencies import require_contributor
 from app.models.user import UserPublic
 from app.schemas import APIResponse, Meta
 from app.schemas.content import (
     ContentCreateRequest,
-    ContentListResponse,
     ContentResponse,
     ContentUpdateRequest,
 )
@@ -38,7 +36,7 @@ async def list_content(
 ) -> JSONResponse:
     """
     List published content with pagination.
-    
+
     - **page**: Page number (1-indexed)
     - **limit**: Items per page (max 100)
     - **category**: Optional category filter
@@ -49,15 +47,15 @@ async def list_content(
         limit=limit,
         category=category,
     )
-    
+
     correlation_id = getattr(request.state, "correlation_id", "")
-    
+
     response = APIResponse(
         success=True,
         data=result.model_dump(mode="json"),
         meta=Meta.create(correlation_id),
     )
-    
+
     return JSONResponse(content=response.model_dump(mode="json"))
 
 
@@ -75,7 +73,7 @@ async def search_content(
 ) -> JSONResponse:
     """
     Search content by text.
-    
+
     - **q**: Search query (searches title, description, categories)
     - **page**: Page number (1-indexed)
     - **limit**: Items per page (max 100)
@@ -86,15 +84,15 @@ async def search_content(
         page=page,
         limit=limit,
     )
-    
+
     correlation_id = getattr(request.state, "correlation_id", "")
-    
+
     response = APIResponse(
         success=True,
         data=result.model_dump(mode="json"),
         meta=Meta.create(correlation_id),
     )
-    
+
     return JSONResponse(content=response.model_dump(mode="json"))
 
 
@@ -110,21 +108,21 @@ async def get_content(
 ) -> JSONResponse:
     """
     Get content by ID.
-    
+
     - **content_id**: Content unique identifier
     """
     service = get_content_service()
     content = await service.get_by_id(content_id)
-    
+
     if content is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Content not found",
         )
-    
+
     # Convert to response model
     from app.models.enums import ContentType
-    
+
     content_response = ContentResponse(
         id=content.id,
         title=content.title,
@@ -140,15 +138,15 @@ async def get_content(
         bookmark_count=content.bookmark_count,
         published_at=content.published_at,
     )
-    
+
     correlation_id = getattr(request.state, "correlation_id", "")
-    
+
     response = APIResponse(
         success=True,
         data=content_response.model_dump(mode="json"),
         meta=Meta.create(correlation_id),
     )
-    
+
     return JSONResponse(content=response.model_dump(mode="json"))
 
 
@@ -166,20 +164,20 @@ async def create_content(
 ) -> JSONResponse:
     """
     Create a new content item.
-    
+
     - Requires contributor role
     - Content is created with draft status
     - Content is associated with the current user as contributor
     """
     service = get_content_service()
-    
+
     content = await service.create(
         contributor_id=current_user.id,
         data=body,
     )
-    
+
     from app.models.enums import ContentType
-    
+
     content_response = ContentResponse(
         id=content.id,
         title=content.title,
@@ -195,15 +193,15 @@ async def create_content(
         bookmark_count=content.bookmark_count,
         published_at=content.published_at,
     )
-    
+
     correlation_id = getattr(request.state, "correlation_id", "")
-    
+
     response = APIResponse(
         success=True,
         data=content_response.model_dump(mode="json"),
         meta=Meta.create(correlation_id),
     )
-    
+
     return JSONResponse(
         content=response.model_dump(mode="json"),
         status_code=status.HTTP_201_CREATED,
@@ -224,34 +222,34 @@ async def update_content(
 ) -> JSONResponse:
     """
     Update an existing content item.
-    
+
     - Requires contributor role
     - Only the content owner can update
     - **content_id**: Content unique identifier
     """
     service = get_content_service()
-    
+
     # Get existing content
     content = await service.get_by_id(content_id)
-    
+
     if content is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Content not found",
         )
-    
+
     # Check ownership
     if content.contributor_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only update your own content",
         )
-    
+
     # Update content
     updated = await service.update(content_id, body)
-    
+
     from app.models.enums import ContentType
-    
+
     content_response = ContentResponse(
         id=updated.id,
         title=updated.title,
@@ -267,15 +265,15 @@ async def update_content(
         bookmark_count=updated.bookmark_count,
         published_at=updated.published_at,
     )
-    
+
     correlation_id = getattr(request.state, "correlation_id", "")
-    
+
     response = APIResponse(
         success=True,
         data=content_response.model_dump(mode="json"),
         meta=Meta.create(correlation_id),
     )
-    
+
     return JSONResponse(content=response.model_dump(mode="json"))
 
 
@@ -298,7 +296,7 @@ async def update_content_status(
 ) -> JSONResponse:
     """
     Update content status (publish/archive).
-    
+
     - Requires contributor role
     - Only the content owner can change status
     - Valid transitions: draft → published, published → archived
@@ -306,7 +304,7 @@ async def update_content_status(
     - **status**: 'published' or 'archived'
     """
     service = get_content_service()
-    
+
     # Validate status value
     valid_statuses = ["published", "archived"]
     if body.status not in valid_statuses:
@@ -314,28 +312,28 @@ async def update_content_status(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}",
         )
-    
+
     # Get existing content
     content = await service.get_by_id(content_id)
-    
+
     if content is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Content not found",
         )
-    
+
     # Check ownership
     if content.contributor_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only update status of your own content",
         )
-    
+
     # Update status
     updated = await service.update_status(content_id, body.status)
-    
+
     from app.models.enums import ContentType
-    
+
     content_response = ContentResponse(
         id=updated.id,
         title=updated.title,
@@ -351,15 +349,15 @@ async def update_content_status(
         bookmark_count=updated.bookmark_count,
         published_at=updated.published_at,
     )
-    
+
     correlation_id = getattr(request.state, "correlation_id", "")
-    
+
     response = APIResponse(
         success=True,
         data=content_response.model_dump(mode="json"),
         meta=Meta.create(correlation_id),
     )
-    
+
     return JSONResponse(content=response.model_dump(mode="json"))
 
 
@@ -376,39 +374,39 @@ async def delete_content(
 ) -> JSONResponse:
     """
     Soft delete content (set status to archived).
-    
+
     - Requires contributor role
     - Only the content owner can delete
     - This is a soft delete (status → archived), not a hard delete
     - **content_id**: Content unique identifier
     """
     service = get_content_service()
-    
+
     # Get existing content
     content = await service.get_by_id(content_id)
-    
+
     if content is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Content not found",
         )
-    
+
     # Check ownership
     if content.contributor_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only delete your own content",
         )
-    
+
     # Soft delete (archive)
     await service.update_status(content_id, "archived")
-    
+
     correlation_id = getattr(request.state, "correlation_id", "")
-    
+
     response = APIResponse(
         success=True,
         data={"message": "Content deleted (archived) successfully"},
         meta=Meta.create(correlation_id),
     )
-    
+
     return JSONResponse(content=response.model_dump(mode="json"))

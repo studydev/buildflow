@@ -7,7 +7,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 class OTPRequest(BaseModel):
     """Request body for POST /auth/otp."""
-    
+
     email: EmailStr = Field(
         ...,
         description="Email address to send OTP to",
@@ -17,7 +17,7 @@ class OTPRequest(BaseModel):
 
 class OTPResponse(BaseModel):
     """Response data for POST /auth/otp."""
-    
+
     message: str = Field(
         default="OTP sent successfully",
         description="Status message",
@@ -38,7 +38,7 @@ class OTPResponse(BaseModel):
 
 class VerifyRequest(BaseModel):
     """Request body for POST /auth/verify."""
-    
+
     email: EmailStr = Field(
         ...,
         description="Email address used to request OTP",
@@ -56,7 +56,7 @@ class VerifyRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     """Response data for successful authentication."""
-    
+
     access_token: str = Field(
         ...,
         description="JWT access token",
@@ -77,7 +77,7 @@ class TokenResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     """Request body for POST /auth/refresh."""
-    
+
     refresh_token: str = Field(
         ...,
         description="Refresh token to exchange for new access token",
@@ -86,7 +86,7 @@ class RefreshRequest(BaseModel):
 
 class RefreshResponse(BaseModel):
     """Response data for token refresh."""
-    
+
     access_token: str = Field(
         ...,
         description="New JWT access token",

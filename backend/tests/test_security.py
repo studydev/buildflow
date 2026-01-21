@@ -1,6 +1,5 @@
 """Test JWT security utilities."""
 
-import time
 from datetime import timedelta
 
 import jwt
@@ -16,7 +15,7 @@ class TestKeyLoading:
         """Should load private key from file."""
         security.clear_key_cache()
         key = security.get_private_key()
-        
+
         assert key is not None
         assert "-----BEGIN PRIVATE KEY-----" in key
 
@@ -24,17 +23,17 @@ class TestKeyLoading:
         """Should load public key from file."""
         security.clear_key_cache()
         key = security.get_public_key()
-        
+
         assert key is not None
         assert "-----BEGIN PUBLIC KEY-----" in key
 
     def test_keys_are_cached(self):
         """Keys should be cached after first load."""
         security.clear_key_cache()
-        
+
         key1 = security.get_private_key()
         key2 = security.get_private_key()
-        
+
         # Should be the same object (cached)
         assert key1 is key2
 
@@ -49,7 +48,7 @@ class TestTokenCreation:
             email="test@example.com",
             role="user",
         )
-        
+
         assert token is not None
         assert isinstance(token, str)
         assert len(token) > 0
@@ -61,7 +60,7 @@ class TestTokenCreation:
             email="test@example.com",
             role="contributor",
         )
-        
+
         assert token is not None
         assert isinstance(token, str)
 
@@ -72,7 +71,7 @@ class TestTokenCreation:
             email="test@example.com",
             role="user",
         )
-        
+
         assert pair.access_token is not None
         assert pair.refresh_token is not None
         assert pair.token_type == "Bearer"
@@ -89,9 +88,9 @@ class TestTokenDecoding:
             email="test@example.com",
             role="contributor",
         )
-        
+
         payload = security.verify_access_token(token)
-        
+
         assert payload.sub == "user-123"
         assert payload.email == "test@example.com"
         assert payload.role == "contributor"
@@ -105,9 +104,9 @@ class TestTokenDecoding:
             role="user",
             jti="refresh-token-id-xyz",
         )
-        
+
         payload = security.verify_refresh_token(token)
-        
+
         assert payload.sub == "user-456"
         assert payload.email == "admin@example.com"
         assert payload.role == "user"
@@ -121,10 +120,10 @@ class TestTokenDecoding:
             email="test@example.com",
             role="user",
         )
-        
+
         with pytest.raises(jwt.InvalidTokenError) as exc_info:
             security.verify_access_token(refresh_token)
-        
+
         assert "not an access token" in str(exc_info.value)
 
     def test_verify_refresh_token_rejects_access_token(self):
@@ -134,10 +133,10 @@ class TestTokenDecoding:
             email="test@example.com",
             role="user",
         )
-        
+
         with pytest.raises(jwt.InvalidTokenError) as exc_info:
             security.verify_refresh_token(access_token)
-        
+
         assert "not a refresh token" in str(exc_info.value)
 
     def test_expired_token_raises_error(self):
@@ -149,7 +148,7 @@ class TestTokenDecoding:
             role="user",
             expires_delta=timedelta(seconds=-1),  # Already expired
         )
-        
+
         with pytest.raises(jwt.ExpiredSignatureError):
             security.decode_token(token)
 
@@ -165,10 +164,10 @@ class TestTokenDecoding:
             email="test@example.com",
             role="user",
         )
-        
+
         # Tamper with the token
         tampered = token[:-5] + "XXXXX"
-        
+
         with pytest.raises(jwt.InvalidTokenError):
             security.decode_token(tampered)
 
@@ -183,9 +182,9 @@ class TestTokenPayload:
             email="test@example.com",
             role="user",
         )
-        
+
         payload = security.decode_token(token)
-        
+
         assert hasattr(payload, "sub")
         assert hasattr(payload, "email")
         assert hasattr(payload, "role")

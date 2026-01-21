@@ -25,17 +25,17 @@ async def get_current_user_token(
 ) -> TokenPayload:
     """
     Extract and verify JWT token from Authorization header.
-    
+
     Returns the decoded token payload.
-    
+
     Raises:
         AuthenticationError: If token is missing, invalid, or expired
     """
     if credentials is None:
         raise AuthenticationError(message="Missing authentication token")
-    
+
     token = credentials.credentials
-    
+
     try:
         payload = verify_access_token(token)
         return payload
@@ -51,10 +51,10 @@ async def get_current_user(
 ) -> UserPublic:
     """
     Get the current authenticated user.
-    
+
     Returns a UserPublic model with user info from the token.
     For MVP, constructs user from token claims without DB lookup.
-    
+
     In production, this would verify user still exists and is active.
     """
     # For MVP without Cosmos, create user from token claims
@@ -62,19 +62,19 @@ async def get_current_user(
     try:
         repo = get_user_repository()
         user = await repo.get_by_id(token.sub)
-        
+
         if user is None:
             # User was deleted after token issued
             raise AuthenticationError(message="User not found")
-        
+
         if not user.is_active:
             raise AuthenticationError(message="User account is disabled")
-        
+
         return UserPublic.from_user(user)
     except RuntimeError:
         # Cosmos not available - use token claims
         from datetime import datetime, timezone
-        
+
         return UserPublic(
             id=token.sub,
             email=token.email,
@@ -89,7 +89,7 @@ async def get_current_active_user(
 ) -> UserPublic:
     """
     Get the current active user.
-    
+
     This is a convenience dependency that ensures user is active.
     Same as get_current_user for MVP but can add additional checks.
     """
@@ -99,13 +99,13 @@ async def get_current_active_user(
 def require_role(required_role: UserRole):
     """
     Dependency factory for role-based access control.
-    
+
     Args:
         required_role: The minimum role required to access the endpoint
-    
+
     Returns:
         Dependency function that checks user role
-    
+
     Usage:
         @router.post("/admin-only")
         async def admin_endpoint(
@@ -121,17 +121,17 @@ def require_role(required_role: UserRole):
             UserRole.USER: 0,
             UserRole.CONTRIBUTOR: 1,
         }
-        
+
         user_level = role_hierarchy.get(user.role, 0)
         required_level = role_hierarchy.get(required_role, 0)
-        
+
         if user_level < required_level:
             raise ForbiddenError(
                 message=f"This action requires {required_role.value} role"
             )
-        
+
         return user
-    
+
     return role_checker
 
 
@@ -146,22 +146,22 @@ async def require_contributor(
 ) -> User:
     """
     Require the current user to have contributor role.
-    
+
     Returns a User model (not UserPublic) for API endpoints that need user.id.
     """
     role_hierarchy = {
         UserRole.USER: 0,
         UserRole.CONTRIBUTOR: 1,
     }
-    
+
     user_level = role_hierarchy.get(user.role, 0)
     required_level = role_hierarchy.get(UserRole.CONTRIBUTOR, 0)
-    
+
     if user_level < required_level:
         raise ForbiddenError(
-            message=f"This action requires contributor role"
+            message="This action requires contributor role"
         )
-    
+
     # Convert UserPublic back to User for the ID
     return User(
         id=user.id,

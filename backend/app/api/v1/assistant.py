@@ -16,15 +16,13 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.core.exceptions import ValidationError
-from app.dependencies import get_current_user_optional, get_current_user_required
+from app.dependencies import get_current_user_required
 from app.models.user import UserPublic
 from app.schemas import APIResponse, Meta
 from app.services.assistant_service import (
-    AssistantService,
-    AssistantError,
-    AssistantConfigError,
     AssistantAPIError,
+    AssistantConfigError,
+    AssistantService,
     ChatContext,
     get_assistant_service,
 )
@@ -41,7 +39,7 @@ router = APIRouter()
 
 class ChatContextRequest(BaseModel):
     """Context for chat request."""
-    
+
     current_content_id: Optional[str] = Field(
         None,
         description="ID of content currently being viewed",
@@ -54,10 +52,10 @@ class ChatContextRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     """Chat request payload.
-    
+
     Per design.md §8 Assistant API specification.
     """
-    
+
     message: str = Field(
         ...,
         min_length=1,
@@ -76,7 +74,7 @@ class ChatRequest(BaseModel):
 
 class CitationResponse(BaseModel):
     """Citation in assistant response."""
-    
+
     content_id: str
     title: str
     relevance: float
@@ -86,7 +84,7 @@ class CitationResponse(BaseModel):
 
 class SuggestedContentResponse(BaseModel):
     """Suggested content in response."""
-    
+
     content_id: str
     title: str
     description: Optional[str] = None
@@ -96,7 +94,7 @@ class SuggestedContentResponse(BaseModel):
 
 class ExternalResultResponse(BaseModel):
     """External search result."""
-    
+
     title: str
     url: str
     snippet: str
@@ -106,10 +104,10 @@ class ExternalResultResponse(BaseModel):
 
 class ChatResponseData(BaseModel):
     """Chat response data.
-    
+
     Per design.md §8 response specification.
     """
-    
+
     response: str = Field(..., description="Assistant's response")
     citations: List[CitationResponse] = Field(
         default_factory=list,
@@ -132,7 +130,7 @@ class ChatResponseData(BaseModel):
 
 class ExplainRequest(BaseModel):
     """Request to explain specific content."""
-    
+
     content_id: str = Field(..., description="Content ID to explain")
     question: Optional[str] = Field(
         None,
@@ -142,7 +140,7 @@ class ExplainRequest(BaseModel):
 
 class RecommendRequest(BaseModel):
     """Request for recommendations."""
-    
+
     query: str = Field(
         ...,
         min_length=1,
@@ -171,7 +169,7 @@ async def get_assistant() -> AssistantService:
 
 def get_visibility_level(user: Optional[UserPublic]) -> str:
     """Determine visibility level based on user.
-    
+
     Per design.md visibility_rules:
     - Anonymous users: Cannot use assistant (401)
     - Authenticated users: internal access
@@ -198,19 +196,19 @@ def get_visibility_level(user: Optional[UserPublic]) -> str:
     summary="Chat with AI assistant",
     description="""
     Send a message to the BuildFlow AI Assistant and receive an intelligent response.
-    
+
     The assistant uses RAG (Retrieval-Augmented Generation) to answer questions
     based on indexed content. It can:
-    
+
     - Answer questions about Azure, cloud development, and DevOps
     - Recommend relevant repositories and learning resources
     - Explain how to use specific content items
     - Suggest learning paths based on skill level
-    
+
     **Visibility Rules**:
     - Authenticated users required (401 if not authenticated)
     - Response content filtered based on user's access level
-    
+
     **Rate Limits**:
     - External search fallback: 10 per user per hour
     """,
@@ -225,24 +223,24 @@ async def chat(
     assistant: AssistantService = Depends(get_assistant),
 ) -> APIResponse[ChatResponseData]:
     """Process chat message and return AI-generated response."""
-    
+
     # Build chat context
     context = ChatContext(
         user_id=str(user.id) if hasattr(user, 'id') else None,
         visibility_level=get_visibility_level(user),
     )
-    
+
     if request.context:
         context.current_content_id = request.context.current_content_id
         context.filters = request.context.filters
-    
+
     try:
         response = await assistant.chat(
             message=request.message,
             conversation_id=request.conversation_id,
             context=context,
         )
-        
+
         # Convert to response format
         response_data = ChatResponseData(
             response=response.response,
@@ -278,7 +276,7 @@ async def chat(
             conversation_id=response.conversation_id,
             used_external_search=response.used_external_search,
         )
-        
+
         return APIResponse(
             success=True,
             data=response_data,
@@ -286,7 +284,7 @@ async def chat(
                 request_id="",  # Would be set by middleware
             ),
         )
-        
+
     except AssistantConfigError as e:
         logger.error(f"Assistant not configured: {e}")
         raise HTTPException(
@@ -308,13 +306,13 @@ async def chat(
     summary="Explain specific content",
     description="""
     Get an explanation of how to use specific content.
-    
+
     The assistant will explain:
     - What the content is about
     - Prerequisites needed
     - How to get started
     - Expected learning outcomes
-    
+
     Optionally include a specific question about the content.
     """,
 )
@@ -324,20 +322,20 @@ async def explain_content(
     assistant: AssistantService = Depends(get_assistant),
 ) -> APIResponse[ChatResponseData]:
     """Explain a specific content item."""
-    
+
     context = ChatContext(
         user_id=str(user.id) if hasattr(user, 'id') else None,
         visibility_level=get_visibility_level(user),
         current_content_id=request.content_id,
     )
-    
+
     try:
         response = await assistant.explain_content(
             content_id=request.content_id,
             question=request.question,
             context=context,
         )
-        
+
         response_data = ChatResponseData(
             response=response.response,
             citations=[
@@ -364,19 +362,19 @@ async def explain_content(
             conversation_id=response.conversation_id,
             used_external_search=response.used_external_search,
         )
-        
+
         return APIResponse(
             success=True,
             data=response_data,
             meta=Meta(request_id=""),
         )
-        
-    except AssistantConfigError as e:
+
+    except AssistantConfigError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Assistant service is not available",
         )
-    except AssistantAPIError as e:
+    except AssistantAPIError:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process your request",
@@ -390,11 +388,11 @@ async def explain_content(
     summary="Get content recommendations",
     description="""
     Get personalized content recommendations based on learning goals.
-    
+
     Specify what you want to learn, and optionally filter by:
     - Skill level (beginner, intermediate, advanced)
     - Specific technologies
-    
+
     The assistant will recommend relevant content with explanations.
     """,
 )
@@ -404,12 +402,12 @@ async def recommend_content(
     assistant: AssistantService = Depends(get_assistant),
 ) -> APIResponse[ChatResponseData]:
     """Get content recommendations."""
-    
+
     context = ChatContext(
         user_id=str(user.id) if hasattr(user, 'id') else None,
         visibility_level=get_visibility_level(user),
     )
-    
+
     try:
         response = await assistant.recommend(
             query=request.query,
@@ -417,7 +415,7 @@ async def recommend_content(
             technologies=request.technologies,
             context=context,
         )
-        
+
         response_data = ChatResponseData(
             response=response.response,
             citations=[
@@ -444,19 +442,19 @@ async def recommend_content(
             conversation_id=response.conversation_id,
             used_external_search=response.used_external_search,
         )
-        
+
         return APIResponse(
             success=True,
             data=response_data,
             meta=Meta(request_id=""),
         )
-        
-    except AssistantConfigError as e:
+
+    except AssistantConfigError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Assistant service is not available",
         )
-    except AssistantAPIError as e:
+    except AssistantAPIError:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process your request",
@@ -480,10 +478,10 @@ async def clear_conversation(
     assistant: AssistantService = Depends(get_assistant),
 ) -> None:
     """Clear a conversation's history."""
-    
+
     # Note: In production, verify user owns this conversation
     success = assistant.clear_conversation(conversation_id)
-    
+
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

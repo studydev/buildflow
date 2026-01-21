@@ -9,11 +9,10 @@ Provides methods to:
 - Receive messages from subscriptions
 """
 
-import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, Optional
 
 from app.config import get_settings
 from app.schemas.pipeline import PipelineMessage
@@ -30,7 +29,9 @@ ServiceBusError: Any = Exception
 try:
     from azure.servicebus import ServiceBusClient as SBClient  # type: ignore[import-not-found]
     from azure.servicebus import ServiceBusMessage as SBMessage  # type: ignore[import-not-found]
-    from azure.servicebus.exceptions import ServiceBusError as SBError  # type: ignore[import-not-found]
+    from azure.servicebus.exceptions import (
+        ServiceBusError as SBError,  # type: ignore[import-not-found]
+    )
     AZURE_SDK_AVAILABLE = True
     ServiceBusClient = SBClient
     ServiceBusMessage = SBMessage
@@ -42,23 +43,23 @@ except ImportError:
 class QueueService:
     """
     Service for Azure Service Bus operations.
-    
+
     Per tasks.md T110:
     - send_to_topic(): Send message to a topic
     - send_with_delay(): Send with scheduled delivery
     - receive_message(): Receive from subscription
-    
+
     Falls back to mock implementation when:
     - Azure SDK not installed
     - No connection string configured
     - Running in local development mode
     """
-    
+
     def __init__(self):
         self._client: Any = None
         self._settings = get_settings()
         self._mock_queues: dict[str, list[PipelineMessage]] = {}
-    
+
     @property
     def is_mock(self) -> bool:
         """Check if using mock implementation."""
@@ -68,7 +69,7 @@ class QueueService:
             self._settings, "servicebus_connection_string", None
         )
         return not conn_str
-    
+
     @property
     def client(self) -> Any:
         """Lazy initialization of Service Bus client."""
@@ -79,7 +80,7 @@ class QueueService:
             if conn_str:
                 self._client = ServiceBusClient.from_connection_string(conn_str)
         return self._client
-    
+
     async def send_to_topic(
         self,
         topic: str,
@@ -87,7 +88,7 @@ class QueueService:
     ) -> None:
         """
         Send a pipeline message to a Service Bus topic.
-        
+
         Args:
             topic: Topic name (e.g., "pipeline-triggers")
             message: PipelineMessage to send
@@ -95,7 +96,7 @@ class QueueService:
         if self.is_mock:
             await self._mock_send(topic, message)
             return
-        
+
         try:
             with self.client.get_topic_sender(topic) as sender:
                 # Create message with custom properties for filtering
@@ -108,9 +109,9 @@ class QueueService:
                     },
                     correlation_id=message.correlation_id,
                 )
-                
+
                 sender.send_messages(sb_message)
-                
+
                 logger.info(
                     "Message sent to Service Bus",
                     extra={
@@ -120,7 +121,7 @@ class QueueService:
                         "correlation_id": message.correlation_id,
                     }
                 )
-                
+
         except ServiceBusError as e:
             logger.error(
                 "Failed to send message to Service Bus",
@@ -131,7 +132,7 @@ class QueueService:
                 }
             )
             raise
-    
+
     async def send_with_delay(
         self,
         topic: str,
@@ -140,9 +141,9 @@ class QueueService:
     ) -> None:
         """
         Send a pipeline message with scheduled delivery.
-        
+
         Used for retry scheduling with exponential backoff.
-        
+
         Args:
             topic: Topic name
             message: PipelineMessage to send
@@ -151,10 +152,10 @@ class QueueService:
         if self.is_mock:
             await self._mock_send(topic, message, delay_seconds)
             return
-        
+
         try:
             scheduled_time = datetime.now(timezone.utc) + timedelta(seconds=delay_seconds)
-            
+
             with self.client.get_topic_sender(topic) as sender:
                 sb_message = ServiceBusMessage(
                     body=message.to_service_bus_message(),
@@ -167,9 +168,9 @@ class QueueService:
                     scheduled_enqueue_time_utc=scheduled_time,
                     correlation_id=message.correlation_id,
                 )
-                
+
                 sender.send_messages(sb_message)
-                
+
                 logger.info(
                     "Scheduled message sent to Service Bus",
                     extra={
@@ -180,7 +181,7 @@ class QueueService:
                         "correlation_id": message.correlation_id,
                     }
                 )
-                
+
         except ServiceBusError as e:
             logger.error(
                 "Failed to send scheduled message to Service Bus",
@@ -192,7 +193,7 @@ class QueueService:
                 }
             )
             raise
-    
+
     async def receive_message(
         self,
         topic: str,
@@ -201,21 +202,21 @@ class QueueService:
     ) -> Optional[PipelineMessage]:
         """
         Receive a message from a Service Bus subscription.
-        
+
         Typically used by the pipeline runner, but Container Apps Jobs
         receive messages via environment variable instead.
-        
+
         Args:
             topic: Topic name
             subscription: Subscription name
             timeout_seconds: How long to wait for a message
-            
+
         Returns:
             PipelineMessage if received, None on timeout
         """
         if self.is_mock:
             return await self._mock_receive(topic, subscription)
-        
+
         try:
             with self.client.get_subscription_receiver(
                 topic_name=topic,
@@ -223,18 +224,18 @@ class QueueService:
                 max_wait_time=timeout_seconds,
             ) as receiver:
                 messages = receiver.receive_messages(max_message_count=1)
-                
+
                 if messages:
                     msg = messages[0]
                     body = str(msg)
-                    
+
                     # Complete the message
                     receiver.complete_message(msg)
-                    
+
                     return PipelineMessage.from_service_bus_message(body)
-                
+
                 return None
-                
+
         except ServiceBusError as e:
             logger.error(
                 "Failed to receive message from Service Bus",
@@ -245,11 +246,11 @@ class QueueService:
                 }
             )
             raise
-    
+
     # =========================================================================
     # Mock Implementation for Local Development
     # =========================================================================
-    
+
     async def _mock_send(
         self,
         topic: str,
@@ -260,9 +261,9 @@ class QueueService:
         queue_key = f"{topic}"
         if queue_key not in self._mock_queues:
             self._mock_queues[queue_key] = []
-        
+
         self._mock_queues[queue_key].append(message)
-        
+
         logger.info(
             "[MOCK] Message queued",
             extra={
@@ -273,7 +274,7 @@ class QueueService:
                 "queue_depth": len(self._mock_queues[queue_key]),
             }
         )
-    
+
     async def _mock_receive(
         self,
         topic: str,
@@ -283,9 +284,9 @@ class QueueService:
         queue_key = f"{topic}"
         if queue_key not in self._mock_queues or not self._mock_queues[queue_key]:
             return None
-        
+
         message = self._mock_queues[queue_key].pop(0)
-        
+
         logger.info(
             "[MOCK] Message received",
             extra={
@@ -295,9 +296,9 @@ class QueueService:
                 "pipeline_type": message.pipeline_type,
             }
         )
-        
+
         return message
-    
+
     def close(self) -> None:
         """Close the Service Bus client."""
         if self._client:

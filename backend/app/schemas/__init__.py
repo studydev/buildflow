@@ -1,11 +1,10 @@
 """Base response schemas following Constitution v1.0.0."""
 
 from datetime import datetime, timezone
-from typing import Any, Generic, List, Optional, TypeVar
+from typing import Generic, List, Optional, TypeVar
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
-
 
 T = TypeVar("T")
 
@@ -47,7 +46,7 @@ class ErrorBody(BaseModel):
 class APIResponse(BaseModel, Generic[T]):
     """
     Standard success response envelope.
-    
+
     Constitution v1.0.0 requires all responses use this envelope:
     {
         "success": true,
@@ -64,7 +63,7 @@ class APIResponse(BaseModel, Generic[T]):
 class APIErrorResponse(BaseModel):
     """
     Standard error response envelope.
-    
+
     Constitution v1.0.0 requires errors use this structure:
     {
         "success": false,

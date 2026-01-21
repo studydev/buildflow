@@ -2,22 +2,23 @@
 
 import logging
 from typing import Optional
+
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 
-from app.dependencies import get_current_user, require_contributor
-from app.models.user import User
+from app.core.exceptions import NotFoundError, ValidationError
+from app.dependencies import require_contributor
 from app.models.enums import AnalysisStatus
+from app.models.user import User
 from app.schemas import APIResponse, Meta
 from app.schemas.analysis import (
     AnalysisRequestCreate,
-    AnalysisRequestResponse,
     AnalysisRequestDetailResponse,
     AnalysisRequestListResponse,
-    StatusHistoryResponse,
+    AnalysisRequestResponse,
     AnalysisResultResponse,
+    StatusHistoryResponse,
 )
-from app.services.analysis_service import get_analysis_service, AnalysisService
-from app.core.exceptions import ValidationError, NotFoundError
+from app.services.analysis_service import AnalysisService, get_analysis_service
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ def _to_response(request) -> AnalysisRequestResponse:
             lab_modules=request.result.lab_modules or [],
             raw_metadata=request.result.raw_metadata,
         )
-    
+
     return AnalysisRequestResponse(
         id=request.id,
         source_url=request.source_url,
@@ -61,7 +62,7 @@ def _to_response(request) -> AnalysisRequestResponse:
 def _to_detail_response(request) -> AnalysisRequestDetailResponse:
     """Convert AnalysisRequest model to detailed response schema."""
     base = _to_response(request)
-    
+
     status_history = [
         StatusHistoryResponse(
             status=entry.status.value if hasattr(entry.status, 'value') else entry.status,
@@ -70,7 +71,7 @@ def _to_detail_response(request) -> AnalysisRequestDetailResponse:
         )
         for entry in (request.status_history or [])
     ]
-    
+
     return AnalysisRequestDetailResponse(
         **base.model_dump(),
         status_history=status_history,
@@ -92,9 +93,9 @@ async def create_analysis_request(
 ):
     """
     Create a new analysis request for a GitHub repository.
-    
+
     - **source_url**: GitHub repository URL (https://github.com/{owner}/{repo})
-    
+
     Returns the created request immediately. Analysis runs in background.
     Poll GET /analysis-requests/{id} to check status.
     """
@@ -102,18 +103,18 @@ async def create_analysis_request(
     is_valid, error_msg = service.validate_url(data.source_url)
     if not is_valid:
         raise ValidationError(error_msg)
-    
+
     # Create or find existing request
     request, is_duplicate = await service.create_request(
         user_id=current_user.id,
         data=data,
         check_duplicate=True,
     )
-    
+
     # Start background processing if this is a new request
     if not is_duplicate:
         from app.services.analysis_pipeline import run_analysis_pipeline
-        
+
         # Add background task to process the request
         background_tasks.add_task(
             run_analysis_pipeline,
@@ -121,9 +122,9 @@ async def create_analysis_request(
             user_id=request.user_id,
         )
         logger.info(f"Queued analysis pipeline for request {request.id}")
-    
+
     response_data = _to_response(request)
-    
+
     return APIResponse(
         success=True,
         data=response_data.model_dump(),
@@ -154,17 +155,17 @@ async def list_analysis_requests(
             status_filter = AnalysisStatus(status)
         except ValueError:
             raise ValidationError(f"Invalid status: {status}")
-    
+
     requests, total = await service.list_user_requests(
         user_id=current_user.id,
         page=page,
         limit=limit,
         status=status_filter,
     )
-    
+
     items = [_to_response(r) for r in requests]
     has_more = (page * limit) < total
-    
+
     response_data = AnalysisRequestListResponse(
         items=items,
         total=total,
@@ -172,7 +173,7 @@ async def list_analysis_requests(
         limit=limit,
         has_more=has_more,
     )
-    
+
     return APIResponse(
         success=True,
         data=response_data.model_dump(),
@@ -192,12 +193,12 @@ async def get_analysis_request(
 ):
     """Get a specific analysis request by ID."""
     request = await service.get_request(request_id, current_user.id)
-    
+
     if not request:
         raise NotFoundError(f"Analysis request not found: {request_id}")
-    
+
     response_data = _to_detail_response(request)
-    
+
     return APIResponse(
         success=True,
         data=response_data.model_dump(),
@@ -217,10 +218,10 @@ async def delete_analysis_request(
 ):
     """Delete an analysis request."""
     deleted = await service.delete_request(request_id, current_user.id)
-    
+
     if not deleted:
         raise NotFoundError(f"Analysis request not found: {request_id}")
-    
+
     return APIResponse(
         success=True,
         data={"deleted": True},
@@ -241,12 +242,12 @@ async def cancel_analysis_request(
 ):
     """Cancel an analysis request."""
     request = await service.cancel_request(request_id, current_user.id)
-    
+
     if not request:
         raise NotFoundError(f"Analysis request not found: {request_id}")
-    
+
     response_data = _to_response(request)
-    
+
     return APIResponse(
         success=True,
         data=response_data.model_dump(),

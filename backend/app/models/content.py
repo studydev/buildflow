@@ -12,44 +12,44 @@ from app.models.enums import ContentStatus, ContentType
 class Content(BaseModel):
     """
     Content model representing a learning resource.
-    
+
     Partition Key: contributor_id (for efficient contributor-based queries)
     """
-    
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     contributor_id: Optional[str] = None  # Made optional for pipeline creation
-    
+
     # Basic info
     title: str
     description: str = ""
     content_type: ContentType = ContentType.WORKSHOP
     status: ContentStatus = ContentStatus.DRAFT
-    
+
     # Source information
     source_url: str  # GitHub repo URL
     source_type: str = "github"  # github, azuredevops, etc.
-    
+
     # Categories and tags
     categories: list[str] = Field(default_factory=list)
     level: str = "beginner"  # beginner, intermediate, advanced
     duration_minutes: int = 60
-    
+
     # Metadata
     thumbnail_url: Optional[str] = None
     og_image_url: Optional[str] = None  # Open Graph image for social sharing
     icon: Optional[str] = None
     language: Optional[str] = None  # Primary programming language
-    
+
     # Analysis results
     analysis_status: str = "pending"  # pending, processing, completed, failed
     analysis_result: Optional[dict] = None
-    
+
     # Pipeline references (Milestone 2)
     raw_extraction_id: Optional[UUID] = None  # Reference to immutable RawExtraction
     enrichment_version: Optional[str] = None  # Semantic version e.g., "1.0.0"
     last_enriched_at: Optional[datetime] = None
     popularity_score: Optional[float] = None  # 0.0-1.0 normalized score
-    
+
     # Enrichment fields (Milestone 3 - design.md §5 Content Extended)
     summary_short: Optional[str] = None  # max 200 chars
     summary_long: Optional[str] = None  # max 2000 chars
@@ -58,18 +58,18 @@ class Content(BaseModel):
     learning_outcomes: list[str] = Field(default_factory=list)
     prerequisites: list[str] = Field(default_factory=list)
     technologies: list[str] = Field(default_factory=list)
-    
+
     # Repository signals (for popularity score)
     stars: Optional[int] = None
     forks: Optional[int] = None
     last_commit_date: Optional[datetime] = None
     is_maintained: Optional[bool] = None
-    
+
     # Quality signals
     has_documentation: Optional[bool] = None
     has_tests: Optional[bool] = None
     has_ci: Optional[bool] = None
-    
+
     # Localization fields (Milestone 5 - design.md §3.3)
     title_kr: Optional[str] = None
     description_kr: Optional[str] = None
@@ -78,16 +78,16 @@ class Content(BaseModel):
     learning_outcomes_kr: list[str] = Field(default_factory=list)
     localized_at: Optional[datetime] = None
     localization_model: Optional[str] = None
-    
+
     # Stats
     view_count: int = 0
     bookmark_count: int = 0
-    
+
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     published_at: Optional[datetime] = None
-    
+
     def to_cosmos_item(self) -> dict[str, Any]:
         """Convert to Cosmos DB document format."""
         return {
@@ -144,19 +144,19 @@ class Content(BaseModel):
             "updated_at": self.updated_at.isoformat(),
             "published_at": self.published_at.isoformat() if self.published_at else None,
         }
-    
+
     @classmethod
     def from_cosmos_item(cls, item: dict[str, Any]) -> "Content":
         """Create Content from Cosmos DB document."""
         from uuid import UUID
-        
+
         raw_extraction_id = None
         if item.get("raw_extraction_id"):
             try:
                 raw_extraction_id = UUID(item["raw_extraction_id"])
             except (ValueError, TypeError):
                 pass
-        
+
         return cls(
             id=item["id"],
             contributor_id=item.get("contributor_id"),
@@ -211,13 +211,13 @@ class Content(BaseModel):
             updated_at=datetime.fromisoformat(item["updated_at"]),
             published_at=datetime.fromisoformat(item["published_at"]) if item.get("published_at") else None,
         )
-    
+
     def publish(self) -> None:
         """Mark content as published."""
         self.status = ContentStatus.PUBLISHED
         self.published_at = datetime.utcnow()
         self.updated_at = datetime.utcnow()
-    
+
     def increment_view(self) -> None:
         """Increment view count."""
         self.view_count += 1
@@ -226,7 +226,7 @@ class Content(BaseModel):
 
 class ContentPublic(BaseModel):
     """Public view of content (for API responses)."""
-    
+
     id: str
     title: str
     description: str
@@ -252,14 +252,14 @@ class ContentPublic(BaseModel):
     popularity_score: Optional[float] = None
     stars: Optional[int] = None
     is_maintained: Optional[bool] = None
-    
+
     # Localization fields (Milestone 5)
     title_kr: Optional[str] = None
     description_kr: Optional[str] = None
     summary_kr: Optional[str] = None
     prerequisites_kr: list[str] = Field(default_factory=list)
     learning_outcomes_kr: list[str] = Field(default_factory=list)
-    
+
     @classmethod
     def from_content(cls, content: Content) -> "ContentPublic":
         """Create public view from Content model."""

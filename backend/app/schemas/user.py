@@ -10,7 +10,7 @@ from app.models.enums import UserRole
 
 class UserResponse(BaseModel):
     """Response data for user profile."""
-    
+
     id: str = Field(..., description="User ID")
     email: EmailStr = Field(..., description="User email")
     display_name: Optional[str] = Field(None, description="Display name")
@@ -20,7 +20,7 @@ class UserResponse(BaseModel):
 
 class UserUpdateRequest(BaseModel):
     """Request body for updating user profile."""
-    
+
     display_name: Optional[str] = Field(
         None,
         min_length=1,

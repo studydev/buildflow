@@ -5,11 +5,11 @@ Registers all API routers for the BuildFlow API.
 
 from fastapi import APIRouter
 
-from app.api.v1.pipelines import router as pipelines_router
-from app.api.v1.pipelines import history_router as pipeline_history_router
-from app.api.v1.search import router as search_router
-from app.api.v1.assistant import router as assistant_router
 from app.api.v1.admin import router as admin_router
+from app.api.v1.assistant import router as assistant_router
+from app.api.v1.pipelines import history_router as pipeline_history_router
+from app.api.v1.pipelines import router as pipelines_router
+from app.api.v1.search import router as search_router
 
 # Create main v1 router
 api_router = APIRouter()

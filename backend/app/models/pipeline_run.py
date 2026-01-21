@@ -11,22 +11,22 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import PipelineStatus, PipelineType, VALID_STATUS_TRANSITIONS
+from app.models.enums import VALID_STATUS_TRANSITIONS, PipelineStatus, PipelineType
 
 
 class PipelineRun(BaseModel):
     """
     Pipeline run document stored in Cosmos DB.
-    
+
     Partition Key: content_id (or triggered_by for orphan runs)
     Container: pipeline_runs
-    
+
     Per design.md §5 PipelineRun schema.
     """
-    
+
     # Primary key
     id: UUID = Field(default_factory=uuid4, description="Unique pipeline run ID")
-    
+
     # Pipeline identification
     pipeline_type: PipelineType = Field(description="Type of pipeline: analysis, enrichment, etc.")
     status: PipelineStatus = Field(
@@ -37,7 +37,7 @@ class PipelineRun(BaseModel):
         default="1.0.0",
         description="Semantic version for enrichment tracking"
     )
-    
+
     # Input/Output
     input_params: dict[str, Any] = Field(
         default_factory=dict,
@@ -51,7 +51,7 @@ class PipelineRun(BaseModel):
         default=None,
         description="Error information if failed"
     )
-    
+
     # Relations
     content_id: Optional[UUID] = Field(
         default=None,
@@ -65,7 +65,7 @@ class PipelineRun(BaseModel):
         default=None,
         description="Parent run ID for chained pipelines"
     )
-    
+
     # Execution metadata
     job_id: Optional[str] = Field(
         default=None,
@@ -78,13 +78,13 @@ class PipelineRun(BaseModel):
     correlation_id: str = Field(
         description="Request correlation ID for tracing"
     )
-    
+
     # Chain tracking
     chain: Optional[str] = Field(
         default=None,
         description="Pipeline chain name: full_ingestion, refresh_enrichment, reindex_only"
     )
-    
+
     # Timestamps
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
@@ -98,11 +98,11 @@ class PipelineRun(BaseModel):
         default=None,
         description="When execution finished (success or failure)"
     )
-    
+
     def can_transition_to(self, new_status: PipelineStatus) -> bool:
         """
         Check if transition to new_status is valid per design.md §9.
-        
+
         Valid transitions:
         - pending → running, cancelled
         - running → completed, failed, cancelled
@@ -113,7 +113,7 @@ class PipelineRun(BaseModel):
         """
         valid_next = VALID_STATUS_TRANSITIONS.get(self.status, [])
         return new_status in valid_next
-    
+
     def to_cosmos_document(self) -> dict[str, Any]:
         """Convert to Cosmos DB document format."""
         doc = self.model_dump(mode="json")
@@ -126,19 +126,19 @@ class PipelineRun(BaseModel):
         if self.parent_run_id:
             doc["parent_run_id"] = str(self.parent_run_id)
         return doc
-    
+
     @classmethod
     def from_cosmos_document(cls, doc: dict[str, Any]) -> "PipelineRun":
         """Create from Cosmos DB document."""
         return cls.model_validate(doc)
-    
+
     class Config:
         use_enum_values = True
 
 
 class InvalidStatusTransitionError(Exception):
     """Raised when an invalid status transition is attempted."""
-    
+
     def __init__(self, current: PipelineStatus, target: PipelineStatus):
         self.current = current
         self.target = target

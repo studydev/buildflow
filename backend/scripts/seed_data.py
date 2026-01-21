@@ -13,7 +13,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.models.content import Content
 from app.models.enums import ContentStatus, ContentType
 
-
 # Sample content data matching the mock data in content_service.py
 SAMPLE_CONTENT = [
     {
@@ -263,11 +262,11 @@ def create_content_items() -> list[Content]:
     """Create Content instances from sample data."""
     contents = []
     base_date = datetime.now() - timedelta(days=90)
-    
+
     for i, data in enumerate(SAMPLE_CONTENT):
         # Stagger published dates
         published_at = base_date + timedelta(days=i * 4)
-        
+
         content = Content(
             id=str(uuid4()),
             contributor_id="system",  # System seed data
@@ -285,19 +284,19 @@ def create_content_items() -> list[Content]:
             published_at=published_at,
         )
         contents.append(content)
-    
+
     return contents
 
 
 async def seed_content_to_cosmos():
     """Seed content to Cosmos DB."""
     from app.repositories.content_repo import get_content_repo
-    
+
     repo = get_content_repo()
     contents = create_content_items()
-    
+
     print(f"Seeding {len(contents)} content items...")
-    
+
     for content in contents:
         try:
             await repo.create(content)
@@ -307,24 +306,24 @@ async def seed_content_to_cosmos():
                 print(f"  - Skipped (exists): {content.title[:50]}...")
             else:
                 print(f"  ✗ Error: {content.title[:50]}: {e}")
-    
+
     print("\nSeed complete!")
 
 
 def print_sample_content():
     """Print sample content for verification (no DB required)."""
     contents = create_content_items()
-    
+
     print(f"\n📚 Sample Content ({len(contents)} items)")
     print("=" * 60)
-    
+
     for content in contents:
         print(f"\n{content.icon} {content.title}")
         print(f"   Type: {content.content_type.value}")
         print(f"   Level: {content.level}")
         print(f"   Duration: {content.duration_minutes} min")
         print(f"   Categories: {', '.join(content.categories)}")
-    
+
     print("\n" + "=" * 60)
     print("Run with --cosmos flag to seed to Cosmos DB")
 

@@ -1,7 +1,6 @@
 """FastAPI application factory and main entry point."""
 
 import logging
-from typing import Optional
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -41,7 +40,7 @@ def get_correlation_id(request: Request) -> str:
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
     """
     Handle custom AppException and subclasses.
-    
+
     Returns Constitution-compliant error response:
     {
         "success": false,
@@ -50,7 +49,7 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
     }
     """
     correlation_id = get_correlation_id(request)
-    
+
     response = APIErrorResponse(
         error=ErrorBody(
             code=exc.code,
@@ -59,14 +58,14 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
         ),
         meta=Meta.create(correlation_id),
     )
-    
+
     logger.warning(
         "AppException: %s - %s",
         exc.code,
         exc.message,
         extra={"correlation_id": correlation_id, "status_code": exc.status_code},
     )
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content=response.model_dump(),
@@ -79,11 +78,11 @@ async def validation_exception_handler(
 ) -> JSONResponse:
     """
     Handle Pydantic/FastAPI validation errors.
-    
+
     Converts validation errors to Constitution-compliant format.
     """
     correlation_id = get_correlation_id(request)
-    
+
     details = [
         ErrorDetail(
             field=".".join(str(loc) for loc in error["loc"]),
@@ -91,7 +90,7 @@ async def validation_exception_handler(
         )
         for error in exc.errors()
     ]
-    
+
     response = APIErrorResponse(
         error=ErrorBody(
             code="VALIDATION_ERROR",
@@ -100,7 +99,7 @@ async def validation_exception_handler(
         ),
         meta=Meta.create(correlation_id),
     )
-    
+
     return JSONResponse(
         status_code=422,
         content=response.model_dump(),
@@ -113,11 +112,11 @@ async def http_exception_handler(
 ) -> JSONResponse:
     """
     Handle standard HTTP exceptions (404, 405, etc.).
-    
+
     Converts to Constitution-compliant format.
     """
     correlation_id = get_correlation_id(request)
-    
+
     # Map status codes to error codes
     code_map = {
         400: "BAD_REQUEST",
@@ -129,7 +128,7 @@ async def http_exception_handler(
         429: "RATE_LIMIT_EXCEEDED",
         500: "INTERNAL_ERROR",
     }
-    
+
     response = APIErrorResponse(
         error=ErrorBody(
             code=code_map.get(exc.status_code, "HTTP_ERROR"),
@@ -138,12 +137,12 @@ async def http_exception_handler(
         ),
         meta=Meta.create(correlation_id),
     )
-    
+
     # Merge exception headers with correlation ID
     headers = {"X-Correlation-ID": correlation_id}
     if exc.headers:
         headers.update(exc.headers)
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content=response.model_dump(),
@@ -154,16 +153,16 @@ async def http_exception_handler(
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
     Handle unexpected exceptions.
-    
+
     Logs the full error but returns a safe message to the client.
     """
     correlation_id = get_correlation_id(request)
-    
+
     logger.exception(
         "Unhandled exception",
         extra={"correlation_id": correlation_id},
     )
-    
+
     response = APIErrorResponse(
         error=ErrorBody(
             code="INTERNAL_ERROR",
@@ -172,7 +171,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
         ),
         meta=Meta.create(correlation_id),
     )
-    
+
     return JSONResponse(
         status_code=500,
         content=response.model_dump(),
@@ -222,20 +221,20 @@ def create_app() -> FastAPI:
 
 def register_routes(app: FastAPI) -> None:
     """Register all API routes."""
-    
+
     # Import and include API routers
-    from app.api.v1.auth import router as auth_router
-    from app.api.v1.users import router as users_router
-    from app.api.v1.content import router as content_router
     from app.api.v1.analysis import router as analysis_router
-    from app.api.v1.pipelines import router as pipelines_router
+    from app.api.v1.auth import router as auth_router
+    from app.api.v1.content import router as content_router
     from app.api.v1.pipelines import history_router as pipeline_history_router
-    
+    from app.api.v1.pipelines import router as pipelines_router
+    from app.api.v1.users import router as users_router
+
     app.include_router(auth_router, prefix=settings.api_v1_prefix)
     app.include_router(users_router, prefix=settings.api_v1_prefix)
     app.include_router(content_router, prefix=settings.api_v1_prefix)
     app.include_router(analysis_router, prefix=settings.api_v1_prefix)
-    
+
     # Pipeline routes (Milestone 1 - T111-T116)
     app.include_router(pipelines_router, prefix=settings.api_v1_prefix)
     app.include_router(pipeline_history_router, prefix=settings.api_v1_prefix)

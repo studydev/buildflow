@@ -8,7 +8,7 @@ from app.schemas import ErrorDetail
 class AppException(Exception):
     """
     Base application exception.
-    
+
     All custom exceptions should inherit from this class.
     Automatically converted to APIErrorResponse by exception handlers.
     """
@@ -30,7 +30,7 @@ class AppException(Exception):
 class ValidationError(AppException):
     """
     Validation error - 400 Bad Request.
-    
+
     Use for: malformed requests, invalid input formats, constraint violations.
     """
 
@@ -46,7 +46,7 @@ class ValidationError(AppException):
 class AuthenticationError(AppException):
     """
     Authentication error - 401 Unauthorized.
-    
+
     Use for: missing token, invalid token, expired token.
     """
 
@@ -61,7 +61,7 @@ class AuthenticationError(AppException):
 class ForbiddenError(AppException):
     """
     Forbidden error - 403 Forbidden.
-    
+
     Use for: valid token but insufficient permissions.
     """
 
@@ -76,7 +76,7 @@ class ForbiddenError(AppException):
 class NotFoundError(AppException):
     """
     Not found error - 404 Not Found.
-    
+
     Use for: resource does not exist.
     """
 
@@ -91,7 +91,7 @@ class NotFoundError(AppException):
 class ConflictError(AppException):
     """
     Conflict error - 409 Conflict.
-    
+
     Use for: duplicate resource, state conflict.
     """
 
@@ -106,7 +106,7 @@ class ConflictError(AppException):
 class RateLimitError(AppException):
     """
     Rate limit error - 429 Too Many Requests.
-    
+
     Use for: exceeded rate limits.
     """
 
@@ -121,7 +121,7 @@ class RateLimitError(AppException):
 class InternalError(AppException):
     """
     Internal server error - 500 Internal Server Error.
-    
+
     Use for: unexpected errors, should be logged.
     """
 

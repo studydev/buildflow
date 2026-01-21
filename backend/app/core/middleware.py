@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class CorrelationIDMiddleware(BaseHTTPMiddleware):
     """
     Middleware to handle correlation IDs for request tracing.
-    
+
     - Extracts X-Correlation-ID from request headers if present
     - Generates a new UUID if not present
     - Stores correlation_id in request.state for access in handlers
@@ -34,13 +34,13 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
         """Process the request with correlation ID tracking."""
         # Extract or generate correlation ID
         correlation_id = request.headers.get(self.HEADER_NAME) or str(uuid4())
-        
+
         # Store in request state for access by handlers and exception handlers
         request.state.correlation_id = correlation_id
-        
+
         # Add to logging context
         start_time = time.perf_counter()
-        
+
         # Log incoming request
         logger.info(
             "Request started: %s %s",
@@ -53,16 +53,16 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
                 "query": str(request.query_params) if request.query_params else None,
             },
         )
-        
+
         # Process request
         response = await call_next(request)
-        
+
         # Calculate duration
         duration_ms = (time.perf_counter() - start_time) * 1000
-        
+
         # Add correlation ID to response headers
         response.headers[self.HEADER_NAME] = correlation_id
-        
+
         # Log completed request
         logger.info(
             "Request completed: %s %s -> %d (%.2fms)",
@@ -78,14 +78,14 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
                 "duration_ms": round(duration_ms, 2),
             },
         )
-        
+
         return response
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """
     Additional request logging middleware for debugging.
-    
+
     Logs detailed request information in debug mode.
     """
 
@@ -105,5 +105,5 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 request.client,
                 extra={"correlation_id": correlation_id},
             )
-        
+
         return await call_next(request)

@@ -12,7 +12,6 @@ Provides:
 import logging
 from enum import Enum
 from typing import List, Optional
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from pydantic import BaseModel, Field
@@ -24,7 +23,6 @@ from app.schemas import APIResponse, Meta
 from app.services.llm_service import get_llm_service
 from app.services.search_service import (
     SearchFilters,
-    SearchResults,
     get_search_service,
 )
 
@@ -54,7 +52,7 @@ class SortOption(str, Enum):
 
 class SearchResultItem(BaseModel):
     """Single search result item for API response."""
-    
+
     id: str
     title: str
     description: Optional[str] = None
@@ -69,14 +67,14 @@ class SearchResultItem(BaseModel):
 
 class FacetValue(BaseModel):
     """Facet value with count."""
-    
+
     value: str
     count: int
 
 
 class SearchResponse(BaseModel):
     """Search response data."""
-    
+
     items: List[SearchResultItem]
     total: int
     facets: dict = Field(default_factory=dict)
@@ -112,25 +110,25 @@ async def search_content(
 ):
     """
     Search content with various filters and modes.
-    
+
     Per tasks.md T403:
     - Supports hybrid, keyword, and vector search modes
     - Filters: categories, technologies, difficulty, min_stars
     - Sort: relevance, popularity, recent
     - Pagination with total count
     - Visibility enforced (public only for unauthenticated)
-    
+
     **Authentication optional** - unauthenticated users see public content only.
     """
     correlation_id = getattr(request.state, "correlation_id", "unknown")
-    
+
     search_service = get_search_service()
     llm_service = get_llm_service()
-    
+
     # Build filters
     # Enforce visibility based on authentication
     visibility = None if user else "public"
-    
+
     filters = SearchFilters(
         categories=categories,
         technologies=technologies,
@@ -138,7 +136,7 @@ async def search_content(
         min_stars=min_stars,
         visibility=visibility,
     )
-    
+
     # Generate embedding for hybrid/vector search
     embedding = None
     if mode in (SearchMode.HYBRID, SearchMode.VECTOR):
@@ -149,7 +147,7 @@ async def search_content(
                 logger.warning(f"Failed to generate embedding, falling back to keyword: {e}")
                 if mode == SearchMode.VECTOR:
                     raise ValidationError("Vector search requires embedding generation, which failed")
-    
+
     # Execute search based on mode
     if mode == SearchMode.HYBRID:
         results = await search_service.hybrid_search(
@@ -175,7 +173,7 @@ async def search_content(
             limit=limit,
             offset=offset,
         )
-    
+
     # Convert to response format
     response_data = SearchResponse(
         items=[
@@ -200,7 +198,7 @@ async def search_content(
         limit=limit,
         offset=offset,
     )
-    
+
     return APIResponse(
         success=True,
         data=response_data,
@@ -221,19 +219,19 @@ async def trigger_reindex(
 ):
     """
     Trigger a full reindex operation.
-    
+
     This enqueues an indexing pipeline job that will:
     1. Load all published content
     2. Generate embeddings for each
     3. Upsert to Azure AI Search
-    
+
     **Requires admin role** (TODO: implement role check).
     """
     # TODO: Implement role check for admin
     # TODO: Enqueue indexing pipeline with content_ids="all"
-    
+
     correlation_id = getattr(request.state, "correlation_id", "unknown")
-    
+
     return APIResponse(
         success=True,
         data={"message": "Reindex job enqueued", "status": "pending"},

@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 
 class EmailService(ABC):
     """Abstract base class for email services."""
-    
+
     @abstractmethod
     async def send_otp(self, email: str, otp: str) -> bool:
         """Send OTP verification email."""
         pass
-    
+
     @abstractmethod
     async def send_welcome(self, email: str, name: str) -> bool:
         """Send welcome email after registration."""
@@ -28,12 +28,12 @@ class EmailService(ABC):
 
 class MailHogEmailService(EmailService):
     """Email service using MailHog for development."""
-    
+
     def __init__(self, host: str = "localhost", port: int = 1025):
         self.host = host
         self.port = port
         self.from_email = "noreply@buildflow.dev"
-    
+
     async def send_otp(self, email: str, otp: str) -> bool:
         """Send OTP via MailHog."""
         subject = "BuildFlow - 인증 코드"
@@ -52,9 +52,9 @@ class MailHogEmailService(EmailService):
         </body>
         </html>
         """
-        
+
         return await self._send_email(email, subject, html_body)
-    
+
     async def send_welcome(self, email: str, name: str) -> bool:
         """Send welcome email via MailHog."""
         subject = "BuildFlow에 오신 것을 환영합니다!"
@@ -77,9 +77,9 @@ class MailHogEmailService(EmailService):
         </body>
         </html>
         """
-        
+
         return await self._send_email(email, subject, html_body)
-    
+
     async def _send_email(self, to_email: str, subject: str, html_body: str) -> bool:
         """Send email using SMTP."""
         try:
@@ -87,16 +87,16 @@ class MailHogEmailService(EmailService):
             msg["Subject"] = subject
             msg["From"] = self.from_email
             msg["To"] = to_email
-            
+
             html_part = MIMEText(html_body, "html")
             msg.attach(html_part)
-            
+
             with smtplib.SMTP(self.host, self.port) as server:
                 server.sendmail(self.from_email, to_email, msg.as_string())
-            
+
             logger.info(f"Email sent to {to_email}: {subject}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {e}")
             return False
@@ -104,12 +104,12 @@ class MailHogEmailService(EmailService):
 
 class AzureCommunicationEmailService(EmailService):
     """Email service using Azure Communication Services for production."""
-    
+
     def __init__(self, connection_string: str, sender_address: str):
         self.connection_string = connection_string
         self.sender_address = sender_address
         self._client = None
-    
+
     @property
     def client(self):
         """Lazy-load Azure Communication Services client."""
@@ -121,7 +121,7 @@ class AzureCommunicationEmailService(EmailService):
                 logger.error("azure-communication-email package not installed")
                 raise
         return self._client
-    
+
     async def send_otp(self, email: str, otp: str) -> bool:
         """Send OTP via Azure Communication Services."""
         subject = "BuildFlow - 인증 코드"
@@ -140,9 +140,9 @@ class AzureCommunicationEmailService(EmailService):
         </body>
         </html>
         """
-        
+
         return await self._send_email(email, subject, html_body)
-    
+
     async def send_welcome(self, email: str, name: str) -> bool:
         """Send welcome email via Azure Communication Services."""
         subject = "BuildFlow에 오신 것을 환영합니다!"
@@ -155,9 +155,9 @@ class AzureCommunicationEmailService(EmailService):
         </body>
         </html>
         """
-        
+
         return await self._send_email(email, subject, html_body)
-    
+
     async def _send_email(self, to_email: str, subject: str, html_body: str) -> bool:
         """Send email using Azure Communication Services."""
         try:
@@ -171,17 +171,17 @@ class AzureCommunicationEmailService(EmailService):
                     "html": html_body
                 }
             }
-            
+
             poller = self.client.begin_send(message)
             result = poller.result()
-            
+
             if result.get("status") == "Succeeded":
                 logger.info(f"Email sent to {to_email} via Azure CS: {subject}")
                 return True
             else:
                 logger.error(f"Failed to send email: {result}")
                 return False
-                
+
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {e}")
             return False
@@ -194,10 +194,10 @@ _email_service: Optional[EmailService] = None
 def get_email_service() -> EmailService:
     """Get email service instance based on environment."""
     global _email_service
-    
+
     if _email_service is None:
         settings = get_settings()
-        
+
         if settings.ENV == "production" and hasattr(settings, "AZURE_COMM_CONNECTION_STRING"):
             _email_service = AzureCommunicationEmailService(
                 connection_string=settings.AZURE_COMM_CONNECTION_STRING,
@@ -207,5 +207,5 @@ def get_email_service() -> EmailService:
         else:
             _email_service = MailHogEmailService()
             logger.info("Using MailHog for email (development mode)")
-    
+
     return _email_service

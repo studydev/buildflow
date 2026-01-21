@@ -19,10 +19,10 @@ class TestCosmosModule:
         # Reset singleton
         cosmos._cosmos_client = None
         cosmos._database = None
-        
+
         with pytest.raises(RuntimeError) as exc_info:
             cosmos.get_cosmos_client()
-        
+
         assert "COSMOS_CONNECTION_STRING is not set" in str(exc_info.value)
 
     def test_close_connection_resets_singletons(self):
@@ -30,9 +30,9 @@ class TestCosmosModule:
         # Set dummy values
         cosmos._cosmos_client = "dummy"
         cosmos._database = "dummy"
-        
+
         cosmos.close_connection()
-        
+
         assert cosmos._cosmos_client is None
         assert cosmos._database is None
 
@@ -48,16 +48,16 @@ class TestCosmosOperations:
             "name": "Test Item",
             "type": "test",
         }
-        
+
         # Create
         created = await cosmos.create_item("test_container", test_item)
         assert created["id"] == "test-123"
-        
+
         # Read
         read = await cosmos.read_item("test_container", "test-123")
         assert read is not None
         assert read["name"] == "Test Item"
-        
+
         # Cleanup
         await cosmos.delete_item("test_container", "test-123")
 

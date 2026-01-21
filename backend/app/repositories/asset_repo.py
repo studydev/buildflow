@@ -28,7 +28,7 @@ CosmosParams = list[dict[str, object]]
 class AssetRepository:
     """
     Repository for GeneratedAsset documents in Cosmos DB.
-    
+
     Methods:
     - create(): Create a new asset record
     - get_by_id(): Get asset by ID
@@ -36,29 +36,29 @@ class AssetRepository:
     - list_by_type(): List assets by type for a content item
     - delete(): Delete an asset
     """
-    
+
     def __init__(self):
         self._container = None
-    
+
     @property
     def container(self):
         """Lazy initialization of container."""
         if self._container is None:
             self._container = get_container(CONTAINER_NAME)
         return self._container
-    
+
     async def create(self, asset: GeneratedAsset) -> GeneratedAsset:
         """
         Create a new generated asset record.
-        
+
         Args:
             asset: GeneratedAsset model to persist
-            
+
         Returns:
             Created GeneratedAsset
         """
         doc = asset.to_cosmos_document()
-        
+
         logger.info(
             "Creating generated asset",
             extra={
@@ -68,10 +68,10 @@ class AssetRepository:
                 "run_id": str(asset.run_id),
             }
         )
-        
+
         result = self.container.create_item(body=doc)
         return GeneratedAsset.from_cosmos_document(result)
-    
+
     async def get_by_id(
         self,
         asset_id: UUID,
@@ -79,11 +79,11 @@ class AssetRepository:
     ) -> Optional[GeneratedAsset]:
         """
         Get a generated asset by ID.
-        
+
         Args:
             asset_id: Asset UUID
             content_id: Optional content ID (partition key) for efficient lookup
-            
+
         Returns:
             GeneratedAsset if found, None otherwise
         """
@@ -98,20 +98,20 @@ class AssetRepository:
                 # Cross-partition query
                 query = "SELECT * FROM c WHERE c.id = @id"
                 params: CosmosParams = [{"name": "@id", "value": str(asset_id)}]
-                
+
                 results = list(self.container.query_items(
                     query=query,
                     parameters=params,
                     enable_cross_partition_query=True
                 ))
-                
+
                 if results:
                     return GeneratedAsset.from_cosmos_document(results[0])
                 return None
-                
+
         except CosmosResourceNotFoundError:
             return None
-    
+
     async def list_by_content_id(
         self,
         content_id: UUID,
@@ -119,32 +119,32 @@ class AssetRepository:
     ) -> list[GeneratedAsset]:
         """
         List all generated assets for a content item.
-        
+
         Args:
             content_id: Content UUID
             limit: Maximum results
-            
+
         Returns:
             List of GeneratedAssets
         """
         query = """
-            SELECT TOP @limit * FROM c 
-            WHERE c.content_id = @content_id 
+            SELECT TOP @limit * FROM c
+            WHERE c.content_id = @content_id
             ORDER BY c.created_at DESC
         """
         params = [
             {"name": "@limit", "value": limit},
             {"name": "@content_id", "value": str(content_id)},
         ]
-        
+
         results = list(self.container.query_items(
             query=query,
             parameters=params,
             partition_key=str(content_id)
         ))
-        
+
         return [GeneratedAsset.from_cosmos_document(doc) for doc in results]
-    
+
     async def list_by_type(
         self,
         content_id: UUID,
@@ -152,16 +152,16 @@ class AssetRepository:
     ) -> list[GeneratedAsset]:
         """
         List assets of a specific type for a content item.
-        
+
         Args:
             content_id: Content UUID
             asset_type: Type of asset (thumbnail, preview, etc.)
-            
+
         Returns:
             List of GeneratedAssets
         """
         query = """
-            SELECT * FROM c 
+            SELECT * FROM c
             WHERE c.content_id = @content_id AND c.asset_type = @type
             ORDER BY c.created_at DESC
         """
@@ -169,44 +169,44 @@ class AssetRepository:
             {"name": "@content_id", "value": str(content_id)},
             {"name": "@type", "value": asset_type.value},
         ]
-        
+
         results = list(self.container.query_items(
             query=query,
             parameters=params,
             partition_key=str(content_id)
         ))
-        
+
         return [GeneratedAsset.from_cosmos_document(doc) for doc in results]
-    
+
     async def list_by_run_id(self, run_id: UUID) -> list[GeneratedAsset]:
         """
         List all assets created by a pipeline run.
-        
+
         Args:
             run_id: Pipeline run UUID
-            
+
         Returns:
             List of GeneratedAssets
         """
         query = "SELECT * FROM c WHERE c.run_id = @run_id"
         params: CosmosParams = [{"name": "@run_id", "value": str(run_id)}]
-        
+
         results = list(self.container.query_items(
             query=query,
             parameters=params,
             enable_cross_partition_query=True
         ))
-        
+
         return [GeneratedAsset.from_cosmos_document(doc) for doc in results]
-    
+
     async def delete(self, asset_id: UUID, content_id: UUID) -> bool:
         """
         Delete a generated asset.
-        
+
         Args:
             asset_id: Asset UUID
             content_id: Content UUID (partition key)
-            
+
         Returns:
             True if deleted, False if not found
         """
@@ -215,7 +215,7 @@ class AssetRepository:
                 item=str(asset_id),
                 partition_key=str(content_id)
             )
-            
+
             logger.info(
                 "Deleted generated asset",
                 extra={
@@ -223,28 +223,28 @@ class AssetRepository:
                     "content_id": str(content_id),
                 }
             )
-            
+
             return True
         except CosmosResourceNotFoundError:
             return False
-    
+
     async def delete_by_content_id(self, content_id: UUID) -> int:
         """
         Delete all assets for a content item.
-        
+
         Args:
             content_id: Content UUID
-            
+
         Returns:
             Number of assets deleted
         """
         assets = await self.list_by_content_id(content_id, limit=1000)
         deleted_count = 0
-        
+
         for asset in assets:
             if await self.delete(asset.id, content_id):
                 deleted_count += 1
-        
+
         logger.info(
             "Deleted all assets for content",
             extra={
@@ -252,7 +252,7 @@ class AssetRepository:
                 "deleted_count": deleted_count,
             }
         )
-        
+
         return deleted_count
 
 

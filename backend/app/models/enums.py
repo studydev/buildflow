@@ -5,14 +5,14 @@ from enum import Enum
 
 class UserRole(str, Enum):
     """User roles in the system."""
-    
+
     USER = "user"
     CONTRIBUTOR = "contributor"
 
 
 class ContentStatus(str, Enum):
     """Content item status."""
-    
+
     DRAFT = "draft"
     PENDING = "pending"
     ANALYZING = "analyzing"
@@ -24,7 +24,7 @@ class ContentStatus(str, Enum):
 
 class ContentType(str, Enum):
     """Types of learning content."""
-    
+
     WORKSHOP = "workshop"
     LAB = "lab"
     TUTORIAL = "tutorial"
@@ -36,11 +36,11 @@ class ContentType(str, Enum):
 
 class AnalysisStatus(str, Enum):
     """GitHub URL analysis status.
-    
+
     DEPRECATED: Use PipelineStatus instead for new pipeline architecture.
     Kept for backward compatibility with existing analysis flows.
     """
-    
+
     PENDING = "pending"
     QUEUED = "queued"
     FETCHING = "fetching"
@@ -58,11 +58,11 @@ class AnalysisStatus(str, Enum):
 class PipelineType(str, Enum):
     """
     Pipeline types per design.md §2.
-    
+
     Each pipeline type corresponds to a distinct processing stage
     executed as an Azure Container Apps Job.
     """
-    
+
     ANALYSIS = "analysis"                   # Raw data extraction from GitHub
     ENRICHMENT = "enrichment"               # AI-powered enhancement (LLM)
     LOCALIZATION = "localization"           # Translation and adaptation
@@ -73,7 +73,7 @@ class PipelineType(str, Enum):
 class PipelineStatus(str, Enum):
     """
     Pipeline run status per design.md §9.
-    
+
     Valid transitions:
     - pending → running, cancelled
     - running → completed, failed, cancelled
@@ -82,7 +82,7 @@ class PipelineStatus(str, Enum):
     - completed → (terminal)
     - cancelled → (terminal)
     """
-    
+
     PENDING = "pending"         # Queued, waiting to start
     RUNNING = "running"         # Currently executing
     COMPLETED = "completed"     # Successfully finished
@@ -106,7 +106,7 @@ class AssetType(str, Enum):
     """
     Generated asset types per design.md §3.4.
     """
-    
+
     THUMBNAIL = "thumbnail"
     PREVIEW = "preview"
     OG_IMAGE = "og_image"
@@ -115,11 +115,11 @@ class AssetType(str, Enum):
 class Visibility(str, Enum):
     """
     Content visibility per design.md §7.
-    
+
     - PUBLIC: Anyone can see (including anonymous users)
     - INTERNAL: Logged-in users only
     """
-    
+
     PUBLIC = "public"
     INTERNAL = "internal"
 
@@ -128,7 +128,7 @@ class PromotionStatus(str, Enum):
     """
     Content promotion status for Dev → Prod workflow per design.md §1.
     """
-    
+
     NONE = "none"                           # Not requested
     PENDING_VALIDATION = "pending_validation"  # Awaiting automated checks
     VALIDATION_FAILED = "validation_failed"    # Automated checks failed

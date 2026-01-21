@@ -1,10 +1,9 @@
 """Service layer for Analysis Requests."""
 
 import logging
-from typing import Optional, List, Tuple
-from datetime import datetime
+from typing import List, Optional, Tuple
 
-from app.models.analysis import AnalysisRequest, AnalysisRequestPublic
+from app.models.analysis import AnalysisRequest
 from app.models.enums import AnalysisStatus
 from app.repositories.analysis_repo import AnalysisRequestRepository, get_analysis_repo
 from app.schemas.analysis import AnalysisRequestCreate
@@ -14,54 +13,54 @@ logger = logging.getLogger(__name__)
 
 class AnalysisService:
     """Service for managing analysis requests."""
-    
+
     # GitHub allowlist for SSRF protection
     ALLOWED_DOMAINS = ["github.com"]
-    
+
     def __init__(self, repo: Optional[AnalysisRequestRepository] = None):
         """Initialize with optional repository."""
         self._repo = repo
-    
+
     @property
     def repo(self) -> AnalysisRequestRepository:
         """Get the repository instance."""
         if self._repo is None:
             self._repo = get_analysis_repo()
         return self._repo
-    
+
     def validate_url(self, url: str) -> Tuple[bool, Optional[str]]:
         """
         Validate the source URL for SSRF protection.
-        
+
         Returns:
             Tuple of (is_valid, error_message)
         """
         import urllib.parse
-        
+
         try:
             parsed = urllib.parse.urlparse(url)
-            
+
             # Check scheme
             if parsed.scheme not in ("http", "https"):
                 return False, "URL must use http or https scheme"
-            
+
             # Check domain against allowlist
             domain = parsed.netloc.lower()
-            if not any(domain == allowed or domain.endswith(f".{allowed}") 
+            if not any(domain == allowed or domain.endswith(f".{allowed}")
                       for allowed in self.ALLOWED_DOMAINS):
                 return False, f"Domain not allowed. Only {', '.join(self.ALLOWED_DOMAINS)} are supported"
-            
+
             # Check for private IPs (basic SSRF protection)
             # Note: In production, use more comprehensive IP validation
             if any(ip in domain for ip in ["127.0.0.1", "localhost", "0.0.0.0"]):
                 return False, "Invalid domain"
-            
+
             return True, None
-            
+
         except Exception as e:
             logger.warning(f"URL validation error: {e}")
             return False, "Invalid URL format"
-    
+
     async def create_request(
         self,
         user_id: str,
@@ -70,18 +69,18 @@ class AnalysisService:
     ) -> Tuple[AnalysisRequest, bool]:
         """
         Create a new analysis request.
-        
+
         Args:
             user_id: The user ID making the request
             data: The request data with source URL
             check_duplicate: Whether to check for existing requests
-            
+
         Returns:
             Tuple of (request, is_duplicate)
             If duplicate exists within 24h, returns existing request and True
         """
         source_url = data.source_url.strip().rstrip("/")
-        
+
         # Check for duplicate requests
         if check_duplicate:
             try:
@@ -98,13 +97,13 @@ class AnalysisService:
             except Exception as e:
                 logger.warning(f"Error checking for duplicates: {e}")
                 # Continue with creation even if duplicate check fails
-        
+
         # Create new request
         request = AnalysisRequest(
             user_id=user_id,
             source_url=source_url,
         )
-        
+
         try:
             created = await self.repo.create(request)
             logger.info(f"Created analysis request {created.id} for user {user_id}")
@@ -112,7 +111,7 @@ class AnalysisService:
         except Exception as e:
             logger.error(f"Failed to create analysis request: {e}")
             raise
-    
+
     async def get_request(
         self,
         request_id: str,
@@ -124,7 +123,7 @@ class AnalysisService:
         except Exception as e:
             logger.error(f"Failed to get analysis request {request_id}: {e}")
             return None
-    
+
     async def list_user_requests(
         self,
         user_id: str,
@@ -134,7 +133,7 @@ class AnalysisService:
     ) -> Tuple[List[AnalysisRequest], int]:
         """
         List analysis requests for a user.
-        
+
         Returns:
             Tuple of (requests, total_count)
         """
@@ -148,7 +147,7 @@ class AnalysisService:
         except Exception as e:
             logger.error(f"Failed to list requests for user {user_id}: {e}")
             return [], 0
-    
+
     async def update_status(
         self,
         request_id: str,
@@ -169,7 +168,7 @@ class AnalysisService:
         except Exception as e:
             logger.error(f"Failed to update status for request {request_id}: {e}")
             return None
-    
+
     async def cancel_request(
         self,
         request_id: str,
@@ -179,21 +178,21 @@ class AnalysisService:
         request = await self.get_request(request_id, user_id)
         if not request:
             return None
-        
+
         # Only pending or in-progress requests can be cancelled
         if request.status in (AnalysisStatus.COMPLETED, AnalysisStatus.FAILED):
             logger.warning(
                 f"Cannot cancel request {request_id} with status {request.status}"
             )
             return request
-        
+
         return await self.update_status(
             request_id=request_id,
             user_id=user_id,
             status=AnalysisStatus.FAILED,
             message="Cancelled by user",
         )
-    
+
     async def delete_request(
         self,
         request_id: str,
