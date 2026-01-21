@@ -177,12 +177,15 @@ def generate_python_code(contents: list[dict]) -> str:
     code_lines = []
 
     for i, content in enumerate(contents):
+        # Python 3.9 doesn't support backslash in f-strings, so escape outside
+        escaped_title = content['title'].replace('"', '\\"')
+        escaped_desc = content['description'][:200].replace('"', '\\"').replace('\n', ' ')
         code_lines.append(f"""
             Content(
                 id="{content['id']}",
                 contributor_id="system",
-                title="{content['title'].replace('"', '\\"')}",
-                description="{content['description'][:200].replace('"', '\\"').replace('\n', ' ')}...",
+                title="{escaped_title}",
+                description="{escaped_desc}...",
                 content_type=ContentType.LAB,
                 status=ContentStatus.PUBLISHED,
                 source_url="{content['source_url']}",
