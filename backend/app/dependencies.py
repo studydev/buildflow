@@ -139,6 +139,9 @@ def require_role(required_role: UserRole):
 RequireUser = Depends(get_current_user)
 RequireContributor = Depends(require_role(UserRole.CONTRIBUTOR))
 
+# Alias for backward compatibility
+get_current_user_required = get_current_active_user
+
 
 # Function-based dependency for contributors
 async def require_contributor(
