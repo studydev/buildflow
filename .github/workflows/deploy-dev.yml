@@ -218,6 +218,15 @@ jobs:
           echo "username=$ACR_USERNAME" >> $GITHUB_OUTPUT
           echo "password=$ACR_PASSWORD" >> $GITHUB_OUTPUT
       
+      - name: Configure ACR registry for Container App
+        run: |
+          az containerapp registry set \
+            --name ${{ steps.get-app.outputs.app_name }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --server ${{ needs.deploy-infrastructure.outputs.acr_login_server }} \
+            --username ${{ steps.acr-creds.outputs.username }} \
+            --password ${{ steps.acr-creds.outputs.password }}
+      
       - name: Update Container App
         run: |
           az containerapp update \
@@ -225,14 +234,6 @@ jobs:
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --image ${{ needs.deploy-infrastructure.outputs.acr_login_server }}/${{ env.API_IMAGE_NAME }}:${{ github.sha }} \
             --set-env-vars "IMAGE_TAG=${{ github.sha }}"
-          
-          # Update registry credentials
-          az containerapp registry set \
-            --name ${{ steps.get-app.outputs.app_name }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --server ${{ needs.deploy-infrastructure.outputs.acr_login_server }} \
-            --username ${{ steps.acr-creds.outputs.username }} \
-            --password ${{ steps.acr-creds.outputs.password }}
 
   # ==========================================================================
   # Post-Deployment Validation
