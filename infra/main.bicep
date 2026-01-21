@@ -207,6 +207,21 @@ resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
   tags: tags
 }
 
+// ============================================================================
+// Container Registry Module
+// ============================================================================
+
+module containerRegistry 'modules/container-registry.bicep' = {
+  name: 'containerRegistryDeployment'
+  params: {
+    projectName: projectName
+    environment: environment
+    location: location
+    tags: tags
+    managedIdentityPrincipalId: managedIdentity.properties.principalId
+  }
+}
+
 // Key Vault Access for Managed Identity
 resource keyVaultRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(keyVault.id, managedIdentity.id, 'KeyVaultSecretsUser')
@@ -481,3 +496,7 @@ resource swaDeploymentTokenKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = i
 // Frontend outputs
 output staticWebAppName string = enableFrontend ? staticWebApp.outputs.staticWebAppName : ''
 output staticWebAppUrl string = enableFrontend ? staticWebApp.outputs.staticWebAppUrl : ''
+
+// Container Registry outputs
+output containerRegistryName string = containerRegistry.outputs.registryName
+output containerRegistryLoginServer string = containerRegistry.outputs.registryLoginServer
