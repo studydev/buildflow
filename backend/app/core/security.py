@@ -1,9 +1,9 @@
-"""Security utilities - JWT token handling with RS256."""
+"""Security utilities - JWT token handling with RS256 or HS256."""
 
 import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import jwt
 from pydantic import BaseModel
@@ -39,11 +39,12 @@ class TokenPair(BaseModel):
 
 
 # =============================================================================
-# Key Loading
+# Key/Secret Loading
 # =============================================================================
 
 _private_key: Optional[str] = None
 _public_key: Optional[str] = None
+_jwt_secret: Optional[str] = None
 
 
 def _load_key(path: str) -> str:
@@ -54,36 +55,73 @@ def _load_key(path: str) -> str:
     return key_path.read_text()
 
 
+def get_jwt_algorithm() -> str:
+    """Get the JWT algorithm from settings."""
+    settings = get_settings()
+    return settings.jwt_algorithm
+
+
+def get_signing_key() -> str:
+    """Get the key/secret for signing tokens based on algorithm."""
+    global _private_key, _jwt_secret
+    settings = get_settings()
+
+    if settings.jwt_algorithm == "HS256":
+        if _jwt_secret is None:
+            if not settings.jwt_secret:
+                raise RuntimeError(
+                    "JWT_SECRET is not set. "
+                    "Set JWT_SECRET environment variable for HS256 algorithm."
+                )
+            _jwt_secret = settings.jwt_secret
+        return _jwt_secret
+    else:
+        # RS256
+        if _private_key is None:
+            if not settings.jwt_private_key_path:
+                raise RuntimeError(
+                    "JWT_PRIVATE_KEY_PATH is not set. "
+                    "Run 'make keys' to generate RSA keys."
+                )
+            _private_key = _load_key(settings.jwt_private_key_path)
+        return _private_key
+
+
+def get_verification_key() -> str:
+    """Get the key/secret for verifying tokens based on algorithm."""
+    global _public_key, _jwt_secret
+    settings = get_settings()
+
+    if settings.jwt_algorithm == "HS256":
+        if _jwt_secret is None:
+            if not settings.jwt_secret:
+                raise RuntimeError(
+                    "JWT_SECRET is not set. "
+                    "Set JWT_SECRET environment variable for HS256 algorithm."
+                )
+            _jwt_secret = settings.jwt_secret
+        return _jwt_secret
+    else:
+        # RS256
+        if _public_key is None:
+            if not settings.jwt_public_key_path:
+                raise RuntimeError(
+                    "JWT_PUBLIC_KEY_PATH is not set. "
+                    "Run 'make keys' to generate RSA keys."
+                )
+            _public_key = _load_key(settings.jwt_public_key_path)
+        return _public_key
+
+
+# Legacy functions for backward compatibility
 def get_private_key() -> str:
-    """Get the private key for signing tokens."""
-    global _private_key
-
-    if _private_key is None:
-        settings = get_settings()
-        if not settings.jwt_private_key_path:
-            raise RuntimeError(
-                "JWT_PRIVATE_KEY_PATH is not set. "
-                "Run 'make keys' to generate RSA keys."
-            )
-        _private_key = _load_key(settings.jwt_private_key_path)
-
-    return _private_key
+    """Get the private key for signing tokens (RS256 only)."""
+    return get_signing_key()
 
 
 def get_public_key() -> str:
-    """Get the public key for verifying tokens."""
-    global _public_key
-
-    if _public_key is None:
-        settings = get_settings()
-        if not settings.jwt_public_key_path:
-            raise RuntimeError(
-                "JWT_PUBLIC_KEY_PATH is not set. "
-                "Run 'make keys' to generate RSA keys."
-            )
-        _public_key = _load_key(settings.jwt_public_key_path)
-
-    return _public_key
+    """Get the public key for verifying tokens (RS256 only)."""
+    return get_verification_key()
 
 
 # =============================================================================
@@ -126,7 +164,7 @@ def create_access_token(
         "exp": expire,
     }
 
-    return jwt.encode(payload, get_private_key(), algorithm="RS256")
+    return jwt.encode(payload, get_signing_key(), algorithm=get_jwt_algorithm())
 
 
 def create_refresh_token(
@@ -169,7 +207,7 @@ def create_refresh_token(
     if jti:
         payload["jti"] = jti
 
-    return jwt.encode(payload, get_private_key(), algorithm="RS256")
+    return jwt.encode(payload, get_signing_key(), algorithm=get_jwt_algorithm())
 
 
 def create_token_pair(
@@ -224,8 +262,8 @@ def decode_token(token: str) -> TokenPayload:
     """
     payload = jwt.decode(
         token,
-        get_public_key(),
-        algorithms=["RS256"],
+        get_verification_key(),
+        algorithms=[get_jwt_algorithm()],
     )
 
     return TokenPayload(

@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     # AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
 
     # JWT Settings
+    jwt_secret: Optional[str] = None  # Used with HS256 algorithm
+    jwt_algorithm: str = "RS256"  # RS256 (key files) or HS256 (secret)
     jwt_private_key_path: Optional[str] = "keys/private.pem"
     jwt_public_key_path: Optional[str] = "keys/public.pem"
     jwt_access_token_expire_minutes: int = 15
