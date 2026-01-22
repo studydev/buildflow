@@ -37,12 +37,12 @@ class LoginAttemptRepository:
     async def upsert(self, attempt: LoginAttempt) -> LoginAttempt:
         """
         Upsert a login attempt (create or replace).
-        
+
         This ensures only one OTP exists per email at any time.
-        
+
         Args:
             attempt: LoginAttempt to upsert
-            
+
         Returns:
             Upserted LoginAttempt
         """
@@ -54,55 +54,55 @@ class LoginAttemptRepository:
     async def get_by_email(self, email: str) -> Optional[LoginAttempt]:
         """
         Get login attempt by email.
-        
+
         Args:
             email: Email address (lowercase)
-            
+
         Returns:
             LoginAttempt if found and not expired, None otherwise
         """
         email = email.lower()
         query = """
-            SELECT * FROM c 
-            WHERE c.email = @email 
+            SELECT * FROM c
+            WHERE c.email = @email
             AND c.type = 'login_attempt'
         """
         parameters = [{"name": "@email", "value": email}]
-        
+
         items = list(self.container.query_items(
             query=query,
             parameters=parameters,
             partition_key=email,
         ))
-        
+
         if not items:
             return None
-        
+
         attempt = LoginAttempt.from_cosmos_item(items[0])
-        
+
         # Check if expired (application-level check in addition to TTL)
         if attempt.is_expired():
             return None
-        
+
         return attempt
 
     async def delete(self, email: str) -> bool:
         """
         Delete login attempt by email.
-        
+
         Args:
             email: Email address
-            
+
         Returns:
             True if deleted, False if not found
         """
         email = email.lower()
-        
+
         # First, find the document to get its ID
         attempt = await self.get_by_email(email)
         if attempt is None:
             return False
-        
+
         try:
             self.container.delete_item(
                 item=attempt.id,
@@ -116,29 +116,29 @@ class LoginAttemptRepository:
     async def can_request_new_otp(self, email: str, rate_limit_minutes: int = 3) -> tuple[bool, int]:
         """
         Check if a new OTP can be requested for the email.
-        
+
         Args:
             email: Email address
             rate_limit_minutes: Minimum minutes between OTP requests
-            
+
         Returns:
             Tuple of (can_request, seconds_remaining)
             - (True, 0) if new OTP can be requested
             - (False, seconds) if rate limited
         """
         attempt = await self.get_by_email(email)
-        
+
         if attempt is None:
             return True, 0
-        
+
         # Calculate time since last OTP request
         now = datetime.now(timezone.utc)
         elapsed = now - attempt.created_at
         rate_limit = timedelta(minutes=rate_limit_minutes)
-        
+
         if elapsed >= rate_limit:
             return True, 0
-        
+
         remaining = rate_limit - elapsed
         return False, int(remaining.total_seconds())
 

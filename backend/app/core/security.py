@@ -312,7 +312,7 @@ def set_auth_cookie(
 ) -> None:
     """
     Set authentication cookie on response.
-    
+
     Args:
         response: FastAPI Response object
         token: JWT access token
@@ -322,11 +322,11 @@ def set_auth_cookie(
         samesite: SameSite policy (default: "lax")
     """
     settings = get_settings()
-    
+
     # In development, allow non-secure cookies
     if settings.debug:
         secure = False
-    
+
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
         value=token,
@@ -341,13 +341,13 @@ def set_auth_cookie(
 def clear_auth_cookie(response) -> None:
     """
     Clear authentication cookie from response.
-    
+
     Args:
         response: FastAPI Response object
     """
     settings = get_settings()
     secure = not settings.debug
-    
+
     response.delete_cookie(
         key=AUTH_COOKIE_NAME,
         path="/",

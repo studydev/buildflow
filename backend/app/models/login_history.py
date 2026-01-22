@@ -9,9 +9,9 @@ from pydantic import BaseModel, Field
 
 class LoginHistory(BaseModel):
     """Login history record stored in Cosmos DB.
-    
+
     Records successful login events for audit and tracking.
-    
+
     Container: login_history
     Partition Key: /email
     """

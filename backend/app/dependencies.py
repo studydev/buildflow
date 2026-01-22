@@ -31,7 +31,7 @@ async def get_current_user_token(
 ) -> TokenPayload:
     """
     Extract and verify JWT token from HttpOnly cookie or Authorization header.
-    
+
     Priority: Cookie > Authorization header (for browser requests)
 
     Returns the decoded token payload.
@@ -40,14 +40,14 @@ async def get_current_user_token(
         AuthenticationError: If token is missing, invalid, or expired
     """
     token = None
-    
+
     # Priority 1: Try HttpOnly cookie first
     if access_token:
         token = access_token
     # Priority 2: Fall back to Authorization header
     elif credentials:
         token = credentials.credentials
-    
+
     if token is None:
         raise AuthenticationError(message="Missing authentication token")
 

@@ -7,7 +7,12 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.core.domain_validator import validate_internal_email
-from app.core.exceptions import AuthenticationError, DomainNotAllowedError, EmailSendError, RateLimitError, ValidationError
+from app.core.exceptions import (
+    AuthenticationError,
+    DomainNotAllowedError,
+    EmailSendError,
+    RateLimitError,
+)
 from app.core.rate_limit import (
     check_rate_limit,
     get_otp_request_limiter,
@@ -144,17 +149,17 @@ async def verify_otp(request: Request, body: VerifyRequest) -> JSONResponse:
     try:
         from app.models.login_history import LoginHistory
         from app.repositories.login_history_repo import get_login_history_repository
-        
+
         # T043: Extract user_agent and ip_address from request
         user_agent = request.headers.get("user-agent", "unknown")
         ip_address = request.client.host if request.client else "unknown"
-        
+
         history = LoginHistory.create(
             email=email,
             user_agent=user_agent,
             ip_address=ip_address,
         )
-        
+
         history_repo = get_login_history_repository()
         await history_repo.create(history)
         logger.info("Login history saved for: %s", email)
@@ -177,7 +182,7 @@ async def verify_otp(request: Request, body: VerifyRequest) -> JSONResponse:
     # T017: Create response and set HttpOnly cookie (FR-008)
     json_response = JSONResponse(content=response.model_dump())
     set_auth_cookie(json_response, tokens.access_token)
-    
+
     return json_response
 
 
@@ -233,27 +238,28 @@ async def refresh_token(request: Request, body: RefreshRequest) -> JSONResponse:
 async def get_current_user_info(request: Request) -> JSONResponse:
     """
     T025: Get current authenticated user info.
-    
+
     Validates the session via HttpOnly cookie and returns user details.
     Used by frontend to check session validity on page load.
     """
     import jwt
+
     from app.core.security import AUTH_COOKIE_NAME, verify_access_token
-    
+
     correlation_id = request.state.correlation_id
-    
+
     # Get token from cookie
     access_token = request.cookies.get(AUTH_COOKIE_NAME)
     if not access_token:
         raise AuthenticationError(message="Missing authentication token")
-    
+
     try:
         payload = verify_access_token(access_token)
     except jwt.ExpiredSignatureError:
         raise AuthenticationError(message="Token has expired")
     except jwt.InvalidTokenError:
         raise AuthenticationError(message="Invalid authentication token")
-    
+
     response = APIResponse(
         success=True,
         data={
@@ -283,16 +289,16 @@ async def logout(request: Request) -> JSONResponse:
     T038: Logout endpoint - clears the HttpOnly auth cookie.
     """
     from app.core.security import clear_auth_cookie
-    
+
     correlation_id = request.state.correlation_id
-    
+
     response_data = APIResponse(
         success=True,
         data={"message": "Logged out successfully"},
         meta=Meta.create(correlation_id),
     )
-    
+
     response = JSONResponse(content=response_data.model_dump())
     clear_auth_cookie(response)
-    
+
     return response

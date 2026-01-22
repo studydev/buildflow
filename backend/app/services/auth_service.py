@@ -4,7 +4,7 @@ import logging
 from typing import Optional
 from uuid import uuid4
 
-from app.core.domain_validator import is_allowed_domain, normalize_email, validate_internal_email
+from app.core.domain_validator import normalize_email, validate_internal_email
 from app.core.security import (
     TokenPair,
     create_token_pair,
@@ -45,10 +45,10 @@ class AuthService:
     def validate_domain(self, email: str) -> tuple[bool, str]:
         """
         Validate that email is from an allowed domain.
-        
+
         Args:
             email: Email address to validate
-            
+
         Returns:
             Tuple of (is_valid, error_message)
         """

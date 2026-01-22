@@ -1,7 +1,6 @@
 """LoginHistory repository for login audit trail in Cosmos DB."""
 
 import logging
-from datetime import datetime, timezone
 from typing import List, Optional
 
 from app.db.cosmos import get_container
@@ -34,10 +33,10 @@ class LoginHistoryRepository:
     async def create(self, history: LoginHistory) -> LoginHistory:
         """
         Create a new login history record.
-        
+
         Args:
             history: LoginHistory to create
-            
+
         Returns:
             Created LoginHistory
         """
@@ -54,19 +53,19 @@ class LoginHistoryRepository:
     ) -> List[LoginHistory]:
         """
         Query login history by email.
-        
+
         Args:
             email: Email address
             limit: Maximum number of records to return
             offset: Number of records to skip
-            
+
         Returns:
             List of LoginHistory records, ordered by logged_in_at desc
         """
         email = email.lower()
         query = """
-            SELECT * FROM c 
-            WHERE c.email = @email 
+            SELECT * FROM c
+            WHERE c.email = @email
             AND c.type = 'login_history'
             ORDER BY c.logged_in_at DESC
             OFFSET @offset LIMIT @limit
@@ -76,22 +75,22 @@ class LoginHistoryRepository:
             {"name": "@offset", "value": offset},
             {"name": "@limit", "value": limit},
         ]
-        
+
         items = list(self.container.query_items(
             query=query,
             parameters=parameters,
             partition_key=email,
         ))
-        
+
         return [LoginHistory.from_cosmos_item(item) for item in items]
 
     async def get_last_login(self, email: str) -> Optional[LoginHistory]:
         """
         Get the most recent login record for an email.
-        
+
         Args:
             email: Email address
-            
+
         Returns:
             Most recent LoginHistory or None
         """
@@ -101,27 +100,27 @@ class LoginHistoryRepository:
     async def count_by_email(self, email: str) -> int:
         """
         Count total login records for an email.
-        
+
         Args:
             email: Email address
-            
+
         Returns:
             Total count of login records
         """
         email = email.lower()
         query = """
-            SELECT VALUE COUNT(1) FROM c 
-            WHERE c.email = @email 
+            SELECT VALUE COUNT(1) FROM c
+            WHERE c.email = @email
             AND c.type = 'login_history'
         """
         parameters = [{"name": "@email", "value": email}]
-        
+
         items = list(self.container.query_items(
             query=query,
             parameters=parameters,
             partition_key=email,
         ))
-        
+
         return items[0] if items else 0
 
 

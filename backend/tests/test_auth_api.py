@@ -215,7 +215,7 @@ class TestProtectedEndpoints:
         """Should return 401 when accessing POST /content without authentication."""
         # Ensure no cookies from previous tests
         client.cookies.clear()
-        
+
         response = client.post(
             "/api/v1/content",
             json={
@@ -232,7 +232,7 @@ class TestProtectedEndpoints:
         """Should return 401 when accessing POST /analysis-requests without authentication."""
         # Ensure no cookies from previous tests
         client.cookies.clear()
-        
+
         response = client.post(
             "/api/v1/analysis-requests",
             json={"source_url": "https://github.com/test/repo"},
@@ -263,13 +263,13 @@ class TestProtectedEndpoints:
 
         # The verify endpoint should set HttpOnly cookie
         # Check that Set-Cookie header is present
-        assert "set-cookie" in verify_response.headers or response.status_code == 200
+        assert "set-cookie" in verify_response.headers or verify_response.status_code == 200
 
     def test_auth_me_without_auth_returns_401(self):
         """Should return 401 when accessing GET /auth/me without authentication."""
         # Ensure no cookies from previous tests
         client.cookies.clear()
-        
+
         response = client.get("/api/v1/auth/me")
 
         assert response.status_code == 401
@@ -337,11 +337,11 @@ class TestLoginHistory:
     def test_login_records_history(self):
         """Should record login history on successful OTP verification."""
         email = "history@microsoft.com"
-        
+
         # Request OTP
         client.post("/api/v1/auth/otp", json={"email": email})
         entry = get_otp_store().get(email)
-        
+
         # Verify OTP with custom headers
         response = client.post(
             "/api/v1/auth/verify",
@@ -350,11 +350,11 @@ class TestLoginHistory:
                 "User-Agent": "TestBrowser/1.0",
             },
         )
-        
+
         # Login should succeed
         assert response.status_code == 200
         assert response.json()["success"] is True
-        
+
         # Note: Login history is saved asynchronously
         # In production, we would query the login_history container to verify
         # For unit tests, we verify the endpoint succeeded (history save is best-effort)

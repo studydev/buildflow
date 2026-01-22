@@ -2,7 +2,6 @@
 
 import hashlib
 from datetime import datetime, timezone
-from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -10,10 +9,10 @@ from pydantic import BaseModel, Field
 
 class LoginAttempt(BaseModel):
     """OTP authentication attempt stored in Cosmos DB.
-    
+
     Each email can have at most one pending LoginAttempt.
     TTL is used for automatic cleanup after expiration.
-    
+
     Container: login_attempts
     Partition Key: /email
     """

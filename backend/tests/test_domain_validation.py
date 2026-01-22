@@ -3,7 +3,6 @@
 import pytest
 
 from app.core.domain_validator import (
-    ALLOWED_DOMAINS,
     extract_domain,
     is_allowed_domain,
     normalize_email,

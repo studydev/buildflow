@@ -32,15 +32,15 @@ class MailHogEmailService(EmailService):
     def __init__(self, host: str = "localhost", port: int = 1025):
         self.host = host
         self.port = port
-        self.from_email = "noreply@buildflow.dev"
+        self.from_email = "noreply@studydev.com"
 
     async def send_otp(self, email: str, otp: str) -> bool:
         """Send OTP via MailHog."""
-        subject = "BuildFlow - 인증 코드"
+        subject = "NexusSkill - 인증 코드"
         html_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>BuildFlow 로그인 인증</h2>
+            <h2>NexusSkill 로그인 인증</h2>
             <p>아래 코드를 입력하여 로그인을 완료하세요:</p>
             <div style="background: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0;">
                 <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px;">{otp}</span>
@@ -57,12 +57,12 @@ class MailHogEmailService(EmailService):
 
     async def send_welcome(self, email: str, name: str) -> bool:
         """Send welcome email via MailHog."""
-        subject = "BuildFlow에 오신 것을 환영합니다!"
+        subject = "NexusSkill에 오신 것을 환영합니다!"
         html_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
             <h2>환영합니다, {name}님! 🎉</h2>
-            <p>BuildFlow에 가입해 주셔서 감사합니다.</p>
+            <p>NexusSkill에 가입해 주셔서 감사합니다.</p>
             <p>이제 Azure 학습 콘텐츠를 탐색하고 북마크할 수 있습니다.</p>
             <ul>
                 <li>워크샵, 튜토리얼, 샘플 코드 탐색</li>
@@ -70,7 +70,7 @@ class MailHogEmailService(EmailService):
                 <li>콘텐츠 기여자로 참여</li>
             </ul>
             <p>
-                <a href="https://buildflow.dev" style="background: #0078d4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">
+                <a href="https://nexus.studydev.com" style="background: #0078d4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">
                     시작하기
                 </a>
             </p>
@@ -125,11 +125,11 @@ class AzureCommunicationEmailService(EmailService):
 
     async def send_otp(self, email: str, otp: str) -> bool:
         """Send OTP via Azure Communication Services."""
-        subject = "BuildFlow - 인증 코드"
+        subject = "NexusSkill - 인증 코드"
         html_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>BuildFlow 로그인 인증</h2>
+            <h2>NexusSkill 로그인 인증</h2>
             <p>아래 코드를 입력하여 로그인을 완료하세요:</p>
             <div style="background: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0;">
                 <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px;">{otp}</span>
@@ -146,12 +146,12 @@ class AzureCommunicationEmailService(EmailService):
 
     async def send_welcome(self, email: str, name: str) -> bool:
         """Send welcome email via Azure Communication Services."""
-        subject = "BuildFlow에 오신 것을 환영합니다!"
+        subject = "NexusSkill에 오신 것을 환영합니다!"
         html_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
             <h2>환영합니다, {name}님! 🎉</h2>
-            <p>BuildFlow에 가입해 주셔서 감사합니다.</p>
+            <p>NexusSkill에 가입해 주셔서 감사합니다.</p>
             <p>이제 Azure 학습 콘텐츠를 탐색하고 북마크할 수 있습니다.</p>
         </body>
         </html>
@@ -216,11 +216,11 @@ def get_email_service() -> EmailService:
 async def send_otp_email(email: str, otp_code: str) -> bool:
     """
     Convenience function to send OTP email.
-    
+
     Args:
         email: Recipient email address
         otp_code: 6-digit OTP code
-        
+
     Returns:
         True if email sent successfully, False otherwise
     """
