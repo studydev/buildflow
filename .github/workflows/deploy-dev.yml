@@ -1,7 +1,7 @@
 # BuildFlow - Dev Environment Deployment
 # Per tasks.md T801: GitHub Actions for Dev
 #
-# Trigger: After Backend CI succeeds on main branch
+# Trigger: After Backend CI succeeds on develop branch
 # Order: Infrastructure first, then Build, then Deploy
 # - Deploy infrastructure via Bicep (creates ACR)
 # - Build and push API Docker image
@@ -11,13 +11,13 @@
 name: Deploy to Dev
 
 on:
-  # Triggered when Backend CI workflow completes on main branch
+  # Triggered when Backend CI workflow completes on develop branch
   workflow_run:
     workflows: ["Backend CI"]
     types:
       - completed
     branches:
-      - main
+      - develop
   
   # Manual trigger for emergency deployments
   workflow_dispatch:
