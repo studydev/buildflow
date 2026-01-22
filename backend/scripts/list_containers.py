@@ -25,6 +25,7 @@ cosmos_key = key_match.group(1)
 print(f"Connecting to: {cosmos_endpoint}")
 
 from azure.cosmos import CosmosClient
+
 client = CosmosClient(cosmos_endpoint, cosmos_key)
 database = client.get_database_client('buildflow')
 
