@@ -88,6 +88,14 @@ class Settings(BaseSettings):
     otp_ttl_minutes: int = 3  # OTP validity period
     otp_rate_limit_minutes: int = 3  # Minimum time between OTP requests
 
+    # CORS Settings
+    cors_origins: str = "http://localhost:5173,http://localhost:3000"  # Comma-separated list
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Get CORS origins as a list."""
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
     @property
     def is_production(self) -> bool:
         return self.env == "production"

@@ -40,6 +40,9 @@
     },
     "enableFrontend": {
       "value": true
+    },
+    "corsOrigins": {
+      "value": "https://nexus.studydev.com,http://localhost:5173,http://localhost:3000"
     }
   }
 }

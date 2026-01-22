@@ -42,7 +42,10 @@ param acsConnectionString string = ''
 @description('Azure Communication Services Sender Address for OTP emails')
 param acsSenderAddress string = ''
 
-@description('Container Registry login server')
+@description('CORS allowed origins (comma-separated)')
+param corsOrigins string = 'http://localhost:5173,http://localhost:3000'
+
+@description('Container Registry login server'))
 param containerRegistryLoginServer string = ''
 
 @description('Pipeline container image tag')
@@ -318,6 +321,7 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
             { name: 'ACS_CONNECTION_STRING', secretRef: 'acs-connection-string' }
             { name: 'ACS_SENDER_ADDRESS', value: acsSenderAddress }
+            { name: 'CORS_ORIGINS', value: corsOrigins }
           ]
           probes: [
             {

@@ -203,10 +203,10 @@ def create_app() -> FastAPI:
     # Correlation ID middleware (must be added first to wrap all requests)
     app.add_middleware(CorrelationIDMiddleware)
 
-    # CORS middleware for frontend
+    # CORS middleware for frontend (uses module-level settings)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173", "http://localhost:3000"],
+        allow_origins=settings.cors_origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
