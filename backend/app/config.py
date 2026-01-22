@@ -80,6 +80,14 @@ class Settings(BaseSettings):
     azure_storage_account_key: Optional[str] = None
     azure_storage_cdn_host: Optional[str] = None  # e.g., "cdn.buildflow.dev"
 
+    # Azure Communication Services Settings (OTP Email)
+    acs_connection_string: Optional[str] = None
+    acs_sender_address: Optional[str] = None  # e.g., "DoNotReply@<domain>.azurecomm.net"
+
+    # OTP Settings (T035: 3-minute validity and resend limit)
+    otp_ttl_minutes: int = 3  # OTP validity period
+    otp_rate_limit_minutes: int = 3  # Minimum time between OTP requests
+
     @property
     def is_production(self) -> bool:
         return self.env == "production"

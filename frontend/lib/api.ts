@@ -11,7 +11,7 @@
 import { useAuthStore } from '@/stores/auth'
 import type { AuthTokens } from '@/stores/auth'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const API_PREFIX = '/api/v1'
 
 /**
@@ -150,9 +150,11 @@ export async function apiRequest<T>(
 
   const url = `${API_BASE_URL}${API_PREFIX}${endpoint}`
 
+  // T026: Use credentials: 'include' for HttpOnly cookie auth
   let response = await fetch(url, {
     ...options,
     headers,
+    credentials: 'include',
   })
 
   // Handle 401 - try to refresh token
@@ -165,6 +167,7 @@ export async function apiRequest<T>(
       response = await fetch(url, {
         ...options,
         headers,
+        credentials: 'include',
       })
     }
   }
@@ -229,7 +232,6 @@ export const authApi = {
     message: string
     email: string
     expires_in_seconds: number
-    dev_code?: string | null
   }> {
     return api.post('/auth/otp', { email })
   },
@@ -259,6 +261,26 @@ export const authApi = {
     created_at: string
   }> {
     return api.get('/users/me')
+  },
+
+  /**
+   * T025: Get current user via auth endpoint (cookie-based)
+   */
+  async getMe(): Promise<{
+    id: string
+    email: string
+    display_name: string | null
+    role: string
+    created_at: string
+  }> {
+    return api.get('/auth/me')
+  },
+
+  /**
+   * T039: Logout - clears HttpOnly cookie on server
+   */
+  async logout(): Promise<void> {
+    return api.post('/auth/logout')
   },
 }
 

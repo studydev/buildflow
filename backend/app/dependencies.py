@@ -5,12 +5,12 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import jwt
-from fastapi import Depends, Header, Request
+from fastapi import Cookie, Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.config import get_settings
 from app.core.exceptions import AuthenticationError, ForbiddenError
-from app.core.security import TokenPayload, verify_access_token
+from app.core.security import AUTH_COOKIE_NAME, TokenPayload, verify_access_token
 from app.models.enums import UserRole
 from app.models.user import User, UserPublic
 from app.repositories.user_repo import get_user_repository
@@ -27,19 +27,29 @@ oauth2_scheme = HTTPBearer(auto_error=False)
 async def get_current_user_token(
     request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(oauth2_scheme),
+    access_token: Optional[str] = Cookie(default=None, alias=AUTH_COOKIE_NAME),
 ) -> TokenPayload:
     """
-    Extract and verify JWT token from Authorization header.
+    Extract and verify JWT token from HttpOnly cookie or Authorization header.
+    
+    Priority: Cookie > Authorization header (for browser requests)
 
     Returns the decoded token payload.
 
     Raises:
         AuthenticationError: If token is missing, invalid, or expired
     """
-    if credentials is None:
+    token = None
+    
+    # Priority 1: Try HttpOnly cookie first
+    if access_token:
+        token = access_token
+    # Priority 2: Fall back to Authorization header
+    elif credentials:
+        token = credentials.credentials
+    
+    if token is None:
         raise AuthenticationError(message="Missing authentication token")
-
-    token = credentials.credentials
 
     try:
         payload = verify_access_token(token)

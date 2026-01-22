@@ -1,0 +1,393 @@
+openapi: 3.0.3
+info:
+  title: BuildFlow Auth API
+  description: OTP 기반 이메일 인증 API
+  version: 1.0.0
+  contact:
+    name: BuildFlow Team
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+tags:
+  - name: Authentication
+    description: OTP 이메일 인증 및 세션 관리
+
+paths:
+  /auth/otp:
+    post:
+      operationId: requestOtp
+      summary: OTP 요청
+      description: |
+        이메일로 6자리 OTP 코드를 발송합니다.
+        - 허용 도메인: @microsoft.com, @github.com
+        - 재발송 제한: 3분
+        - OTP 유효시간: 3분
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPRequest'
+            example:
+              email: user@microsoft.com
+      responses:
+        '200':
+          description: OTP 발송 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPResponse'
+              example:
+                success: true
+                data:
+                  message: OTP sent successfully
+                  email: u***@microsoft.com
+                  expires_in_seconds: 180
+                meta:
+                  timestamp: '2026-01-22T10:00:00Z'
+                  correlationId: 550e8400-e29b-41d4-a716-446655440000
+        '400':
+          description: 유효하지 않은 도메인
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: DOMAIN_NOT_ALLOWED
+                  message: 내부 직원 전용 로그인 서비스입니다.
+                meta:
+                  timestamp: '2026-01-22T10:00:00Z'
+                  correlationId: 550e8400-e29b-41d4-a716-446655440000
+        '429':
+          description: 재발송 제한
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: 2분 후에 다시 시도해주세요.
+                  details:
+                    retry_after_seconds: 120
+                meta:
+                  timestamp: '2026-01-22T10:00:00Z'
+                  correlationId: 550e8400-e29b-41d4-a716-446655440000
+
+  /auth/verify:
+    post:
+      operationId: verifyOtp
+      summary: OTP 검증
+      description: |
+        OTP 코드를 검증하고 세션을 생성합니다.
+        성공 시 HttpOnly 쿠키에 JWT 토큰이 설정됩니다.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyRequest'
+            example:
+              email: user@microsoft.com
+              code: '123456'
+      responses:
+        '200':
+          description: 인증 성공
+          headers:
+            Set-Cookie:
+              description: JWT 토큰이 포함된 HttpOnly 쿠키
+              schema:
+                type: string
+                example: access_token=eyJ...; HttpOnly; Secure; SameSite=Lax; Max-Age=604800; Path=/
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+              example:
+                success: true
+                data:
+                  message: Authentication successful
+                  user:
+                    id: 550e8400-e29b-41d4-a716-446655440000
+                    email: user@microsoft.com
+                    role: contributor
+                meta:
+                  timestamp: '2026-01-22T10:00:00Z'
+                  correlationId: 550e8400-e29b-41d4-a716-446655440000
+        '401':
+          description: 인증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_code:
+                  summary: 잘못된 코드
+                  value:
+                    success: false
+                    error:
+                      code: INVALID_OTP
+                      message: 인증 코드가 올바르지 않습니다.
+                    meta:
+                      timestamp: '2026-01-22T10:00:00Z'
+                      correlationId: 550e8400-e29b-41d4-a716-446655440000
+                expired_code:
+                  summary: 만료된 코드
+                  value:
+                    success: false
+                    error:
+                      code: OTP_EXPIRED
+                      message: 인증 코드가 만료되었습니다.
+                    meta:
+                      timestamp: '2026-01-22T10:00:00Z'
+                      correlationId: 550e8400-e29b-41d4-a716-446655440000
+
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: 로그아웃
+      description: |
+        세션을 종료하고 인증 쿠키를 삭제합니다.
+      tags:
+        - Authentication
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: 로그아웃 성공
+          headers:
+            Set-Cookie:
+              description: 쿠키 삭제
+              schema:
+                type: string
+                example: access_token=; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Path=/
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+              example:
+                success: true
+                data:
+                  message: Logged out successfully
+                meta:
+                  timestamp: '2026-01-22T10:00:00Z'
+                  correlationId: 550e8400-e29b-41d4-a716-446655440000
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      summary: 현재 사용자 조회
+      description: |
+        현재 인증된 사용자 정보를 반환합니다.
+      tags:
+        - Authentication
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: 사용자 정보
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                success: true
+                data:
+                  id: 550e8400-e29b-41d4-a716-446655440000
+                  email: user@microsoft.com
+                  display_name: null
+                  role: contributor
+                  created_at: '2026-01-22T10:00:00Z'
+                meta:
+                  timestamp: '2026-01-22T10:00:00Z'
+                  correlationId: 550e8400-e29b-41d4-a716-446655440000
+        '401':
+          description: 인증 필요
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: UNAUTHORIZED
+                  message: Missing or invalid authentication token
+                meta:
+                  timestamp: '2026-01-22T10:00:00Z'
+                  correlationId: 550e8400-e29b-41d4-a716-446655440000
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: HttpOnly JWT 쿠키
+
+  schemas:
+    OTPRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: 인증할 이메일 주소 (@microsoft.com 또는 @github.com)
+          example: user@microsoft.com
+
+    OTPResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              example: OTP sent successfully
+            email:
+              type: string
+              description: 마스킹된 이메일
+              example: u***@microsoft.com
+            expires_in_seconds:
+              type: integer
+              description: OTP 유효시간 (초)
+              example: 180
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    VerifyRequest:
+      type: object
+      required:
+        - email
+        - code
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@microsoft.com
+        code:
+          type: string
+          pattern: '^[0-9]{6}$'
+          description: 6자리 OTP 코드
+          example: '123456'
+
+    VerifyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Authentication successful
+            user:
+              $ref: '#/components/schemas/UserBasic'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    LogoutResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Logged out successfully
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    UserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/UserFull'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    UserBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [user, contributor, admin]
+
+    UserFull:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [user, contributor, admin]
+        created_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: 에러 코드
+              example: DOMAIN_NOT_ALLOWED
+            message:
+              type: string
+              description: 사용자 친화적 메시지
+              example: 내부 직원 전용 로그인 서비스입니다.
+            details:
+              type: object
+              additionalProperties: true
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    Meta:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+          format: uuid

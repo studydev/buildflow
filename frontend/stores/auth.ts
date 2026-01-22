@@ -136,6 +136,13 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
+    // T040: Call backend logout to clear HttpOnly cookie
+    import('@/lib/api').then(({ authApi }) => {
+      authApi.logout().catch(() => {
+        // Ignore logout API errors - continue with local cleanup
+      })
+    })
+    
     accessToken.value = null
     refreshToken.value = null
     user.value = null
@@ -156,6 +163,35 @@ export const useAuthStore = defineStore('auth', () => {
     }
     return {
       Authorization: `Bearer ${accessToken.value}`,
+    }
+  }
+
+  /**
+   * T024: Check authentication status via API (cookie-based)
+   * This validates the session with the server using HttpOnly cookie
+   */
+  async function checkSession(): Promise<boolean> {
+    try {
+      // Import api dynamically to avoid circular dependency
+      const { authApi } = await import('@/lib/api')
+      const userData = await authApi.getMe()
+      
+      // Update user state with server response
+      user.value = {
+        id: userData.id,
+        email: userData.email,
+        display_name: userData.display_name,
+        role: userData.role as User['role'],
+        created_at: userData.created_at,
+      }
+      
+      return true
+    } catch {
+      // Session invalid - clear local state
+      accessToken.value = null
+      refreshToken.value = null
+      user.value = null
+      return false
     }
   }
 
@@ -184,11 +220,13 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     updateTokens,
     getAuthHeader,
+    checkSession,
   }
 }, {
   persist: {
     key: 'buildflow-auth',
     storage: localStorage,
-    pick: ['accessToken', 'refreshToken', 'user'],
+    // T045: Only persist user info, tokens are now in HttpOnly cookies
+    pick: ['user'],
   },
 })

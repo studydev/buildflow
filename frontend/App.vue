@@ -1,11 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import Header from '@/components/layout/Header.vue'
 import Assistant from '@/components/Assistant.vue'
+import { useAuthStore } from '@/stores/auth'
 
+const authStore = useAuthStore()
 const isDarkMode = ref(false)
 const isSidebarOpen = ref(true)
+
+// T034: Check session on app mount for 7-day persistence
+onMounted(async () => {
+  // Validate session with server using HttpOnly cookie
+  await authStore.checkSession()
+})
 
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import {
   Dialog,
   DialogContent,
@@ -22,8 +22,38 @@ const email = ref('')
 const otpCode = ref('')
 const isLoading = ref(false)
 const error = ref<string | null>(null)
-const otpExpiresIn = ref(300) // 5 minutes default
-const devCode = ref<string | null>(null) // Development only - OTP code for testing
+const otpExpiresIn = ref(180) // 3 minutes default
+
+// T037: Countdown timer state for OTP resend limit
+const resendCountdown = ref(0)
+let countdownInterval: ReturnType<typeof setInterval> | null = null
+
+// Start countdown timer when OTP is requested
+const startResendCountdown = (seconds: number) => {
+  resendCountdown.value = seconds
+  
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+  }
+  
+  countdownInterval = setInterval(() => {
+    if (resendCountdown.value > 0) {
+      resendCountdown.value--
+    } else if (countdownInterval) {
+      clearInterval(countdownInterval)
+      countdownInterval = null
+    }
+  }, 1000)
+}
+
+// Cleanup interval on unmount
+onUnmounted(() => {
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+  }
+})
+
+const canResendOtp = computed(() => resendCountdown.value === 0 && !isLoading.value)
 
 const emit = defineEmits<{
   login: [email: string]
@@ -47,11 +77,24 @@ const handleRequestOtp = async () => {
   try {
     const result = await authApi.requestOtp(email.value)
     otpExpiresIn.value = result.expires_in_seconds
-    devCode.value = result.dev_code || null
     step.value = 'otp'
+    // T037: Start 3-minute resend countdown timer
+    startResendCountdown(result.expires_in_seconds)
   } catch (e) {
     if (e instanceof APIError) {
-      error.value = e.message
+      // T021: Handle domain validation errors
+      if (e.code === 'DOMAIN_NOT_ALLOWED') {
+        error.value = '내부 직원 전용 로그인 서비스입니다.'
+      } else if (e.code === 'EMAIL_SEND_FAILED') {
+        error.value = '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.'
+      } else if (e.code === 'VALIDATION_ERROR') {
+        error.value = '올바른 이메일 형식을 입력해주세요.'
+      } else if (e.code === 'RATE_LIMIT_EXCEEDED') {
+        // Handle resend rate limit
+        error.value = '잠시 후 다시 시도해주세요.'
+      } else {
+        error.value = e.message
+      }
     } else {
       error.value = '인증 코드 요청에 실패했습니다. 다시 시도해주세요.'
     }
@@ -103,19 +146,45 @@ const handleVerifyOtp = async () => {
 }
 
 const handleResendOtp = async () => {
-  step.value = 'email'
-  otpCode.value = ''
+  if (!canResendOtp.value) return
+  
+  // Re-request OTP (same as email step but without UI transition)
+  isLoading.value = true
   error.value = null
+  otpCode.value = ''
+  
+  try {
+    const result = await authApi.requestOtp(email.value)
+    otpExpiresIn.value = result.expires_in_seconds
+    startResendCountdown(result.expires_in_seconds)
+  } catch (e) {
+    if (e instanceof APIError) {
+      if (e.code === 'RATE_LIMIT_EXCEEDED') {
+        error.value = '잠시 후 다시 시도해주세요.'
+      } else {
+        error.value = e.message
+      }
+    } else {
+      error.value = '인증 코드 재발송에 실패했습니다.'
+    }
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const closeAndReset = () => {
   isLoginOpen.value = false
+  // Clear countdown on close
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+    countdownInterval = null
+  }
+  resendCountdown.value = 0
   step.value = 'email'
   email.value = ''
   otpCode.value = ''
   error.value = null
   isLoading.value = false
-  devCode.value = null
 }
 
 defineExpose({
@@ -165,14 +234,6 @@ defineExpose({
 
       <!-- OTP 입력 단계 -->
       <div v-else class="grid gap-4 py-4">
-        <!-- 개발 환경 전용: OTP 코드 표시 -->
-        <div v-if="devCode" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-          <p class="text-xs text-yellow-700 font-semibold mb-1">🛠️ 개발 환경 전용</p>
-          <p class="text-sm text-yellow-800">
-            인증 코드: <code class="bg-yellow-100 px-2 py-1 rounded font-mono font-bold text-lg">{{ devCode }}</code>
-          </p>
-        </div>
-        
         <div class="grid gap-2">
           <Label for="otp-code">인증 코드</Label>
           <Input
@@ -227,12 +288,16 @@ defineExpose({
         <div class="text-center text-sm">
           <span class="text-muted-foreground">코드를 받지 못하셨나요? </span>
           <button 
+            v-if="canResendOtp"
             @click="handleResendOtp"
             class="text-primary hover:underline font-semibold transition-colors"
             :disabled="isLoading"
           >
             다시 받기
           </button>
+          <span v-else class="text-muted-foreground">
+            {{ Math.floor(resendCountdown / 60) }}:{{ String(resendCountdown % 60).padStart(2, '0') }} 후 재발송 가능
+          </span>
         </div>
       </div>
     </DialogContent>

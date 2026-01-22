@@ -35,6 +35,13 @@ param azureOpenAiEndpoint string = ''
 @description('Azure OpenAI Deployment Name')
 param azureOpenAiDeployment string = ''
 
+@secure()
+@description('Azure Communication Services Connection String for OTP emails')
+param acsConnectionString string = ''
+
+@description('Azure Communication Services Sender Address for OTP emails')
+param acsSenderAddress string = ''
+
 @description('Container Registry login server')
 param containerRegistryLoginServer string = ''
 
@@ -134,16 +141,25 @@ resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023
 }
 
 // Cosmos DB Containers
-var containers = ['users', 'contents', 'bookmarks', 'analysis_requests', 'pipeline_runs', 'raw_extractions', 'generated_assets']
+var containers = [
+  { name: 'users', partitionKey: '/id' }
+  { name: 'contents', partitionKey: '/id' }
+  { name: 'bookmarks', partitionKey: '/id' }
+  { name: 'analysis_requests', partitionKey: '/id' }
+  { name: 'pipeline_runs', partitionKey: '/id' }
+  { name: 'raw_extractions', partitionKey: '/id' }
+  { name: 'generated_assets', partitionKey: '/id' }
+  { name: 'login_history', partitionKey: '/email' }
+]
 
 resource cosmosContainers 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = [for container in containers: {
   parent: cosmosDatabase
-  name: container
+  name: container.name
   properties: {
     resource: {
-      id: container
+      id: container.name
       partitionKey: {
-        paths: ['/id']
+        paths: [container.partitionKey]
         kind: 'Hash'
       }
     }
@@ -176,11 +192,11 @@ resource jwtSecretKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
   }
 }
 
-resource cosmosKeyKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+resource cosmosConnectionStringKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
   parent: keyVault
-  name: 'cosmos-key'
+  name: 'cosmos-connection-string'
   properties: {
-    value: cosmosAccount.listKeys().primaryMasterKey
+    value: 'AccountEndpoint=${cosmosAccount.properties.documentEndpoint};AccountKey=${cosmosAccount.listKeys().primaryMasterKey}'
   }
 }
 
@@ -197,6 +213,14 @@ resource openAiKeyKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = if (!empty
   name: 'azure-openai-key'
   properties: {
     value: azureOpenAiKey
+  }
+}
+
+resource acsConnectionStringKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = if (!empty(acsConnectionString)) {
+  parent: keyVault
+  name: 'acs-connection-string'
+  properties: {
+    value: acsConnectionString
   }
 }
 
@@ -264,8 +288,13 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
           identity: managedIdentity.id
         }
         {
-          name: 'cosmos-key'
-          keyVaultUrl: cosmosKeyKv.properties.secretUri
+          name: 'cosmos-connection-string'
+          keyVaultUrl: cosmosConnectionStringKv.properties.secretUri
+          identity: managedIdentity.id
+        }
+        {
+          name: 'acs-connection-string'
+          keyVaultUrl: acsConnectionStringKv.properties.secretUri
           identity: managedIdentity.id
         }
       ]
@@ -283,11 +312,12 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'ENV', value: environment }
             { name: 'JWT_SECRET', secretRef: 'jwt-secret' }
             { name: 'JWT_ALGORITHM', value: 'HS256' }
-            { name: 'COSMOS_ENDPOINT', value: cosmosAccount.properties.documentEndpoint }
-            { name: 'COSMOS_KEY', secretRef: 'cosmos-key' }
-            { name: 'COSMOS_DATABASE', value: 'buildflow' }
+            { name: 'COSMOS_CONNECTION_STRING', secretRef: 'cosmos-connection-string' }
+            { name: 'COSMOS_DATABASE_NAME', value: 'buildflow' }
             { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
             { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
+            { name: 'ACS_CONNECTION_STRING', secretRef: 'acs-connection-string' }
+            { name: 'ACS_SENDER_ADDRESS', value: acsSenderAddress }
           ]
           probes: [
             {

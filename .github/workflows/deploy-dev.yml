@@ -115,6 +115,8 @@ jobs:
             azureOpenAiKey=${{ secrets.AZURE_OPENAI_KEY }}
             azureOpenAiEndpoint=${{ secrets.AZURE_OPENAI_ENDPOINT }}
             azureOpenAiDeployment=${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+            acsConnectionString=${{ secrets.ACS_CONNECTION_STRING }}
+            acsSenderAddress=${{ secrets.ACS_SENDER_ADDRESS }}
             pipelineImageTag=${{ github.sha }}
             enableMonitoring=true
             enablePipelines=true

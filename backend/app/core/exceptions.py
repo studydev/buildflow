@@ -118,6 +118,36 @@ class RateLimitError(AppException):
         )
 
 
+class DomainNotAllowedError(AppException):
+    """
+    Domain not allowed error - 400 Bad Request.
+
+    Use for: email domain is not in the allowed list for internal employees.
+    """
+
+    def __init__(self, message: str = "내부 직원 전용 로그인 서비스입니다."):
+        super().__init__(
+            message=message,
+            code="DOMAIN_NOT_ALLOWED",
+            status_code=400,
+        )
+
+
+class EmailSendError(AppException):
+    """
+    Email send error - 500 Internal Server Error.
+
+    Use for: failed to send email via Azure Communication Services.
+    """
+
+    def __init__(self, message: str = "이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요."):
+        super().__init__(
+            message=message,
+            code="EMAIL_SEND_FAILED",
+            status_code=500,
+        )
+
+
 class InternalError(AppException):
     """
     Internal server error - 500 Internal Server Error.

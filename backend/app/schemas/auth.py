@@ -27,13 +27,10 @@ class OTPResponse(BaseModel):
         description="Email address OTP was sent to (masked)",
     )
     expires_in_seconds: int = Field(
-        default=300,
-        description="OTP expiration time in seconds",
+        default=180,
+        description="OTP expiration time in seconds (3 minutes)",
     )
-    dev_code: Optional[str] = Field(
-        default=None,
-        description="OTP code for development only - NOT included in production",
-    )
+    # FR-020: dev_code removed - OTP codes are no longer exposed in API responses
 
 
 class VerifyRequest(BaseModel):

@@ -91,8 +91,10 @@ router.beforeEach(async (
       // Store intended destination for redirect after login
       sessionStorage.setItem('redirectAfterLogin', to.fullPath)
       
+      // T023: Show login required message (FR-013)
+      sessionStorage.setItem('loginRequiredMessage', '이 기능을 사용하려면 로그인이 필요합니다')
+      
       // Redirect to home with login prompt
-      // The header can trigger the login modal
       return next({ 
         name: 'Home', 
         query: { login: 'required' } 

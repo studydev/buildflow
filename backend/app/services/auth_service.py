@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 from uuid import uuid4
 
+from app.core.domain_validator import is_allowed_domain, normalize_email, validate_internal_email
 from app.core.security import (
     TokenPair,
     create_token_pair,
@@ -41,22 +42,33 @@ class AuthService:
             self._user_repo = get_user_repository()
         return self._user_repo
 
+    def validate_domain(self, email: str) -> tuple[bool, str]:
+        """
+        Validate that email is from an allowed domain.
+        
+        Args:
+            email: Email address to validate
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        return validate_internal_email(email)
+
     def request_otp(self, email: str) -> tuple[bool, str, int, str]:
         """
         Request an OTP for the given email.
 
         Args:
-            email: Email address
+            email: Email address (must be from allowed domain)
 
         Returns:
             Tuple of (is_new, masked_email, expires_in_seconds, otp_code)
         """
+        email = normalize_email(email)
         code, is_new = self.otp_store.create(email)
 
-        # In production, send email here
-        # For MVP, just log the code (development only!)
         if is_new:
-            logger.info("OTP for %s: %s (dev only - remove in production!)", email, code)
+            logger.info("OTP requested for %s", self._mask_email(email))
 
         # Mask email for response
         masked = self._mask_email(email)
