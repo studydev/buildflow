@@ -1,4 +1,4 @@
-# BuildFlow - Dev Environment Deployment
+# BuildFlow - Backend Deployment (Dev Environment)
 # Per tasks.md T801: GitHub Actions for Dev
 #
 # Trigger: After Backend CI succeeds on develop branch
@@ -8,7 +8,7 @@
 # - Build and push Pipeline Docker image  
 # - Deploy Container Apps
 
-name: Deploy to Dev
+name: Deploy Backend
 
 on:
   # Triggered when Backend CI workflow completes on develop branch

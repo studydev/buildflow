@@ -6,10 +6,10 @@ BuildFlow GitHub Actions 워크플로우 문서
 
 | 워크플로우 | 상태 | 트리거 | 설명 |
 |-----------|------|--------|------|
-| Backend CI | ✅ 성공 | `push`, `pull_request` | Lint + Test |
-| Frontend CI | ✅ 성공 | `push`, `pull_request` | Lint + Test + Build |
-| Deploy to Dev | ✅ 성공 | Backend CI 성공 시 | Dev 환경 배포 |
-| Deploy Frontend | ✅ 성공 | `push` | Azure SWA 배포 |
+| Backend CI | ✅ 성공 | `push`, `pull_request` (develop) | Lint + Test |
+| Frontend CI | ✅ 성공 | `push`, `pull_request` (develop) | Lint + Test + Build |
+| Deploy Backend | ✅ 성공 | Backend CI 성공 시 (develop) | Dev 환경 백엔드 배포 |
+| Deploy Frontend | ✅ 성공 | `push` (develop) | Azure SWA 배포 |
 
 ## 🔄 워크플로우 구조
 
@@ -94,9 +94,12 @@ Jobs:
 - `frontend/**` 경로 변경 시
 - `package.json`, `vite.config.ts`, `tsconfig*.json` 변경 시
 
-### deploy-dev.yml
+### deploy-backend.yml
 
-Dev 환경 배포 워크플로우
+Dev 환경 백엔드 배포 워크플로우
+
+```yaml
+트리거: workflow_run (Backend CI 성공 시 on develop), workflow_dispatch (수동)
 
 ```yaml
 트리거: workflow_run (Backend CI 성공 시), workflow_dispatch (수동)
@@ -119,7 +122,7 @@ Jobs:
 Frontend Azure Static Web Apps 배포 워크플로우
 
 ```yaml
-트리거: push (main 브랜치)
+트리거: push (develop 브랜치)
 Jobs:
   1. build_and_deploy: SWA CLI로 빌드 및 배포
 ```
@@ -140,16 +143,16 @@ Jobs:
 
 | 상황 | 결과 |
 |------|------|
-| Backend CI 실패 | Deploy to Dev 트리거되지 않음 (배포 차단) |
+| Backend CI 실패 | Deploy Backend 트리거되지 않음 (배포 차단) |
 | Frontend CI 실패 | PR에 경고 표시, Frontend 배포와 독립적 |
-| Deploy to Dev 실패 | validate job에서 헬스체크 실패 알림 |
+| Deploy Backend 실패 | validate job에서 헬스체크 실패 알림 |
 
 ## 🔧 수동 배포
 
 긴급 상황 시 CI를 스킵하고 수동 배포:
 
 1. GitHub Actions 탭 이동
-2. "Deploy to Dev" 워크플로우 선택
+2. "Deploy Backend" 워크플로우 선택
 3. "Run workflow" 클릭
 4. 옵션 선택 후 실행
 
