@@ -295,9 +295,11 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
           keyVaultUrl: cosmosConnectionStringKv.properties.secretUri
           identity: managedIdentity.id
         }
+      // Conditionally add ACS secret only when connection string is provided
       ], !empty(acsConnectionString) ? [
         {
           name: 'acs-connection-string'
+          #disable-next-line BCP318
           keyVaultUrl: acsConnectionStringKv.properties.secretUri
           identity: managedIdentity.id
         }
