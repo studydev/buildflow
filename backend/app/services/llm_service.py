@@ -131,12 +131,17 @@ Repository metadata:
 
 Extract the following information and respond with a valid JSON object. Provide BOTH English and Korean translations for title and description:
 
+IMPORTANT: The README may be written in English, Korean, or a mix of both languages.
+- If the README is in English: translate to Korean for title_kr and description_kr
+- If the README is in Korean: translate to English for title and description, keep original Korean for title_kr and description_kr
+- Always ensure title/description are in English and title_kr/description_kr are in Korean
+
 {{
   "topic": "A brief topic summary in English (1-2 sentences describing the main theme)",
-  "title": "A concise, descriptive title for this content in English (max 100 chars)",
-  "title_kr": "한국어 제목 (max 100 chars)",
-  "description": "A clear summary in English of what this content teaches (2-3 sentences)",
-  "description_kr": "이 컨텐츠가 가르치는 내용에 대한 한국어 설명 (2-3 문장)",
+  "title": "A concise, descriptive title for this content in ENGLISH (max 100 chars) - translate if README is in Korean",
+  "title_kr": "한국어 제목 (max 100 chars) - README가 영어인 경우 번역하여 제공",
+  "description": "A clear summary in ENGLISH of what this content teaches (2-3 sentences) - translate if README is in Korean",
+  "description_kr": "이 컨텐츠가 가르치는 내용에 대한 한국어 설명 (2-3 문장) - README가 영어인 경우 번역하여 제공",
   "content_type": "One of: workshop, tutorial, lab, sample, demo, course, article",
   "categories": ["List of relevant categories from: AI, Azure, DevOps, Web, Mobile, Data, Security, Cloud, IoT, Serverless, Containers, Kubernetes, Machine Learning, Databases, Copilot, Agent, Analytics"],
   "level": "One of: beginner, intermediate, advanced",
@@ -600,7 +605,7 @@ class LLMService:
     async def generate_embedding(
         self,
         text: str,
-        model: str = "text-embedding-ada-002",
+        model: str = "text-embedding-3-small",
     ) -> List[float]:
         """
         Generate embedding vector for text content.
@@ -609,10 +614,10 @@ class LLMService:
 
         Args:
             text: Text to embed (concatenated title + description + summary)
-            model: Embedding model to use (default: text-embedding-ada-002)
+            model: Embedding model to use (default: text-embedding-3-small)
 
         Returns:
-            1536-dimension float vector
+            1536-dimension float vector (text-embedding-3-small default)
 
         Raises:
             LLMConfigError: If service not configured
@@ -622,13 +627,13 @@ class LLMService:
         if not self.is_configured:
             raise LLMConfigError("Azure OpenAI is not configured (missing API key)")
 
-        # Truncate text to avoid token limits (ada-002 has 8192 token limit)
+        # Truncate text to avoid token limits (text-embedding-3-small has 8191 token limit)
         # Roughly 4 chars per token, so ~32000 chars max
         truncated_text = text[:30000] if len(text) > 30000 else text
 
         # Build embedding API URL
         # Azure OpenAI embedding endpoint format
-        embedding_deployment = getattr(settings, 'azure_openai_embedding_deployment', 'text-embedding-ada-002')
+        embedding_deployment = getattr(settings, 'azure_openai_embedding_deployment', 'text-embedding-3-small')
         url = f"{self.endpoint.rstrip('/')}/openai/deployments/{embedding_deployment}/embeddings?api-version={self.api_version}"
 
         headers = {

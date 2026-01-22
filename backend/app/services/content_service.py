@@ -53,9 +53,12 @@ class ContentService:
         # Map content type from analysis result
         content_type = self._map_content_type(result.content_type)
 
-        # Use Korean title if available, otherwise use English title
-        title = result.title_kr or result.title or "Untitled Content"
-        description = result.description_kr or result.description or ""
+        # Store both English (title) and Korean (title_kr) versions
+        # title should be English, title_kr should be Korean
+        title = result.title or result.title_kr or "Untitled Content"
+        title_kr = result.title_kr or None
+        description = result.description or result.description_kr or ""
+        description_kr = result.description_kr or None
 
         # Determine icon based on content type
         icon_map = {
@@ -73,7 +76,9 @@ class ContentService:
         content = Content(
             contributor_id=contributor_id,
             title=title,
+            title_kr=title_kr,
             description=description,
+            description_kr=description_kr,
             content_type=content_type,
             status=ContentStatus.PUBLISHED,
             source_url=source_url,
@@ -85,6 +90,10 @@ class ContentService:
             analysis_status="completed",
             analysis_result=result.to_dict(),
             published_at=datetime.utcnow(),
+            # Additional bilingual fields from analysis
+            prerequisites=result.prerequisites or [],
+            learning_outcomes=result.learning_objectives or [],
+            technologies=result.technologies or [],
         )
 
         # Persist to database
@@ -299,6 +308,16 @@ class ContentService:
                 view_count=c.view_count,
                 bookmark_count=c.bookmark_count,
                 published_at=c.published_at,
+                # Bilingual fields (T502)
+                title_kr=getattr(c, 'title_kr', None),
+                description_kr=getattr(c, 'description_kr', None),
+                summary_short=getattr(c, 'summary_short', None),
+                summary_kr=getattr(c, 'summary_kr', None),
+                prerequisites=getattr(c, 'prerequisites', []) or [],
+                prerequisites_kr=getattr(c, 'prerequisites_kr', []) or [],
+                learning_outcomes=getattr(c, 'learning_outcomes', []) or [],
+                learning_outcomes_kr=getattr(c, 'learning_outcomes_kr', []) or [],
+                difficulty_level=getattr(c, 'difficulty_level', None),
             )
             for c in contents
         ]
@@ -361,6 +380,16 @@ class ContentService:
                 view_count=c.view_count,
                 bookmark_count=c.bookmark_count,
                 published_at=c.published_at,
+                # Bilingual fields (T502)
+                title_kr=getattr(c, 'title_kr', None),
+                description_kr=getattr(c, 'description_kr', None),
+                summary_short=getattr(c, 'summary_short', None),
+                summary_kr=getattr(c, 'summary_kr', None),
+                prerequisites=getattr(c, 'prerequisites', []) or [],
+                prerequisites_kr=getattr(c, 'prerequisites_kr', []) or [],
+                learning_outcomes=getattr(c, 'learning_outcomes', []) or [],
+                learning_outcomes_kr=getattr(c, 'learning_outcomes_kr', []) or [],
+                difficulty_level=getattr(c, 'difficulty_level', None),
             )
             for c in contents
         ]

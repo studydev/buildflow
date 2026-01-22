@@ -346,9 +346,10 @@ class TestAnalysisRequestRepository:
 
         assert result is not None
         assert result.id == "req-123"
+        # Partition key is now request_id (the container uses /id as partition key)
         mock_container.read_item.assert_called_with(
             item="req-123",
-            partition_key="user-456",
+            partition_key="req-123",
         )
 
     @pytest.mark.asyncio

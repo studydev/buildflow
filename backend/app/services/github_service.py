@@ -23,15 +23,46 @@ class RepoInfo:
     repo: str
     readme_content: Optional[str] = None
     description: Optional[str] = None
-    topics: list = None
-    language: Optional[str] = None
+    topics: list = None  # List of topics
+    language: Optional[str] = None  # Primary language
+    languages: Optional[str] = None  # Top 10 languages, comma-separated
     stars: int = 0
     forks: int = 0
     license: Optional[str] = None
 
+    # Additional metadata for filtering/sorting
+    watchers: int = 0
+    open_issues: int = 0
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    pushed_at: Optional[str] = None  # Last commit date
+    default_branch: Optional[str] = None
+
+    # Contributors info
+    contributors_count: int = 0
+    contributors: list = None  # List of contributor logins
+
+    # Extracted URLs from README
+    demo_url: Optional[str] = None
+    docs_url: Optional[str] = None
+    video_url: Optional[str] = None  # YouTube or other video links
+    homepage_url: Optional[str] = None  # Repo homepage setting
+
     def __post_init__(self):
         if self.topics is None:
             self.topics = []
+        if self.contributors is None:
+            self.contributors = []
+
+    @property
+    def topics_str(self) -> str:
+        """Topics as comma-separated string."""
+        return ", ".join(self.topics) if self.topics else ""
+
+    @property
+    def contributors_str(self) -> str:
+        """Contributors as comma-separated string."""
+        return ", ".join(self.contributors) if self.contributors else ""
 
 
 @dataclass
@@ -203,6 +234,13 @@ class GitHubService:
                 stars=data.get("stargazers_count", 0),
                 forks=data.get("forks_count", 0),
                 license=data.get("license", {}).get("name") if data.get("license") else None,
+                watchers=data.get("watchers_count", 0),
+                open_issues=data.get("open_issues_count", 0),
+                created_at=data.get("created_at"),
+                updated_at=data.get("updated_at"),
+                pushed_at=data.get("pushed_at"),
+                default_branch=data.get("default_branch"),
+                homepage_url=data.get("homepage"),
             )
 
         except httpx.HTTPStatusError as e:
@@ -279,7 +317,96 @@ class GitHubService:
         readme = await self.fetch_readme(owner, repo)
         repo_info.readme_content = readme
 
+        # Extract URLs from README (demo, docs, video)
+        if readme:
+            extracted_urls = self._extract_urls_from_readme(readme)
+            repo_info.demo_url = extracted_urls.get("demo_url")
+            repo_info.docs_url = extracted_urls.get("docs_url")
+            repo_info.video_url = extracted_urls.get("video_url")
+
+        # Fetch top contributors (up to 10)
+        contributors = await self._fetch_contributors(owner, repo)
+        repo_info.contributors = contributors
+        repo_info.contributors_count = len(contributors)
+
+        # Fetch top languages (up to 10)
+        repo_info.languages = await self._fetch_languages(owner, repo)
+
         return repo_info
+
+    async def _fetch_contributors(
+        self, owner: str, repo: str, limit: int = 10
+    ) -> list:
+        """
+        Fetch top contributors for the repository.
+
+        Args:
+            owner: Repository owner
+            repo: Repository name
+            limit: Max number of contributors to fetch
+
+        Returns:
+            List of contributor logins
+        """
+        client = await self.get_client()
+        url = f"{self.API_BASE_URL}/repos/{owner}/{repo}/contributors"
+
+        try:
+            response = await client.get(
+                url,
+                params={"per_page": limit, "anon": "false"}
+            )
+
+            if response.status_code in (404, 403):
+                return []
+
+            response.raise_for_status()
+            contributors = response.json()
+
+            return [c.get("login") for c in contributors if c.get("login")]
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch contributors for {owner}/{repo}: {e}")
+            return []
+
+    async def _fetch_languages(
+        self, owner: str, repo: str, limit: int = 10
+    ) -> str:
+        """
+        Fetch top languages for the repository.
+
+        Args:
+            owner: Repository owner
+            repo: Repository name
+            limit: Max number of languages to return
+
+        Returns:
+            Comma-separated string of top languages (by bytes)
+        """
+        client = await self.get_client()
+        url = f"{self.API_BASE_URL}/repos/{owner}/{repo}/languages"
+
+        try:
+            response = await client.get(url)
+
+            if response.status_code in (404, 403):
+                return ""
+
+            response.raise_for_status()
+            languages_data = response.json()
+
+            # Sort by bytes (value) descending and take top N
+            sorted_languages = sorted(
+                languages_data.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )[:limit]
+
+            return ", ".join(lang for lang, _ in sorted_languages)
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch languages for {owner}/{repo}: {e}")
+            return ""
 
     # =========================================================================
     # Comprehensive Extraction per design.md §3.1 (T200)
@@ -530,11 +657,11 @@ class GitHubService:
         if not readme_content:
             return result
 
-        # Patterns for different URL types
+        # Patterns for different URL types (supports Korean labels)
         demo_patterns = [
-            r'\[(?:demo|live demo|try it|playground|live)\]\((https?://[^\)]+)\)',
-            r'(?:demo|live demo|try it):\s*(https?://[^\s\)]+)',
-            r'https?://(?:[\w-]+\.)?(?:vercel\.app|netlify\.app|github\.io|herokuapp\.com)[^\s\)]*',
+            r'\[(?:[^]]*demo[^]]*|live|try it|playground|데모|접속|시작하기)\]\((https?://[^\)]+)\)',
+            r'(?:demo|live demo|try it|데모):\s*(https?://[^\s\)]+)',
+            r'https?://(?:[\w-]+\.)?(?:vercel\.app|netlify\.app|github\.io|herokuapp\.com|azurestaticapps\.net|azurewebsites\.net)[^\s\)]*',
         ]
 
         docs_patterns = [

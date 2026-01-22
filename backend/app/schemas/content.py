@@ -23,6 +23,17 @@ class ContentResponse(BaseModel):
     bookmark_count: int
     published_at: Optional[datetime] = None
 
+    # Bilingual fields (T502)
+    title_kr: Optional[str] = None
+    description_kr: Optional[str] = None
+    summary_short: Optional[str] = None
+    summary_kr: Optional[str] = None
+    prerequisites: list[str] = Field(default_factory=list)
+    prerequisites_kr: list[str] = Field(default_factory=list)
+    learning_outcomes: list[str] = Field(default_factory=list)
+    learning_outcomes_kr: list[str] = Field(default_factory=list)
+    difficulty_level: Optional[str] = None
+
 
 class ContentListResponse(BaseModel):
     """Paginated content list response."""

@@ -59,6 +59,27 @@ class AnalysisResult:
     learning_objectives: list[str] = field(default_factory=list)
     lab_modules: list[str] = field(default_factory=list)  # 실습 모듈 목록
 
+    # 저장소 메타데이터 (필터링/정렬용)
+    source_url: Optional[str] = None
+    stars: int = 0
+    forks: int = 0
+    watchers: int = 0
+    language: Optional[str] = None  # Primary programming language
+    languages: Optional[str] = None  # Top 10 languages, comma-separated
+    license: Optional[str] = None
+    topics: Optional[str] = None  # Topics, comma-separated
+    owner: Optional[str] = None  # Repository owner/author
+    contributors: Optional[str] = None  # Top contributors, comma-separated
+    contributors_count: int = 0
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None  # Last update date
+
+    # 외부 링크
+    demo_url: Optional[str] = None
+    docs_url: Optional[str] = None
+    video_url: Optional[str] = None  # YouTube or video link
+    homepage_url: Optional[str] = None
+
     # 메타데이터
     raw_metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -78,6 +99,25 @@ class AnalysisResult:
             "prerequisites": self.prerequisites,
             "learning_objectives": self.learning_objectives,
             "lab_modules": self.lab_modules,
+            # Repository metadata
+            "source_url": self.source_url,
+            "stars": self.stars,
+            "forks": self.forks,
+            "watchers": self.watchers,
+            "language": self.language,
+            "languages": self.languages,
+            "license": self.license,
+            "topics": self.topics,
+            "owner": self.owner,
+            "contributors": self.contributors,
+            "contributors_count": self.contributors_count,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            # External links
+            "demo_url": self.demo_url,
+            "docs_url": self.docs_url,
+            "video_url": self.video_url,
+            "homepage_url": self.homepage_url,
             "raw_metadata": self.raw_metadata,
         }
 
@@ -98,6 +138,25 @@ class AnalysisResult:
             prerequisites=data.get("prerequisites", []),
             learning_objectives=data.get("learning_objectives", []),
             lab_modules=data.get("lab_modules", []),
+            # Repository metadata
+            source_url=data.get("source_url"),
+            stars=data.get("stars", 0),
+            forks=data.get("forks", 0),
+            watchers=data.get("watchers", 0),
+            language=data.get("language"),
+            languages=data.get("languages"),
+            license=data.get("license"),
+            topics=data.get("topics"),
+            owner=data.get("owner"),
+            contributors=data.get("contributors"),
+            contributors_count=data.get("contributors_count", 0),
+            created_at=data.get("created_at"),
+            updated_at=data.get("updated_at"),
+            # External links
+            demo_url=data.get("demo_url"),
+            docs_url=data.get("docs_url"),
+            video_url=data.get("video_url"),
+            homepage_url=data.get("homepage_url"),
             raw_metadata=data.get("raw_metadata", {}),
         )
 

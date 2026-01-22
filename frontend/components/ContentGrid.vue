@@ -11,20 +11,24 @@ onMounted(async () => {
   }
 })
 
-// Helper to get localized text
-function getLocalizedText(
-  enText: string | undefined, 
-  krText: string | undefined,
-  fallback: string = ''
-): string {
-  if (contentStore.displayLanguage === 'ko' && krText) {
-    return krText
-  }
-  return enText || fallback
-}
-
 // Map content items to display format with language support
 const displayItems = computed(() => {
+  // Access displayLanguage directly to ensure reactivity tracking
+  const lang = contentStore.displayLanguage
+  
+  // Helper to get localized text
+  // title = English, title_kr = Korean
+  const getLocalizedText = (
+    enText: string | undefined, 
+    krText: string | undefined,
+    fallback: string = ''
+  ): string => {
+    if (lang === 'ko') {
+      return krText || enText || fallback
+    }
+    return enText || krText || fallback
+  }
+  
   return contentStore.items.map(item => ({
     id: item.id,
     icon: item.icon || '📄',
@@ -46,10 +50,10 @@ const displayItems = computed(() => {
     duration: item.duration_minutes,
     viewCount: item.view_count,
     // Additional localized fields
-    prerequisites: contentStore.displayLanguage === 'ko' && item.prerequisites_kr?.length 
+    prerequisites: lang === 'ko' && item.prerequisites_kr?.length 
       ? item.prerequisites_kr 
       : item.prerequisites,
-    learningOutcomes: contentStore.displayLanguage === 'ko' && item.learning_outcomes_kr?.length 
+    learningOutcomes: lang === 'ko' && item.learning_outcomes_kr?.length 
       ? item.learning_outcomes_kr 
       : item.learning_outcomes,
   }))

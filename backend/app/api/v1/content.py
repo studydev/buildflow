@@ -8,6 +8,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.dependencies import require_contributor
+from app.models.content import Content
+from app.models.enums import ContentType
 from app.models.user import UserPublic
 from app.schemas import APIResponse, Meta
 from app.schemas.content import (
@@ -20,6 +22,35 @@ from app.services.content_service import get_content_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/content", tags=["content"])
+
+
+def _content_to_response(c: Content) -> ContentResponse:
+    """Convert Content model to ContentResponse with bilingual fields."""
+    return ContentResponse(
+        id=c.id,
+        title=c.title,
+        description=c.description,
+        content_type=c.content_type.value if isinstance(c.content_type, ContentType) else c.content_type,
+        categories=c.categories,
+        level=c.level,
+        duration_minutes=c.duration_minutes,
+        thumbnail_url=c.thumbnail_url,
+        icon=c.icon,
+        source_url=c.source_url,
+        view_count=c.view_count,
+        bookmark_count=c.bookmark_count,
+        published_at=c.published_at,
+        # Bilingual fields (T502)
+        title_kr=getattr(c, 'title_kr', None),
+        description_kr=getattr(c, 'description_kr', None),
+        summary_short=getattr(c, 'summary_short', None),
+        summary_kr=getattr(c, 'summary_kr', None),
+        prerequisites=getattr(c, 'prerequisites', []) or [],
+        prerequisites_kr=getattr(c, 'prerequisites_kr', []) or [],
+        learning_outcomes=getattr(c, 'learning_outcomes', []) or [],
+        learning_outcomes_kr=getattr(c, 'learning_outcomes_kr', []) or [],
+        difficulty_level=getattr(c, 'difficulty_level', None),
+    )
 
 
 @router.get(
@@ -121,23 +152,7 @@ async def get_content(
         )
 
     # Convert to response model
-    from app.models.enums import ContentType
-
-    content_response = ContentResponse(
-        id=content.id,
-        title=content.title,
-        description=content.description,
-        content_type=content.content_type.value if isinstance(content.content_type, ContentType) else content.content_type,
-        categories=content.categories,
-        level=content.level,
-        duration_minutes=content.duration_minutes,
-        thumbnail_url=content.thumbnail_url,
-        icon=content.icon,
-        source_url=content.source_url,
-        view_count=content.view_count,
-        bookmark_count=content.bookmark_count,
-        published_at=content.published_at,
-    )
+    content_response = _content_to_response(content)
 
     correlation_id = getattr(request.state, "correlation_id", "")
 
@@ -176,23 +191,7 @@ async def create_content(
         data=body,
     )
 
-    from app.models.enums import ContentType
-
-    content_response = ContentResponse(
-        id=content.id,
-        title=content.title,
-        description=content.description,
-        content_type=content.content_type.value if isinstance(content.content_type, ContentType) else content.content_type,
-        categories=content.categories,
-        level=content.level,
-        duration_minutes=content.duration_minutes,
-        thumbnail_url=content.thumbnail_url,
-        icon=content.icon,
-        source_url=content.source_url,
-        view_count=content.view_count,
-        bookmark_count=content.bookmark_count,
-        published_at=content.published_at,
-    )
+    content_response = _content_to_response(content)
 
     correlation_id = getattr(request.state, "correlation_id", "")
 
@@ -248,23 +247,7 @@ async def update_content(
     # Update content
     updated = await service.update(content_id, body)
 
-    from app.models.enums import ContentType
-
-    content_response = ContentResponse(
-        id=updated.id,
-        title=updated.title,
-        description=updated.description,
-        content_type=updated.content_type.value if isinstance(updated.content_type, ContentType) else updated.content_type,
-        categories=updated.categories,
-        level=updated.level,
-        duration_minutes=updated.duration_minutes,
-        thumbnail_url=updated.thumbnail_url,
-        icon=updated.icon,
-        source_url=updated.source_url,
-        view_count=updated.view_count,
-        bookmark_count=updated.bookmark_count,
-        published_at=updated.published_at,
-    )
+    content_response = _content_to_response(updated)
 
     correlation_id = getattr(request.state, "correlation_id", "")
 
@@ -332,23 +315,7 @@ async def update_content_status(
     # Update status
     updated = await service.update_status(content_id, body.status)
 
-    from app.models.enums import ContentType
-
-    content_response = ContentResponse(
-        id=updated.id,
-        title=updated.title,
-        description=updated.description,
-        content_type=updated.content_type.value if isinstance(updated.content_type, ContentType) else updated.content_type,
-        categories=updated.categories,
-        level=updated.level,
-        duration_minutes=updated.duration_minutes,
-        thumbnail_url=updated.thumbnail_url,
-        icon=updated.icon,
-        source_url=updated.source_url,
-        view_count=updated.view_count,
-        bookmark_count=updated.bookmark_count,
-        published_at=updated.published_at,
-    )
+    content_response = _content_to_response(updated)
 
     correlation_id = getattr(request.state, "correlation_id", "")
 

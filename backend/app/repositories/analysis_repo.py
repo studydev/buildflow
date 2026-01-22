@@ -22,9 +22,10 @@ class AnalysisRequestRepository:
     def container(self):
         """Lazy load container."""
         if self._container is None:
+            # Note: Container was created with /id as partition key
             self._container = get_container(
                 Containers.ANALYSIS_REQUESTS,
-                partition_key_path="/user_id"
+                partition_key_path="/id"
             )
         return self._container
 
@@ -49,16 +50,20 @@ class AnalysisRequestRepository:
 
         Args:
             request_id: Request ID
-            user_id: User ID (partition key)
+            user_id: User ID (for authorization check, not partition key)
 
         Returns:
             AnalysisRequest if found, None otherwise
         """
         try:
+            # Note: Container uses /id as partition key, not /user_id
             item = self.container.read_item(
                 item=request_id,
-                partition_key=user_id,
+                partition_key=request_id,  # Use request_id as partition key
             )
+            # Verify user owns this request
+            if item.get("user_id") != user_id:
+                return None
             return AnalysisRequest.from_cosmos_item(item)
         except Exception as e:
             if "NotFound" in str(e) or "404" in str(e):
@@ -120,12 +125,12 @@ class AnalysisRequestRepository:
             where_clause += " AND c.status = @status"
             parameters.append({"name": "@status", "value": status.value})
 
-        # Count query
+        # Count query (cross-partition since container uses /id as partition key)
         count_query = f"SELECT VALUE COUNT(1) FROM c WHERE {where_clause}"
         count_result = list(self.container.query_items(
             query=count_query,
             parameters=parameters,
-            partition_key=user_id,
+            enable_cross_partition_query=True,
         ))
         total = count_result[0] if count_result else 0
 
@@ -144,7 +149,7 @@ class AnalysisRequestRepository:
         items = list(self.container.query_items(
             query=query,
             parameters=parameters,
-            partition_key=user_id,
+            enable_cross_partition_query=True,
         ))
 
         requests = [AnalysisRequest.from_cosmos_item(item) for item in items]
@@ -231,7 +236,7 @@ class AnalysisRequestRepository:
         items = list(self.container.query_items(
             query=query,
             parameters=parameters,
-            partition_key=user_id,
+            enable_cross_partition_query=True,
         ))
 
         if items:
@@ -274,15 +279,21 @@ class AnalysisRequestRepository:
 
         Args:
             request_id: Request ID
-            user_id: User ID (partition key)
+            user_id: User ID (for authorization check)
 
         Returns:
             True if deleted, False if not found
         """
         try:
+            # First verify user owns this request
+            request = await self.get_by_id(request_id, user_id)
+            if not request:
+                return False
+
+            # Container uses /id as partition key
             self.container.delete_item(
                 item=request_id,
-                partition_key=user_id,
+                partition_key=request_id,
             )
             logger.info(f"Deleted analysis request: {request_id}")
             return True
