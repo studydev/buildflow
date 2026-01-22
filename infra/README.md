@@ -96,6 +96,9 @@ az deployment group create \
 | `enableMonitoring` | `true` | Application Insights 활성화 |
 | `enablePipelines` | `true` | Container Apps Jobs 활성화 |
 | `enableFrontend` | `true` | Static Web App 활성화 |
+| `acsConnectionString` | - | Azure Communication Services 연결 문자열 (OTP 이메일) |
+| `acsSenderAddress` | - | OTP 이메일 발신자 주소 |
+| `corsOrigins` | `http://localhost:5173,...` | CORS 허용 도메인 (쉼표 구분) |
 
 ## 🌍 환경별 설정
 

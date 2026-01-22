@@ -54,22 +54,25 @@ backend/
 │   │   ├── admin.py         # 관리자 API
 │   │   ├── analysis.py      # GitHub 분석 API
 │   │   ├── assistant.py     # AI 어시스턴트 API
-│   │   ├── auth.py          # 인증 API
+│   │   ├── auth.py          # 인증 API (OTP)
 │   │   ├── content.py       # 콘텐츠 CRUD API
 │   │   ├── pipelines.py     # 파이프라인 트리거 API
 │   │   ├── search.py        # 검색 API
 │   │   └── users.py         # 사용자 API
 │   ├── core/                # 핵심 유틸리티
+│   │   ├── domain_validator.py  # 도메인 검증 (내부 직원)
 │   │   ├── exceptions.py    # 커스텀 예외
 │   │   ├── middleware.py    # 미들웨어
 │   │   ├── rate_limit.py    # 요청 제한
 │   │   ├── retry.py         # 재시도 로직
-│   │   └── security.py      # 보안 유틸
+│   │   └── security.py      # 보안 유틸 (JWT, OTP)
 │   ├── db/                  # 데이터베이스
 │   │   └── cosmos.py        # Cosmos DB 클라이언트
 │   ├── models/              # Pydantic 모델
 │   │   ├── analysis.py      # 분석 모델
 │   │   ├── content.py       # 콘텐츠 모델
+│   │   ├── login_attempt.py # OTP 로그인 시도 모델
+│   │   ├── login_history.py # 로그인 이력 모델
 │   │   ├── pipeline_run.py  # 파이프라인 실행 모델
 │   │   └── user.py          # 사용자 모델
 │   ├── pipelines/           # 데이터 파이프라인
@@ -116,13 +119,16 @@ backend/
 | POST | `/api/v1/pipelines/trigger` | 파이프라인 트리거 |
 | GET | `/api/v1/pipelines/runs` | 실행 이력 조회 |
 
-### 인증 API
+### 인증 API (OTP 기반)
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| POST | `/api/v1/auth/otp/request` | OTP 요청 |
-| POST | `/api/v1/auth/otp/verify` | OTP 검증 |
-| POST | `/api/v1/auth/refresh` | 토큰 갱신 |
+| POST | `/api/v1/auth/otp` | OTP 요청 (이메일 전송) |
+| POST | `/api/v1/auth/verify` | OTP 검증 + JWT 발급 |
+| GET | `/api/v1/auth/me` | 현재 인증된 사용자 정보 |
+| POST | `/api/v1/auth/logout` | 로그아웃 (쿠키 제거) |
+
+> 허용된 도메인: `@microsoft.com`, `@github.com` 내부 직원 전용
 
 ## 🔧 환경 변수
 
@@ -138,12 +144,19 @@ COSMOS_DATABASE_NAME=buildflow
 # Azure OpenAI
 AZURE_OPENAI_ENDPOINT=
 AZURE_OPENAI_API_KEY=
-AZURE_OPENAI_DEPLOYMENT=gpt-4o
+AZURE_OPENAI_DEPLOYMENT=gpt-5.2
 
 # JWT
 JWT_SECRET=
 JWT_ALGORITHM=RS256
 JWT_EXPIRY_MINUTES=60
+
+# Azure Communication Services (OTP 이메일 발송)
+ACS_CONNECTION_STRING=
+ACS_SENDER_ADDRESS=DoNotReply@your-domain.azurecomm.net
+
+# CORS 설정 (쉼표로 구분)
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
 ## 🧪 테스트

@@ -76,8 +76,10 @@ buildflow/
 | **Backend** | Health Check 엔드포인트 | 2026-01-21 | /health, /api/v1/health |
 | **Backend** | Content CRUD API | 2026-01-21 | 기본 CRUD |
 | **Backend** | GitHub 분석 파이프라인 | 2026-01-21 | 저장소 메타데이터 추출 |
+| **Backend** | OTP 이메일 인증 | 2026-01-22 | @microsoft.com, @github.com 도메인 |
 | **Frontend** | 콘텐츠 그리드 UI | 2026-01-21 | ContentGrid 컴포넌트 |
 | **Frontend** | 언어 토글 (EN/KR) | 2026-01-21 | LanguageToggle 컴포넌트 |
+| **Frontend** | OTP 로그인 UI | 2026-01-22 | 이메일 입력 + OTP 입력 모달 |
 
 ### ⏳ 예정된 기능
 
