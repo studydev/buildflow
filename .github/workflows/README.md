@@ -9,7 +9,7 @@ BuildFlow GitHub Actions 워크플로우 문서
 | Backend CI | ✅ 성공 | `push`, `pull_request` (develop) | Lint + Test |
 | Frontend CI | ✅ 성공 | `push`, `pull_request` (develop) | Lint + Test + Build |
 | Deploy Backend | ✅ 성공 | Backend CI 성공 시 (develop) | Dev 환경 백엔드 배포 |
-| Deploy Frontend | ✅ 성공 | `push` (develop) | Azure SWA 배포 |
+| Deploy Frontend | ✅ 성공 | Frontend CI 성공 시 (develop) | Azure SWA 배포 |
 
 ## 🔄 워크플로우 구조
 
@@ -32,7 +32,7 @@ BuildFlow GitHub Actions 워크플로우 문서
 │                    │ workflow_run (success)                              │
 │                    ▼                                                     │
 │   ┌────────────────────────────────────────────────────────────────┐     │
-│   │                      Deploy to Dev                              │     │
+│   │                      Deploy Backend                             │     │
 │   │                                                                 │     │
 │   │  ┌──────────┐   ┌─────────────┐   ┌───────────┐   ┌──────────┐ │     │
 │   │  │ Check CI │ → │ Deploy Infra│ → │ Build API │ → │  Deploy  │ │     │
@@ -47,7 +47,7 @@ BuildFlow GitHub Actions 워크플로우 문서
 │                                                                          │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│   [main 브랜치 push - frontend/** 변경]                                  │
+│   [develop 브랜치 push - frontend/** 변경]                               │
 │                    │                                                     │
 │                    ▼                                                     │
 │   ┌────────────────────────────────────────────┐                         │
@@ -55,6 +55,16 @@ BuildFlow GitHub Actions 워크플로우 문서
 │   │  ┌──────────┐  ┌──────────┐  ┌──────────┐  │                         │
 │   │  │   Lint   │→ │   Test   │→ │  Build   │  │                         │
 │   │  │ (ESLint) │  │ (Vitest) │  │  (Vite)  │  │                         │
+│   │  └──────────┘  └──────────┘  └──────────┘  │                         │
+│   └────────────────────────────────────────────┘                         │
+│                    │                                                     │
+│                    │ workflow_run (success)                              │
+│                    ▼                                                     │
+│   ┌────────────────────────────────────────────┐                         │
+│   │           Deploy Frontend                   │                         │
+│   │  ┌──────────┐  ┌──────────┐  ┌──────────┐  │                         │
+│   │  │ Check CI │→ │  Build   │→ │  Deploy  │  │                         │
+│   │  │  Status  │  │  (Vite)  │  │  (SWA)   │  │                         │
 │   │  └──────────┘  └──────────┘  └──────────┘  │                         │
 │   └────────────────────────────────────────────┘                         │
 │                                                                          │
@@ -122,10 +132,17 @@ Jobs:
 Frontend Azure Static Web Apps 배포 워크플로우
 
 ```yaml
-트리거: push (develop 브랜치)
+트리거: workflow_run (Frontend CI 성공 시 on develop), workflow_dispatch (수동)
 Jobs:
-  1. build_and_deploy: SWA CLI로 빌드 및 배포
+  1. check-ci: CI 성공 여부 확인
+  2. build: Vue 3 + Vite 빌드
+  3. deploy-dev: Azure Static Web Apps 배포
 ```
+
+**주요 특징:**
+- Frontend CI가 성공해야만 자동 트리거
+- `workflow_dispatch`로 수동 배포 가능 (긴급 상황)
+- PR preview 배포 지원
 
 ## ⚙️ 필요한 Secrets
 
