@@ -2,8 +2,49 @@
 
 import subprocess
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
+
+
+class MockEmailService:
+    """Mock email service that never sends real emails."""
+
+    async def send_otp(self, email: str, otp: str) -> bool:
+        """Mock OTP send - always succeeds without sending."""
+        return True
+
+    async def send_welcome(self, email: str, name: str) -> bool:
+        """Mock welcome email - always succeeds without sending."""
+        return True
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_email_service():
+    """
+    Replace email service with mock to prevent real email sending during tests.
+    
+    This prevents:
+    - Sending emails to non-existent addresses during tests
+    - Damaging email sender reputation
+    - Azure Communication Services costs during testing
+    """
+    import app.services.email_service as email_module
+
+    # Store original
+    original_service = email_module._email_service
+    original_get_service = email_module.get_email_service
+
+    # Replace with mock
+    mock_service = MockEmailService()
+    email_module._email_service = mock_service
+    email_module.get_email_service = lambda: mock_service
+
+    yield mock_service
+
+    # Restore original
+    email_module._email_service = original_service
+    email_module.get_email_service = original_get_service
 
 
 @pytest.fixture(scope="session", autouse=True)

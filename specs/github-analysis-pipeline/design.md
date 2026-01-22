@@ -1049,7 +1049,7 @@ def filter_content_response(content: Content, role: str, user_id: UUID | None) -
 ### Assistant Capabilities
 
 ```yaml
-assistant_name: BuildFlow Assistant
+assistant_name: NexusSkill Assistant
 purpose: Help users discover and understand Azure learning content
 
 capabilities:
