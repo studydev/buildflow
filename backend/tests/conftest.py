@@ -2,7 +2,6 @@
 
 import subprocess
 from pathlib import Path
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -23,7 +22,7 @@ class MockEmailService:
 def mock_email_service():
     """
     Replace email service with mock to prevent real email sending during tests.
-    
+
     This prevents:
     - Sending emails to non-existent addresses during tests
     - Damaging email sender reputation
