@@ -279,9 +279,10 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
         targetPort: 8001
         transport: 'http'
         corsPolicy: {
-          allowedOrigins: ['*']
+          allowedOrigins: split(corsOrigins, ',')
           allowedMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
           allowedHeaders: ['*']
+          allowCredentials: true
         }
       }
       secrets: concat([

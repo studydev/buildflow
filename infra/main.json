@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "8132676565160790052"
+      "templateHash": "5786159135343869408"
     }
   },
   "parameters": {
@@ -77,6 +77,27 @@
         "description": "Azure OpenAI Deployment Name"
       }
     },
+    "acsConnectionString": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Azure Communication Services Connection String for OTP emails"
+      }
+    },
+    "acsSenderAddress": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Azure Communication Services Sender Address for OTP emails"
+      }
+    },
+    "corsOrigins": {
+      "type": "string",
+      "defaultValue": "http://localhost:5173,http://localhost:3000",
+      "metadata": {
+        "description": "CORS allowed origins (comma-separated)"
+      }
+    },
     "containerRegistryLoginServer": {
       "type": "string",
       "defaultValue": "",
@@ -132,13 +153,38 @@
       "managedBy": "bicep"
     },
     "containers": [
-      "users",
-      "contents",
-      "bookmarks",
-      "analysis_requests",
-      "pipeline_runs",
-      "raw_extractions",
-      "generated_assets"
+      {
+        "name": "users",
+        "partitionKey": "/id"
+      },
+      {
+        "name": "contents",
+        "partitionKey": "/id"
+      },
+      {
+        "name": "bookmarks",
+        "partitionKey": "/id"
+      },
+      {
+        "name": "analysis_requests",
+        "partitionKey": "/id"
+      },
+      {
+        "name": "pipeline_runs",
+        "partitionKey": "/id"
+      },
+      {
+        "name": "raw_extractions",
+        "partitionKey": "/id"
+      },
+      {
+        "name": "generated_assets",
+        "partitionKey": "/id"
+      },
+      {
+        "name": "login_history",
+        "partitionKey": "/email"
+      }
     ]
   },
   "resources": {
@@ -220,13 +266,13 @@
       },
       "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
       "apiVersion": "2023-04-15",
-      "name": "[format('{0}/{1}/{2}', format('cosmos-{0}', variables('resourceSuffix')), 'buildflow', variables('containers')[copyIndex()])]",
+      "name": "[format('{0}/{1}/{2}', format('cosmos-{0}', variables('resourceSuffix')), 'buildflow', variables('containers')[copyIndex()].name)]",
       "properties": {
         "resource": {
-          "id": "[variables('containers')[copyIndex()]]",
+          "id": "[variables('containers')[copyIndex()].name]",
           "partitionKey": {
             "paths": [
-              "/id"
+              "[variables('containers')[copyIndex()].partitionKey]"
             ],
             "kind": "Hash"
           }
@@ -264,12 +310,12 @@
         "keyVault"
       ]
     },
-    "cosmosKeyKv": {
+    "cosmosConnectionStringKv": {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2023-02-01",
-      "name": "[format('{0}/{1}', variables('keyVaultName'), 'cosmos-key')]",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'cosmos-connection-string')]",
       "properties": {
-        "value": "[listKeys('cosmosAccount', '2023-04-15').primaryMasterKey]"
+        "value": "[format('AccountEndpoint={0};AccountKey={1}', reference('cosmosAccount').documentEndpoint, listKeys('cosmosAccount', '2023-04-15').primaryMasterKey)]"
       },
       "dependsOn": [
         "cosmosAccount",
@@ -295,6 +341,18 @@
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'azure-openai-key')]",
       "properties": {
         "value": "[parameters('azureOpenAiKey')]"
+      },
+      "dependsOn": [
+        "keyVault"
+      ]
+    },
+    "acsConnectionStringKv": {
+      "condition": "[not(empty(parameters('acsConnectionString')))]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-02-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'acs-connection-string')]",
+      "properties": {
+        "value": "[parameters('acsConnectionString')]"
       },
       "dependsOn": [
         "keyVault"
@@ -342,9 +400,7 @@
             "targetPort": 8001,
             "transport": "http",
             "corsPolicy": {
-              "allowedOrigins": [
-                "*"
-              ],
+              "allowedOrigins": "[split(parameters('corsOrigins'), ',')]",
               "allowedMethods": [
                 "GET",
                 "POST",
@@ -355,21 +411,11 @@
               ],
               "allowedHeaders": [
                 "*"
-              ]
+              ],
+              "allowCredentials": true
             }
           },
-          "secrets": [
-            {
-              "name": "jwt-secret",
-              "keyVaultUrl": "[reference('jwtSecretKv').secretUri]",
-              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))]"
-            },
-            {
-              "name": "cosmos-key",
-              "keyVaultUrl": "[reference('cosmosKeyKv').secretUri]",
-              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))]"
-            }
-          ]
+          "secrets": "[concat(createArray(createObject('name', 'jwt-secret', 'keyVaultUrl', reference('jwtSecretKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'cosmos-connection-string', 'keyVaultUrl', reference('cosmosConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), if(not(empty(parameters('acsConnectionString'))), createArray(createObject('name', 'acs-connection-string', 'keyVaultUrl', reference('acsConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()))]"
         },
         "template": {
           "containers": [
@@ -394,15 +440,11 @@
                   "value": "HS256"
                 },
                 {
-                  "name": "COSMOS_ENDPOINT",
-                  "value": "[reference('cosmosAccount').documentEndpoint]"
+                  "name": "COSMOS_CONNECTION_STRING",
+                  "secretRef": "cosmos-connection-string"
                 },
                 {
-                  "name": "COSMOS_KEY",
-                  "secretRef": "cosmos-key"
-                },
-                {
-                  "name": "COSMOS_DATABASE",
+                  "name": "COSMOS_DATABASE_NAME",
                   "value": "buildflow"
                 },
                 {
@@ -412,6 +454,18 @@
                 {
                   "name": "AZURE_OPENAI_DEPLOYMENT",
                   "value": "[parameters('azureOpenAiDeployment')]"
+                },
+                {
+                  "name": "ACS_CONNECTION_STRING",
+                  "secretRef": "acs-connection-string"
+                },
+                {
+                  "name": "ACS_SENDER_ADDRESS",
+                  "value": "[parameters('acsSenderAddress')]"
+                },
+                {
+                  "name": "CORS_ORIGINS",
+                  "value": "[parameters('corsOrigins')]"
                 }
               ],
               "probes": [
@@ -453,9 +507,9 @@
         }
       },
       "dependsOn": [
+        "acsConnectionStringKv",
         "containerAppsEnv",
-        "cosmosAccount",
-        "cosmosKeyKv",
+        "cosmosConnectionStringKv",
         "jwtSecretKv",
         "managedIdentity"
       ]
