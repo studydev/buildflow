@@ -18,17 +18,17 @@ FastAPI 기반 백엔드 API - 콘텐츠 관리, GitHub 분석, AI 파이프라�
 pip install -r requirements.txt
 
 # 개발 서버 실행
-uvicorn app.main:app --reload --port 8001
+uvicorn app.main:app --reload --port 8000
 
 # 또는 Docker로 실행
 docker build -t buildflow-api .
-docker run -p 8001:8000 buildflow-api
+docker run -p 8000:8000 buildflow-api
 ```
 
 ### 헬스 체크
 
 ```bash
-curl http://localhost:8001/health
+curl http://localhost:8000/health
 
 # 응답:
 # {"success": true, "data": {"status": "healthy"}, "meta": {...}}
@@ -38,9 +38,9 @@ curl http://localhost:8001/health
 
 | 문서 | URL |
 |------|-----|
-| Swagger UI | http://localhost:8001/docs |
-| ReDoc | http://localhost:8001/redoc |
-| OpenAPI JSON | http://localhost:8001/openapi.json |
+| Swagger UI | http://localhost:8000/api/v1/docs |
+| ReDoc | http://localhost:8000/api/v1/redoc |
+| OpenAPI JSON | http://localhost:8000/api/v1/openapi.json |
 
 ## 📁 프로젝트 구조
 
@@ -189,7 +189,7 @@ pytest tests/test_content_api.py -v
 
 ```bash
 docker build -t buildflow-api .
-docker run -p 8001:8000 --env-file .env buildflow-api
+docker run -p 8000:8000 --env-file .env buildflow-api
 ```
 
 ### 파이프라인 빌드
