@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 import jwt
 from pydantic import BaseModel
