@@ -45,7 +45,7 @@ param acsSenderAddress string = ''
 @description('CORS allowed origins (comma-separated)')
 param corsOrigins string = 'http://localhost:5173,http://localhost:3000'
 
-@description('Container Registry login server'))
+@description('Container Registry login server')
 param containerRegistryLoginServer string = ''
 
 @description('Pipeline container image tag')
@@ -284,7 +284,7 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
           allowedHeaders: ['*']
         }
       }
-      secrets: [
+      secrets: concat([
         {
           name: 'jwt-secret'
           keyVaultUrl: jwtSecretKv.properties.secretUri
@@ -295,12 +295,13 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
           keyVaultUrl: cosmosConnectionStringKv.properties.secretUri
           identity: managedIdentity.id
         }
+      ], !empty(acsConnectionString) ? [
         {
           name: 'acs-connection-string'
           keyVaultUrl: acsConnectionStringKv.properties.secretUri
           identity: managedIdentity.id
         }
-      ]
+      ] : [])
     }
     template: {
       containers: [
