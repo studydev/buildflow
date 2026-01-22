@@ -19,7 +19,7 @@ const routes: RouteRecordRaw[] = [
     name: 'Home',
     component: () => import('@/views/Home.vue'),
     meta: {
-      title: 'BuildFlow - 학습 콘텐츠'
+      title: 'NexusSkill - 학습 콘텐츠'
     }
   },
   {
