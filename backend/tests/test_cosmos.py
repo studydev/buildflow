@@ -1,5 +1,8 @@
 """Test Cosmos DB client module."""
 
+import os
+from unittest.mock import patch
+
 import pytest
 
 from app.db import cosmos
@@ -20,10 +23,15 @@ class TestCosmosModule:
         cosmos._cosmos_client = None
         cosmos._database = None
 
-        with pytest.raises(RuntimeError) as exc_info:
-            cosmos.get_cosmos_client()
+        # Mock environment to remove COSMOS_CONNECTION_STRING
+        with patch.dict(os.environ, {}, clear=True):
+            # Also need to reload settings or mock get_settings
+            with patch('app.db.cosmos.get_settings') as mock_settings:
+                mock_settings.return_value.cosmos_connection_string = None
+                with pytest.raises(RuntimeError) as exc_info:
+                    cosmos.get_cosmos_client()
 
-        assert "COSMOS_CONNECTION_STRING is not set" in str(exc_info.value)
+                assert "COSMOS_CONNECTION_STRING is not set" in str(exc_info.value)
 
     def test_close_connection_resets_singletons(self):
         """close_connection should reset the singleton instances."""

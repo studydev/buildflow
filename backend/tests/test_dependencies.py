@@ -45,14 +45,14 @@ def get_test_token() -> str:
     otp_store.clear()
     reset_rate_limiters()
 
-    # Request OTP
-    client.post("/api/v1/auth/otp", json={"email": "deps-test@example.com"})
-    entry = otp_store.get("deps-test@example.com")
+    # Request OTP - use allowed domain (@microsoft.com)
+    client.post("/api/v1/auth/otp", json={"email": "deps-test@microsoft.com"})
+    entry = otp_store.get("deps-test@microsoft.com")
 
     # Verify OTP
     response = client.post(
         "/api/v1/auth/verify",
-        json={"email": "deps-test@example.com", "code": entry.code},
+        json={"email": "deps-test@microsoft.com", "code": entry.code},
     )
 
     return response.json()["data"]["access_token"]
@@ -83,7 +83,7 @@ class TestGetCurrentUserToken:
         )
 
         assert response.status_code == 200
-        assert response.json()["email"] == "deps-test@example.com"
+        assert response.json()["email"] == "deps-test@microsoft.com"
 
     def test_missing_token(self):
         """Should reject missing token with 401."""

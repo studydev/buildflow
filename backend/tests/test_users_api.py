@@ -24,12 +24,13 @@ def get_test_token() -> str:
     otp_store.clear()
     reset_rate_limiters()
 
-    client.post("/api/v1/auth/otp", json={"email": "users-api@example.com"})
-    entry = otp_store.get("users-api@example.com")
+    # Use allowed domain (@microsoft.com)
+    client.post("/api/v1/auth/otp", json={"email": "users-api@microsoft.com"})
+    entry = otp_store.get("users-api@microsoft.com")
 
     response = client.post(
         "/api/v1/auth/verify",
-        json={"email": "users-api@example.com", "code": entry.code},
+        json={"email": "users-api@microsoft.com", "code": entry.code},
     )
 
     return response.json()["data"]["access_token"]
