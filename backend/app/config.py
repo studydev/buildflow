@@ -86,6 +86,9 @@ class Settings(BaseSettings):
     acs_connection_string: Optional[str] = None
     acs_sender_address: Optional[str] = None  # e.g., "DoNotReply@<domain>.azurecomm.net"
 
+    # GitHub Settings (for higher API rate limits)
+    github_token: Optional[str] = None  # Personal Access Token for 5000 req/hour
+
     # OTP Settings (T035: 3-minute validity and resend limit)
     otp_ttl_minutes: int = 3  # OTP validity period
     otp_rate_limit_minutes: int = 3  # Minimum time between OTP requests

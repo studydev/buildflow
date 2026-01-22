@@ -304,6 +304,13 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
           keyVaultUrl: acsConnectionStringKv.properties.secretUri
           identity: managedIdentity.id
         }
+      ] : [], !empty(githubToken) ? [
+        {
+          name: 'github-token'
+          #disable-next-line BCP318
+          keyVaultUrl: githubTokenKv.properties.secretUri
+          identity: managedIdentity.id
+        }
       ] : [])
     }
     template: {
@@ -315,7 +322,7 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
             cpu: json('0.5')
             memory: '1Gi'
           }
-          env: [
+          env: concat([
             { name: 'ENV', value: environment }
             { name: 'JWT_SECRET', secretRef: 'jwt-secret' }
             { name: 'JWT_ALGORITHM', value: 'HS256' }
@@ -326,7 +333,9 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'ACS_CONNECTION_STRING', secretRef: 'acs-connection-string' }
             { name: 'ACS_SENDER_ADDRESS', value: acsSenderAddress }
             { name: 'CORS_ORIGINS', value: corsOrigins }
-          ]
+          ], !empty(githubToken) ? [
+            { name: 'GITHUB_TOKEN', secretRef: 'github-token' }
+          ] : [])
           probes: [
             {
               type: 'Liveness'

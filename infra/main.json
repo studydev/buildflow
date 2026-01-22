@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "5786159135343869408"
+      "templateHash": "7945079500825945536"
     }
   },
   "parameters": {
@@ -415,7 +415,7 @@
               "allowCredentials": true
             }
           },
-          "secrets": "[concat(createArray(createObject('name', 'jwt-secret', 'keyVaultUrl', reference('jwtSecretKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'cosmos-connection-string', 'keyVaultUrl', reference('cosmosConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), if(not(empty(parameters('acsConnectionString'))), createArray(createObject('name', 'acs-connection-string', 'keyVaultUrl', reference('acsConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()))]"
+          "secrets": "[concat(createArray(createObject('name', 'jwt-secret', 'keyVaultUrl', reference('jwtSecretKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'cosmos-connection-string', 'keyVaultUrl', reference('cosmosConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), if(not(empty(parameters('acsConnectionString'))), createArray(createObject('name', 'acs-connection-string', 'keyVaultUrl', reference('acsConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'github-token', 'keyVaultUrl', reference('githubTokenKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()))]"
         },
         "template": {
           "containers": [
@@ -426,48 +426,7 @@
                 "cpu": "[json('0.5')]",
                 "memory": "1Gi"
               },
-              "env": [
-                {
-                  "name": "ENV",
-                  "value": "[parameters('environment')]"
-                },
-                {
-                  "name": "JWT_SECRET",
-                  "secretRef": "jwt-secret"
-                },
-                {
-                  "name": "JWT_ALGORITHM",
-                  "value": "HS256"
-                },
-                {
-                  "name": "COSMOS_CONNECTION_STRING",
-                  "secretRef": "cosmos-connection-string"
-                },
-                {
-                  "name": "COSMOS_DATABASE_NAME",
-                  "value": "buildflow"
-                },
-                {
-                  "name": "AZURE_OPENAI_ENDPOINT",
-                  "value": "[parameters('azureOpenAiEndpoint')]"
-                },
-                {
-                  "name": "AZURE_OPENAI_DEPLOYMENT",
-                  "value": "[parameters('azureOpenAiDeployment')]"
-                },
-                {
-                  "name": "ACS_CONNECTION_STRING",
-                  "secretRef": "acs-connection-string"
-                },
-                {
-                  "name": "ACS_SENDER_ADDRESS",
-                  "value": "[parameters('acsSenderAddress')]"
-                },
-                {
-                  "name": "CORS_ORIGINS",
-                  "value": "[parameters('corsOrigins')]"
-                }
-              ],
+              "env": "[concat(createArray(createObject('name', 'ENV', 'value', parameters('environment')), createObject('name', 'JWT_SECRET', 'secretRef', 'jwt-secret'), createObject('name', 'JWT_ALGORITHM', 'value', 'HS256'), createObject('name', 'COSMOS_CONNECTION_STRING', 'secretRef', 'cosmos-connection-string'), createObject('name', 'COSMOS_DATABASE_NAME', 'value', 'buildflow'), createObject('name', 'AZURE_OPENAI_ENDPOINT', 'value', parameters('azureOpenAiEndpoint')), createObject('name', 'AZURE_OPENAI_DEPLOYMENT', 'value', parameters('azureOpenAiDeployment')), createObject('name', 'ACS_CONNECTION_STRING', 'secretRef', 'acs-connection-string'), createObject('name', 'ACS_SENDER_ADDRESS', 'value', parameters('acsSenderAddress')), createObject('name', 'CORS_ORIGINS', 'value', parameters('corsOrigins'))), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'GITHUB_TOKEN', 'secretRef', 'github-token')), createArray()))]",
               "probes": [
                 {
                   "type": "Liveness",
@@ -510,6 +469,7 @@
         "acsConnectionStringKv",
         "containerAppsEnv",
         "cosmosConnectionStringKv",
+        "githubTokenKv",
         "jwtSecretKv",
         "managedIdentity"
       ]
