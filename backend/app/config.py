@@ -93,6 +93,10 @@ class Settings(BaseSettings):
     otp_ttl_minutes: int = 3  # OTP validity period
     otp_rate_limit_minutes: int = 3  # Minimum time between OTP requests
 
+    # Dev Bypass Account (for development/testing - bypasses OTP verification)
+    # Only works when env != "production"
+    dev_bypass_email: Optional[str] = "hskim@microsoft.com"
+
     # CORS Settings
     cors_origins: str = "http://localhost:5173,http://localhost:3000"  # Comma-separated list
 

@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 from uuid import uuid4
 
+from app.config import get_settings
 from app.core.domain_validator import normalize_email, validate_internal_email
 from app.core.security import (
     TokenPair,
@@ -41,6 +42,30 @@ class AuthService:
         if self._user_repo is None:
             self._user_repo = get_user_repository()
         return self._user_repo
+
+    def is_dev_bypass_email(self, email: str) -> bool:
+        """
+        Check if email is the dev bypass account.
+
+        Only works in non-production environments.
+
+        Args:
+            email: Email address to check
+
+        Returns:
+            True if this is the dev bypass email in a non-production environment
+        """
+        settings = get_settings()
+        if settings.is_production:
+            return False
+
+        if not settings.dev_bypass_email:
+            return False
+
+        normalized_email = normalize_email(email)
+        normalized_bypass = normalize_email(settings.dev_bypass_email)
+
+        return normalized_email == normalized_bypass
 
     def validate_domain(self, email: str) -> tuple[bool, str]:
         """
@@ -86,11 +111,17 @@ class AuthService:
         Returns:
             Tuple of (success, message, tokens or None)
         """
-        # Verify OTP
-        success, message = self.otp_store.verify(email, code)
+        # Check for dev bypass account (skip OTP verification)
+        is_bypass = self.is_dev_bypass_email(email)
 
-        if not success:
-            return False, message, None
+        if is_bypass:
+            logger.info("Dev bypass login for: %s", self._mask_email(email))
+        else:
+            # Verify OTP for non-bypass accounts
+            success, message = self.otp_store.verify(email, code)
+
+            if not success:
+                return False, message, None
 
         # Get or create user
         # Note: For MVP without Cosmos, we'll create tokens directly

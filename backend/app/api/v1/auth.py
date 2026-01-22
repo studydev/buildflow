@@ -56,6 +56,9 @@ async def request_otp(request: Request, body: OTPRequest) -> JSONResponse:
     OTP is valid for 3 minutes.
     Only internal employee emails (@microsoft.com, @github.com) are allowed.
     Rate limited to 1 request per email per 3 minutes.
+
+    For dev bypass accounts (in non-production environments),
+    returns success without sending an email.
     """
     correlation_id = request.state.correlation_id
     email = body.email.lower()
@@ -65,14 +68,35 @@ async def request_otp(request: Request, body: OTPRequest) -> JSONResponse:
     if not is_valid:
         raise DomainNotAllowedError(message=error_message)
 
-    # Check rate limit before processing
+    auth_service = get_auth_service()
+
+    # Check if this is a dev bypass account
+    is_bypass = auth_service.is_dev_bypass_email(email)
+
+    if is_bypass:
+        # For dev bypass account, skip rate limiting and email sending
+        logger.info("Dev bypass OTP request for: %s", email)
+
+        response_data = OTPResponse(
+            message="Dev bypass account - enter any code to login",
+            email=auth_service._mask_email(email),
+            expires_in_seconds=180,
+        )
+
+        response = APIResponse(
+            success=True,
+            data=response_data,
+            meta=Meta.create(correlation_id),
+        )
+
+        return JSONResponse(content=response.model_dump())
+
+    # Check rate limit before processing (only for non-bypass accounts)
     check_rate_limit(
         get_otp_request_limiter(),
         email,
         "Too many OTP requests. Please wait before requesting a new one.",
     )
-
-    auth_service = get_auth_service()
 
     is_new, masked_email, expires_in, otp_code = auth_service.request_otp(email)
 
@@ -127,18 +151,25 @@ async def verify_otp(request: Request, body: VerifyRequest) -> JSONResponse:
     Returns access and refresh tokens on successful verification.
     T017: Sets HttpOnly cookie with access token for browser authentication.
     Rate limited to 5 verify attempts per email per 15 minutes.
+
+    For dev bypass accounts (in non-production environments),
+    any OTP code will be accepted.
     """
     correlation_id = request.state.correlation_id
     email = body.email.lower()
 
-    # Check rate limit before processing
-    check_rate_limit(
-        get_otp_verify_limiter(),
-        email,
-        "Too many verification attempts. Please wait before trying again.",
-    )
-
     auth_service = get_auth_service()
+
+    # Check if this is a dev bypass account (skip rate limiting)
+    is_bypass = auth_service.is_dev_bypass_email(email)
+
+    if not is_bypass:
+        # Check rate limit before processing (only for non-bypass accounts)
+        check_rate_limit(
+            get_otp_verify_limiter(),
+            email,
+            "Too many verification attempts. Please wait before trying again.",
+        )
 
     success, message, tokens = await auth_service.verify_otp(email, body.code)
 
