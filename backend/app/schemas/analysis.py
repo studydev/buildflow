@@ -12,23 +12,26 @@ class AnalysisRequestCreate(BaseModel):
 
     source_url: str = Field(
         ...,
-        description="GitHub repository URL to analyze",
-        examples=["https://github.com/Azure-Samples/azure-functions-python"],
+        description="GitHub repository URL or redirect URL (e.g., aka.ms) to analyze",
+        examples=[
+            "https://github.com/Azure-Samples/azure-functions-python",
+            "https://aka.ms/ignite25-LAB510GHRepo",
+        ],
     )
 
     @field_validator("source_url")
     @classmethod
-    def validate_github_url(cls, v: str) -> str:
-        """Validate that the URL is a valid GitHub repository URL."""
+    def validate_url(cls, v: str) -> str:
+        """Validate that the URL is a valid HTTP/HTTPS URL."""
         # Normalize the URL
         v = v.strip().rstrip("/")
 
-        # Pattern for GitHub repository URLs
-        github_pattern = r"^https://github\.com/[\w\-\.]+/[\w\-\.]+$"
+        # Allow any valid HTTP/HTTPS URL (redirect validation done in service layer)
+        url_pattern = r"^https?://[\w\-\.]+(:\d+)?(/[\w\-\.~!$&'()*+,;=:@%]*)*/?(\?[\w\-\.~!$&'()*+,;=:@%/?]*)?(#[\w\-\.~!$&'()*+,;=:@%/?]*)?$"
 
-        if not re.match(github_pattern, v, re.IGNORECASE):
+        if not re.match(url_pattern, v, re.IGNORECASE):
             raise ValueError(
-                "Invalid GitHub URL. Must be in format: https://github.com/{owner}/{repo}"
+                "Invalid URL. Must be a valid HTTP or HTTPS URL"
             )
 
         return v

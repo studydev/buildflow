@@ -39,6 +39,10 @@ def mock_service():
     """Create a mock analysis service."""
     service = MagicMock(spec=AnalysisService)
     service.validate_url.return_value = (True, None)
+    # Mock the new async validate_and_resolve_url method
+    service.validate_and_resolve_url = AsyncMock(
+        return_value=(True, "https://github.com/Azure-Samples/test-repo", None)
+    )
     return service
 
 
@@ -95,20 +99,27 @@ class TestCreateAnalysisRequest:
         data = response.json()
         assert data["meta"]["message"] == "Analysis request already exists"
 
-    def test_create_request_invalid_url(self, client):
-        """Test rejection of invalid GitHub URL."""
-        # Invalid URL format caught by pydantic
+    def test_create_request_invalid_url(self, client, mock_service):
+        """Test rejection of non-GitHub URL after redirect resolution."""
+        # Mock service to reject gitlab URL
+        mock_service.validate_and_resolve_url = AsyncMock(
+            return_value=(False, "https://gitlab.com/some/repo", "Final URL must be a GitHub repository. Got: gitlab.com")
+        )
+        
         response = client.post(
             "/api/v1/analysis-requests",
             json={"source_url": "https://gitlab.com/some/repo"},
         )
 
-        # Should fail validation
-        assert response.status_code == 422
+        # Should fail validation at service layer
+        assert response.status_code == 400
+        assert "GitHub" in response.json()["error"]["message"]
 
     def test_create_request_ssrf_blocked(self, client, mock_service):
         """Test SSRF protection blocks non-github domains."""
-        mock_service.validate_url.return_value = (False, "Domain not allowed")
+        mock_service.validate_and_resolve_url = AsyncMock(
+            return_value=(False, "https://github.com/test/repo", "Domain not allowed")
+        )
 
         response = client.post(
             "/api/v1/analysis-requests",

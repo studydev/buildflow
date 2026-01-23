@@ -333,7 +333,9 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'ACS_CONNECTION_STRING', secretRef: 'acs-connection-string' }
             { name: 'ACS_SENDER_ADDRESS', value: acsSenderAddress }
             { name: 'CORS_ORIGINS', value: corsOrigins }
-          ], !empty(githubToken) ? [
+          ], environment != 'prod' && !empty(devBypassEmail) ? [
+            { name: 'DEV_BYPASS_EMAIL', value: devBypassEmail }
+          ] : [], !empty(githubToken) ? [
             { name: 'GITHUB_TOKEN', secretRef: 'github-token' }
           ] : [])
           probes: [
@@ -359,7 +361,7 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
         }
       ]
       scale: {
-        minReplicas: environment == 'prod' ? 1 : 0
+        minReplicas: environment == 'prod' ? 1 : 1
         maxReplicas: environment == 'prod' ? 10 : 3
         rules: [
           {

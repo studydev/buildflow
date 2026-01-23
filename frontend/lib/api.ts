@@ -158,17 +158,24 @@ export async function apiRequest<T>(
   })
 
   // Handle 401 - try to refresh token
-  if (response.status === 401 && authStore.canRefresh) {
-    const refreshed = await refreshAccessToken()
-    
-    if (refreshed) {
-      // Retry with new token
-      headers['Authorization'] = `Bearer ${authStore.accessToken}`
-      response = await fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include',
-      })
+  if (response.status === 401) {
+    if (authStore.canRefresh) {
+      const refreshed = await refreshAccessToken()
+      
+      if (refreshed) {
+        // Retry with new token
+        headers['Authorization'] = `Bearer ${authStore.accessToken}`
+        response = await fetch(url, {
+          ...options,
+          headers,
+          credentials: 'include',
+        })
+      } else {
+        // Refresh failed - already logged out by refreshAccessToken
+      }
+    } else {
+      // Can't refresh - logout and let caller handle the error
+      authStore.logout()
     }
   }
 

@@ -172,6 +172,12 @@ export const useAnalysisStore = defineStore('analysis', () => {
       startPollingForActiveRequests()
       
     } catch (e) {
+      // Don't show auth errors in the analysis store - these are handled by router/auth
+      if (e instanceof APIError && e.status === 401) {
+        console.warn('Authentication required for fetching analysis requests')
+        // Auth errors are handled by the API layer (logout, redirect)
+        return
+      }
       error.value = e instanceof Error ? e.message : 'Failed to fetch analysis requests'
       console.error('Failed to fetch analysis requests:', e)
     } finally {
@@ -205,6 +211,11 @@ export const useAnalysisStore = defineStore('analysis', () => {
       return newRequest
       
     } catch (e) {
+      // Don't show auth errors in the analysis store - these are handled by router/auth
+      if (e instanceof APIError && e.status === 401) {
+        console.warn('Authentication required for submitting analysis request')
+        return null
+      }
       if (e instanceof APIError) {
         error.value = e.message
         // Handle duplicate URL case

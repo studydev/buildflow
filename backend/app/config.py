@@ -95,7 +95,8 @@ class Settings(BaseSettings):
 
     # Dev Bypass Account (for development/testing - bypasses OTP verification)
     # Only works when env != "production"
-    dev_bypass_email: Optional[str] = "hskim@microsoft.com"
+    # Set via environment variable: DEV_BYPASS_EMAIL
+    dev_bypass_email: Optional[str] = None
 
     # CORS Settings
     cors_origins: str = "http://localhost:5173,http://localhost:3000"  # Comma-separated list

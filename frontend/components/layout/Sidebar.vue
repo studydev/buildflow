@@ -9,7 +9,8 @@ defineProps<{
 const route = useRoute()
 
 const navItems = [
-  { icon: '🎓', label: 'Workshops', path: '/' },
+  { icon: '🎓', label: 'GitHub Repo', path: '/' },
+  { icon: '📚', label: 'Workshops', path: '/workshops' },
 ]
 
 const categories = [

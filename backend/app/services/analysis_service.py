@@ -1,7 +1,10 @@
 """Service layer for Analysis Requests."""
 
 import logging
+import urllib.parse
 from typing import List, Optional, Tuple
+
+import httpx
 
 from app.models.analysis import AnalysisRequest
 from app.models.enums import AnalysisStatus
@@ -14,8 +17,14 @@ logger = logging.getLogger(__name__)
 class AnalysisService:
     """Service for managing analysis requests."""
 
-    # GitHub allowlist for SSRF protection
+    # GitHub allowlist for SSRF protection (final destination)
     ALLOWED_DOMAINS = ["github.com"]
+    
+    # Domains allowed to redirect to GitHub
+    REDIRECT_DOMAINS = ["aka.ms", "go.microsoft.com", "bit.ly", "t.co", "tinyurl.com"]
+    
+    # Maximum redirects to follow
+    MAX_REDIRECTS = 5
 
     def __init__(self, repo: Optional[AnalysisRequestRepository] = None):
         """Initialize with optional repository."""
@@ -28,15 +37,61 @@ class AnalysisService:
             self._repo = get_analysis_repo()
         return self._repo
 
+    async def resolve_redirect_url(self, url: str) -> Tuple[str, Optional[str]]:
+        """
+        Resolve redirect URLs to get the final destination.
+        
+        Args:
+            url: The URL to resolve (may be a redirect URL)
+            
+        Returns:
+            Tuple of (resolved_url, error_message)
+        """
+        try:
+            parsed = urllib.parse.urlparse(url)
+            domain = parsed.netloc.lower()
+            
+            # If already a GitHub URL, return as-is
+            if any(domain == allowed or domain.endswith(f".{allowed}")
+                   for allowed in self.ALLOWED_DOMAINS):
+                return url, None
+            
+            # Check if it's a known redirect domain
+            is_redirect_domain = any(
+                domain == rd or domain.endswith(f".{rd}")
+                for rd in self.REDIRECT_DOMAINS
+            )
+            
+            if not is_redirect_domain:
+                return url, None  # Not a redirect domain, validate normally
+            
+            # Follow redirects to find the final URL
+            async with httpx.AsyncClient(
+                timeout=10.0,
+                follow_redirects=True,
+                max_redirects=self.MAX_REDIRECTS
+            ) as client:
+                response = await client.head(url)
+                final_url = str(response.url)
+                logger.info(f"Resolved redirect: {url} -> {final_url}")
+                return final_url, None
+                
+        except httpx.TooManyRedirects:
+            return url, "Too many redirects"
+        except httpx.TimeoutException:
+            return url, "Request timeout while resolving redirect"
+        except Exception as e:
+            logger.warning(f"Error resolving redirect URL {url}: {e}")
+            return url, f"Failed to resolve redirect: {str(e)}"
+
     def validate_url(self, url: str) -> Tuple[bool, Optional[str]]:
         """
-        Validate the source URL for SSRF protection.
+        Validate the source URL for SSRF protection (sync version).
+        For redirect URLs, use validate_url_async instead.
 
         Returns:
             Tuple of (is_valid, error_message)
         """
-        import urllib.parse
-
         try:
             parsed = urllib.parse.urlparse(url)
 
@@ -48,10 +103,13 @@ class AnalysisService:
             domain = parsed.netloc.lower()
             if not any(domain == allowed or domain.endswith(f".{allowed}")
                       for allowed in self.ALLOWED_DOMAINS):
+                # Check if it's a known redirect domain
+                if any(domain == rd or domain.endswith(f".{rd}")
+                       for rd in self.REDIRECT_DOMAINS):
+                    return True, None  # Allow redirect domains
                 return False, f"Domain not allowed. Only {', '.join(self.ALLOWED_DOMAINS)} are supported"
 
             # Check for private IPs (basic SSRF protection)
-            # Note: In production, use more comprehensive IP validation
             if any(ip in domain for ip in ["127.0.0.1", "localhost", "0.0.0.0"]):
                 return False, "Invalid domain"
 
@@ -60,6 +118,41 @@ class AnalysisService:
         except Exception as e:
             logger.warning(f"URL validation error: {e}")
             return False, "Invalid URL format"
+    
+    async def validate_and_resolve_url(self, url: str) -> Tuple[bool, str, Optional[str]]:
+        """
+        Validate URL and resolve redirects if needed.
+        
+        Returns:
+            Tuple of (is_valid, resolved_url, error_message)
+        """
+        # First, basic validation
+        is_valid, error = self.validate_url(url)
+        if not is_valid:
+            return False, url, error
+        
+        # Try to resolve redirect
+        resolved_url, resolve_error = await self.resolve_redirect_url(url)
+        if resolve_error:
+            logger.warning(f"Redirect resolution warning: {resolve_error}")
+            # Continue with original URL if resolution fails
+            resolved_url = url
+        
+        # Validate the resolved URL (must be GitHub)
+        parsed = urllib.parse.urlparse(resolved_url)
+        domain = parsed.netloc.lower()
+        
+        if not any(domain == allowed or domain.endswith(f".{allowed}")
+                   for allowed in self.ALLOWED_DOMAINS):
+            return False, resolved_url, f"Final URL must be a GitHub repository. Got: {domain}"
+        
+        # Check for valid GitHub repo pattern
+        import re
+        pattern = r"https?://github\.com/[^/]+/[^/]+"
+        if not re.match(pattern, resolved_url):
+            return False, resolved_url, "URL must point to a valid GitHub repository"
+        
+        return True, resolved_url, None
 
     async def create_request(
         self,

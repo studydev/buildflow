@@ -95,14 +95,18 @@ async def create_analysis_request(
     Create a new analysis request for a GitHub repository.
 
     - **source_url**: GitHub repository URL (https://github.com/{owner}/{repo})
+                      or redirect URL (e.g., https://aka.ms/...) that resolves to GitHub
 
     Returns the created request immediately. Analysis runs in background.
     Poll GET /analysis-requests/{id} to check status.
     """
-    # Validate URL (SSRF protection)
-    is_valid, error_msg = service.validate_url(data.source_url)
+    # Validate URL and resolve redirects (SSRF protection)
+    is_valid, resolved_url, error_msg = await service.validate_and_resolve_url(data.source_url)
     if not is_valid:
         raise ValidationError(error_msg)
+    
+    # Update the source URL with the resolved URL
+    data.source_url = resolved_url
 
     # Create or find existing request
     request, is_duplicate = await service.create_request(

@@ -19,7 +19,7 @@ const routes: RouteRecordRaw[] = [
     name: 'Home',
     component: () => import('@/views/Home.vue'),
     meta: {
-      title: 'NexusSkill - 학습 콘텐츠'
+      title: 'NexusSkill - Repo 모음'
     }
   },
   {
@@ -29,7 +29,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       requiresContributor: true,
-      title: 'GitHub 연결'
+      title: 'NexusSkill - Repo 등록'
     }
   },
   {
@@ -39,7 +39,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       requiresContributor: true,
-      title: '콘텐츠 편집'
+      title: 'NexusSkill - Repo 편집'
     }
   },
   {
@@ -49,7 +49,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       requiresContributor: true,
-      title: '파이프라인 히스토리'
+      title: 'NexusSkill - 파이프라인 히스토리'
     }
   },
   // Catch-all 404 route

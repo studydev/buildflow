@@ -11,10 +11,15 @@ const analysisStore = useAnalysisStore()
 const githubUrl = ref('')
 const urlError = ref('')
 
-// URL validation
-const isValidGithubUrl = (url: string): boolean => {
-  const githubPattern = /^https?:\/\/(www\.)?github\.com\/[\w-]+\/[\w.-]+\/?$/
-  return githubPattern.test(url)
+// URL validation - allows GitHub URLs and redirect URLs (aka.ms, etc.)
+// Backend will resolve redirects and validate final URL
+const isValidUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
 }
 
 // Computed
@@ -30,8 +35,8 @@ const handleSubmit = async () => {
     return
   }
   
-  if (!isValidGithubUrl(githubUrl.value.trim())) {
-    urlError.value = '유효한 GitHub 저장소 URL을 입력해주세요 (예: https://github.com/owner/repo)'
+  if (!isValidUrl(githubUrl.value.trim())) {
+    urlError.value = '유효한 URL을 입력해주세요 (예: https://github.com/owner/repo 또는 리다이렉트 URL)'
     return
   }
   

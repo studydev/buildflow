@@ -319,7 +319,7 @@ onUnmounted(() => {
             : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
         ]"
       >
-        내 콘텐츠
+        등록 Repo
         <span v-if="activeTab === 'content'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></span>
       </button>
       <button
