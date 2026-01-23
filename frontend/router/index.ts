@@ -72,8 +72,8 @@ const router = createRouter({
  * Navigation guard for authentication and authorization
  */
 router.beforeEach(async (
-  to: RouteLocationNormalized, 
-  _from: RouteLocationNormalized, 
+  to: RouteLocationNormalized,
+  _from: RouteLocationNormalized,
   next: NavigationGuardNext
 ) => {
   // Update document title
@@ -87,17 +87,22 @@ router.beforeEach(async (
 
   // Check if route requires authentication
   if (to.meta.requiresAuth) {
+    // Wait for session check to complete if not done yet
+    if (!authStore.sessionChecked) {
+      await authStore.checkSession()
+    }
+
     if (!authStore.isAuthenticated) {
       // Store intended destination for redirect after login
       sessionStorage.setItem('redirectAfterLogin', to.fullPath)
-      
+
       // T023: Show login required message (FR-013)
       sessionStorage.setItem('loginRequiredMessage', '이 기능을 사용하려면 로그인이 필요합니다')
-      
+
       // Redirect to home with login prompt
-      return next({ 
-        name: 'Home', 
-        query: { login: 'required' } 
+      return next({
+        name: 'Home',
+        query: { login: 'required' }
       })
     }
   }
@@ -105,9 +110,9 @@ router.beforeEach(async (
   // Check if route requires contributor role
   if (to.meta.requiresContributor) {
     if (!authStore.isContributor) {
-      return next({ 
-        name: 'Home', 
-        query: { error: 'contributor-required' } 
+      return next({
+        name: 'Home',
+        query: { error: 'contributor-required' }
       })
     }
   }
@@ -115,9 +120,9 @@ router.beforeEach(async (
   // Check if route requires admin role
   if (to.meta.requiresAdmin) {
     if (!authStore.isAdmin) {
-      return next({ 
-        name: 'Home', 
-        query: { error: 'admin-required' } 
+      return next({
+        name: 'Home',
+        query: { error: 'admin-required' }
       })
     }
   }

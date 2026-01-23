@@ -2,18 +2,18 @@
   "$schema": "https://json.schemastore.org/staticwebapp.config.json",
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/favicon.ico", "/*.svg", "/*.png", "/*.jpg", "/*.ico"]
+    "exclude": ["/api/*", "/assets/*", "*.js", "*.css", "*.json", "*.ico", "*.svg", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.woff", "*.woff2", "*.ttf", "*.eot"]
   },
   "routes": [
     {
       "route": "/api/*",
-      "allowedRoles": ["anonymous", "authenticated"],
-      "rewrite": "/api/*"
+      "allowedRoles": ["anonymous", "authenticated"]
     }
   ],
   "responseOverrides": {
     "404": {
-      "rewrite": "/index.html"
+      "rewrite": "/index.html",
+      "statusCode": 200
     }
   },
   "globalHeaders": {

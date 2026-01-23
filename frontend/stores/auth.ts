@@ -73,10 +73,16 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  // Session validity flag for cookie-based auth (server confirmed)
+  const sessionValid = ref(false)
+  // Flag to track if initial session check has been done
+  const sessionChecked = ref(false)
 
   // Getters
   const isAuthenticated = computed(() => {
-    return !!accessToken.value && !isTokenExpired(accessToken.value)
+    // Cookie-based auth: session is valid if server confirmed it
+    // OR if we have a valid access token (for immediate post-login state)
+    return sessionValid.value || (!!accessToken.value && !isTokenExpired(accessToken.value))
   })
 
   const needsRefresh = computed(() => {
@@ -132,6 +138,9 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
     }
+    // Mark session as valid after successful login
+    sessionValid.value = true
+    sessionChecked.value = true
     error.value = null
   }
 
@@ -142,10 +151,11 @@ export const useAuthStore = defineStore('auth', () => {
         // Ignore logout API errors - continue with local cleanup
       })
     })
-    
+
     accessToken.value = null
     refreshToken.value = null
     user.value = null
+    sessionValid.value = false
     error.value = null
   }
 
@@ -172,10 +182,11 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function checkSession(): Promise<boolean> {
     try {
+      isLoading.value = true
       // Import api dynamically to avoid circular dependency
       const { authApi } = await import('@/lib/api')
       const userData = await authApi.getMe()
-      
+
       // Update user state with server response
       user.value = {
         id: userData.id,
@@ -184,14 +195,21 @@ export const useAuthStore = defineStore('auth', () => {
         role: userData.role as User['role'],
         created_at: userData.created_at,
       }
-      
+
+      // Mark session as valid (cookie-based auth confirmed by server)
+      sessionValid.value = true
+      sessionChecked.value = true
       return true
     } catch {
       // Session invalid - clear local state
       accessToken.value = null
       refreshToken.value = null
       user.value = null
+      sessionValid.value = false
+      sessionChecked.value = true
       return false
+    } finally {
+      isLoading.value = false
     }
   }
 
@@ -202,7 +220,8 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isLoading,
     error,
-    
+    sessionChecked,
+
     // Getters
     isAuthenticated,
     needsRefresh,
