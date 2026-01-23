@@ -177,13 +177,61 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * T024: Check authentication status via API (cookie-based)
-   * This validates the session with the server using HttpOnly cookie
+   * T024: Check authentication status
+   * First checks if we have a valid stored token, then validates with server
    */
   async function checkSession(): Promise<boolean> {
     try {
       isLoading.value = true
-      // Import api dynamically to avoid circular dependency
+
+      // If we have a valid access token (not expired), we're authenticated
+      if (accessToken.value && !isTokenExpired(accessToken.value)) {
+        // Token is valid, extract user info if not already set
+        if (!user.value) {
+          const payload = parseJwt(accessToken.value)
+          if (payload) {
+            user.value = {
+              id: payload.sub,
+              email: payload.email,
+              display_name: null,
+              role: payload.role as User['role'],
+              created_at: new Date().toISOString(),
+            }
+          }
+        }
+        sessionValid.value = true
+        sessionChecked.value = true
+        return true
+      }
+
+      // If access token is expired but we have a refresh token, try to refresh
+      if (refreshToken.value && !isTokenExpired(refreshToken.value)) {
+        try {
+          const { authApi } = await import('@/lib/api')
+          const tokens = await authApi.refreshToken(refreshToken.value)
+          accessToken.value = tokens.access_token
+          refreshToken.value = tokens.refresh_token
+
+          // Extract user info from new token
+          const payload = parseJwt(tokens.access_token)
+          if (payload) {
+            user.value = {
+              id: payload.sub,
+              email: payload.email,
+              display_name: null,
+              role: payload.role as User['role'],
+              created_at: new Date().toISOString(),
+            }
+          }
+          sessionValid.value = true
+          sessionChecked.value = true
+          return true
+        } catch {
+          // Refresh failed, continue to server check
+        }
+      }
+
+      // Last resort: try cookie-based auth with server
       const { authApi } = await import('@/lib/api')
       const userData = await authApi.getMe()
 
@@ -229,7 +277,7 @@ export const useAuthStore = defineStore('auth', () => {
     userRole,
     isContributor,
     isAdmin,
-    
+
     // Actions
     setTokens,
     setUser,
@@ -245,7 +293,9 @@ export const useAuthStore = defineStore('auth', () => {
   persist: {
     key: 'buildflow-auth',
     storage: localStorage,
-    // T045: Only persist user info, tokens are now in HttpOnly cookies
-    pick: ['user'],
+    // Persist tokens and user info for session persistence across tabs/refreshes
+    // Note: HttpOnly cookies provide additional security layer but cross-origin
+    // restrictions require localStorage backup for reliable session persistence
+    pick: ['accessToken', 'refreshToken', 'user'],
   },
 })
