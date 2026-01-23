@@ -45,6 +45,9 @@ param acsSenderAddress string = ''
 @description('CORS allowed origins (comma-separated)')
 param corsOrigins string = 'http://localhost:5173,http://localhost:3000'
 
+@description('Dev bypass email for non-prod environments')
+param devBypassEmail string = ''
+
 @description('Container Registry login server')
 param containerRegistryLoginServer string = ''
 
