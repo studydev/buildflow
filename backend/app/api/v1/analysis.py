@@ -104,7 +104,7 @@ async def create_analysis_request(
     is_valid, resolved_url, error_msg = await service.validate_and_resolve_url(data.source_url)
     if not is_valid:
         raise ValidationError(error_msg)
-    
+
     # Update the source URL with the resolved URL
     data.source_url = resolved_url
 

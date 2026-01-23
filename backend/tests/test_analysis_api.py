@@ -105,7 +105,7 @@ class TestCreateAnalysisRequest:
         mock_service.validate_and_resolve_url = AsyncMock(
             return_value=(False, "https://gitlab.com/some/repo", "Final URL must be a GitHub repository. Got: gitlab.com")
         )
-        
+
         response = client.post(
             "/api/v1/analysis-requests",
             json={"source_url": "https://gitlab.com/some/repo"},
