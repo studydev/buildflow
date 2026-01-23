@@ -346,7 +346,7 @@ def set_auth_cookie(
     max_age: int = COOKIE_MAX_AGE,
     secure: bool = True,
     httponly: bool = True,
-    samesite: str = "lax",
+    samesite: str = "none",
 ) -> None:
     """
     Set authentication cookie on response.
@@ -357,13 +357,15 @@ def set_auth_cookie(
         max_age: Cookie lifetime in seconds (default: 7 days)
         secure: Use HTTPS only (default: True)
         httponly: Prevent JavaScript access (default: True)
-        samesite: SameSite policy (default: "lax")
+        samesite: SameSite policy (default: "none" for cross-origin support)
     """
     settings = get_settings()
 
-    # In development, allow non-secure cookies
+    # SameSite=None requires Secure=True (HTTPS)
+    # In development with HTTP, use Lax instead
     if settings.debug:
         secure = False
+        samesite = "lax"  # Fallback for HTTP in development
 
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
@@ -384,12 +386,19 @@ def clear_auth_cookie(response) -> None:
         response: FastAPI Response object
     """
     settings = get_settings()
-    secure = not settings.debug
+
+    # Match the same settings used when setting the cookie
+    if settings.debug:
+        secure = False
+        samesite = "lax"
+    else:
+        secure = True
+        samesite = "none"
 
     response.delete_cookie(
         key=AUTH_COOKIE_NAME,
         path="/",
         secure=secure,
         httponly=True,
-        samesite="lax",
+        samesite=samesite,
     )

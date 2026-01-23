@@ -42,7 +42,7 @@
       "value": true
     },
     "corsOrigins": {
-      "value": "https://nexus.studydev.com,http://localhost:5173,http://localhost:3000"
+      "value": "https://nexus.studydev.com,https://gentle-island-011f94300.1.azurestaticapps.net,http://localhost:5173,http://localhost:3000"
     }
   }
 }
