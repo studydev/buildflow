@@ -314,6 +314,13 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
           keyVaultUrl: githubTokenKv.properties.secretUri
           identity: managedIdentity.id
         }
+      ] : [], !empty(azureOpenAiKey) ? [
+        {
+          name: 'azure-openai-key'
+          #disable-next-line BCP318
+          keyVaultUrl: openAiKeyKv.properties.secretUri
+          identity: managedIdentity.id
+        }
       ] : [])
     }
     template: {
@@ -340,6 +347,8 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'DEV_BYPASS_EMAIL', value: devBypassEmail }
           ] : [], !empty(githubToken) ? [
             { name: 'GITHUB_TOKEN', secretRef: 'github-token' }
+          ] : [], !empty(azureOpenAiKey) ? [
+            { name: 'AZURE_OPENAI_API_KEY', secretRef: 'azure-openai-key' }
           ] : [])
           probes: [
             {
