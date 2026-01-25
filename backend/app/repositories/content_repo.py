@@ -178,16 +178,16 @@ class ContentRepository:
         Returns:
             Tuple of (content list, total count)
         """
-        # Build query
+        # Build query with pagination
         if status:
-            query = "SELECT * FROM c WHERE c.contributor_id = @contributor_id AND c.status = @status ORDER BY c.created_at DESC"
+            query = f"SELECT * FROM c WHERE c.contributor_id = @contributor_id AND c.status = @status ORDER BY c.created_at DESC OFFSET {offset} LIMIT {limit}"
             count_query = "SELECT VALUE COUNT(1) FROM c WHERE c.contributor_id = @contributor_id AND c.status = @status"
             parameters = [
                 {"name": "@contributor_id", "value": contributor_id},
                 {"name": "@status", "value": status.value},
             ]
         else:
-            query = "SELECT * FROM c WHERE c.contributor_id = @contributor_id ORDER BY c.created_at DESC"
+            query = f"SELECT * FROM c WHERE c.contributor_id = @contributor_id ORDER BY c.created_at DESC OFFSET {offset} LIMIT {limit}"
             count_query = "SELECT VALUE COUNT(1) FROM c WHERE c.contributor_id = @contributor_id"
             parameters = [{"name": "@contributor_id", "value": contributor_id}]
 
@@ -204,8 +204,6 @@ class ContentRepository:
             query=query,
             parameters=parameters,
             partition_key=contributor_id,
-            max_item_count=limit,
-            offset=offset,
         ))
 
         contents = [Content.from_cosmos_item(item) for item in items]
@@ -230,10 +228,11 @@ class ContentRepository:
         """
         # Build query with optional status filter
         if status:
-            query = """
+            query = f"""
                 SELECT * FROM c
                 WHERE c.status = @status
                 ORDER BY c.created_at DESC
+                OFFSET {offset} LIMIT {limit}
             """
             count_query = """
                 SELECT VALUE COUNT(1) FROM c
@@ -254,11 +253,10 @@ class ContentRepository:
                 query=query,
                 parameters=parameters,
                 enable_cross_partition_query=True,
-                max_item_count=limit + offset,
             ))
         else:
             # No parameters needed
-            query = "SELECT * FROM c ORDER BY c.created_at DESC"
+            query = f"SELECT * FROM c ORDER BY c.created_at DESC OFFSET {offset} LIMIT {limit}"
             count_query = "SELECT VALUE COUNT(1) FROM c"
 
             # Get total count
@@ -272,11 +270,7 @@ class ContentRepository:
             items = list(self.container.query_items(
                 query=query,
                 enable_cross_partition_query=True,
-                max_item_count=limit + offset,
             ))
-
-        # Manual offset handling
-        items = items[offset:offset + limit]
 
         contents = [Content.from_cosmos_item(item) for item in items]
         return contents, total
@@ -298,13 +292,14 @@ class ContentRepository:
         Returns:
             Tuple of (content list, total count)
         """
-        # Build query
+        # Build query with pagination
         if category:
-            query = """
+            query = f"""
                 SELECT * FROM c
                 WHERE c.status = @status
                 AND ARRAY_CONTAINS(c.categories, @category)
                 ORDER BY c.published_at DESC
+                OFFSET {offset} LIMIT {limit}
             """
             count_query = """
                 SELECT VALUE COUNT(1) FROM c
@@ -316,7 +311,7 @@ class ContentRepository:
                 {"name": "@category", "value": category},
             ]
         else:
-            query = "SELECT * FROM c WHERE c.status = @status ORDER BY c.published_at DESC"
+            query = f"SELECT * FROM c WHERE c.status = @status ORDER BY c.published_at DESC OFFSET {offset} LIMIT {limit}"
             count_query = "SELECT VALUE COUNT(1) FROM c WHERE c.status = @status"
             parameters = [{"name": "@status", "value": ContentStatus.PUBLISHED.value}]
 
@@ -333,11 +328,7 @@ class ContentRepository:
             query=query,
             parameters=parameters,
             enable_cross_partition_query=True,
-            max_item_count=limit,
         ))
-
-        # Manual offset handling (Cosmos DB SDK limitation)
-        items = items[offset:offset + limit]
 
         contents = [Content.from_cosmos_item(item) for item in items]
         return contents, total
@@ -361,9 +352,9 @@ class ContentRepository:
         Returns:
             Tuple of (content list, total count)
         """
-        # Build search query
+        # Build search query with pagination
         search_lower = query_text.lower()
-        query = """
+        query = f"""
             SELECT * FROM c
             WHERE c.status = @status
             AND (
@@ -371,6 +362,7 @@ class ContentRepository:
                 OR CONTAINS(LOWER(c.description), @search)
             )
             ORDER BY c.published_at DESC
+            OFFSET {offset} LIMIT {limit}
         """
         count_query = """
             SELECT VALUE COUNT(1) FROM c
@@ -398,11 +390,7 @@ class ContentRepository:
             query=query,
             parameters=parameters,
             enable_cross_partition_query=True,
-            max_item_count=limit + offset,
         ))
-
-        # Manual offset handling
-        items = items[offset:offset + limit]
 
         contents = [Content.from_cosmos_item(item) for item in items]
         return contents, total

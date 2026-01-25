@@ -828,7 +828,7 @@ onUnmounted(() => {
                     </button>
                     <button
                       v-if="request.content_ids && request.content_ids.length > 0"
-                      @click="handleEditContent(request.content_ids[0])"
+                      @click="handleEditContent(request.content_ids[0]!)"
                       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primary-hover rounded-lg transition-colors"
                       title="콘텐츠 수정"
                     >
@@ -839,7 +839,7 @@ onUnmounted(() => {
                     </button>
                     <button
                       v-if="request.content_ids && request.content_ids.length > 0"
-                      @click="handlePublishContent(request.content_ids[0])"
+                      @click="handlePublishContent(request.content_ids[0]!)"
                       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
                       title="콘텐츠 퍼블리싱"
                     >
