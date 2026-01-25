@@ -14,8 +14,8 @@ const navItems = [
 ]
 
 const categories = [
-  { icon: '✏️', label: 'Contribute Content', path: '/contributor/edit' },
-  { icon: '➕', label: 'Create Content', path: '/contributor/connect' },
+  { icon: '📋', label: 'GitHub Repo', path: '/contributor/manage' },
+  // { icon: '📋', label: 'Workshops', path: '/contributor/manage' },
 ]
 </script>
 

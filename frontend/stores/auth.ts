@@ -231,6 +231,14 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
 
+      // No local tokens available - user has never logged in or session expired
+      // Skip server call to avoid 401 error in console
+      if (!accessToken.value && !refreshToken.value) {
+        sessionValid.value = false
+        sessionChecked.value = true
+        return false
+      }
+
       // Last resort: try cookie-based auth with server
       const { authApi } = await import('@/lib/api')
       const userData = await authApi.getMe()

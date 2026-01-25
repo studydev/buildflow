@@ -13,6 +13,7 @@ class ContentResponse(BaseModel):
     title: str
     description: str
     content_type: str
+    status: Optional[str] = None  # draft, published, archived
     categories: list[str]
     level: str
     duration_minutes: int
@@ -33,6 +34,9 @@ class ContentResponse(BaseModel):
     learning_outcomes: list[str] = Field(default_factory=list)
     learning_outcomes_kr: list[str] = Field(default_factory=list)
     difficulty_level: Optional[str] = None
+
+    # Link to original analysis request
+    analysis_request_id: Optional[str] = None
 
 
 class ContentListResponse(BaseModel):

@@ -149,8 +149,8 @@ class TestListAnalysisRequests:
     """Tests for GET /api/v1/analysis-requests."""
 
     def test_list_requests(self, client, mock_service, mock_analysis_request):
-        """Test listing user's analysis requests."""
-        mock_service.list_user_requests = AsyncMock(return_value=([mock_analysis_request], 1))
+        """Test listing all analysis requests."""
+        mock_service.list_all_requests = AsyncMock(return_value=([mock_analysis_request], 1))
 
         response = client.get("/api/v1/analysis-requests")
 
@@ -162,7 +162,7 @@ class TestListAnalysisRequests:
 
     def test_list_requests_with_pagination(self, client, mock_service, mock_analysis_request):
         """Test pagination parameters."""
-        mock_service.list_user_requests = AsyncMock(return_value=([mock_analysis_request], 50))
+        mock_service.list_all_requests = AsyncMock(return_value=([mock_analysis_request], 50))
 
         response = client.get("/api/v1/analysis-requests?page=1&limit=10")
 
@@ -174,13 +174,13 @@ class TestListAnalysisRequests:
 
     def test_list_requests_with_status_filter(self, client, mock_service, mock_analysis_request):
         """Test filtering by status."""
-        mock_service.list_user_requests = AsyncMock(return_value=([mock_analysis_request], 1))
+        mock_service.list_all_requests = AsyncMock(return_value=([mock_analysis_request], 1))
 
         response = client.get("/api/v1/analysis-requests?status=pending")
 
         assert response.status_code == 200
         # Verify status filter was passed
-        call_args = mock_service.list_user_requests.call_args
+        call_args = mock_service.list_all_requests.call_args
         assert call_args.kwargs.get("status") == AnalysisStatus.PENDING
 
 
@@ -189,7 +189,7 @@ class TestGetAnalysisRequest:
 
     def test_get_request(self, client, mock_service, mock_analysis_request):
         """Test getting a specific request."""
-        mock_service.get_request = AsyncMock(return_value=mock_analysis_request)
+        mock_service.get_request_cross_partition = AsyncMock(return_value=mock_analysis_request)
 
         response = client.get("/api/v1/analysis-requests/req-123")
 
@@ -200,7 +200,7 @@ class TestGetAnalysisRequest:
 
     def test_get_request_not_found(self, client, mock_service):
         """Test 404 for non-existent request."""
-        mock_service.get_request = AsyncMock(return_value=None)
+        mock_service.get_request_cross_partition = AsyncMock(return_value=None)
 
         response = client.get("/api/v1/analysis-requests/nonexistent")
 
@@ -212,7 +212,7 @@ class TestDeleteAnalysisRequest:
 
     def test_delete_request(self, client, mock_service):
         """Test deleting a request."""
-        mock_service.delete_request = AsyncMock(return_value=True)
+        mock_service.delete_request_cross_partition = AsyncMock(return_value=True)
 
         response = client.delete("/api/v1/analysis-requests/req-123")
 
@@ -222,7 +222,7 @@ class TestDeleteAnalysisRequest:
 
     def test_delete_request_not_found(self, client, mock_service):
         """Test 404 when deleting non-existent request."""
-        mock_service.delete_request = AsyncMock(return_value=False)
+        mock_service.delete_request_cross_partition = AsyncMock(return_value=False)
 
         response = client.delete("/api/v1/analysis-requests/nonexistent")
 
@@ -235,7 +235,7 @@ class TestCancelAnalysisRequest:
     def test_cancel_request(self, client, mock_service, mock_analysis_request):
         """Test cancelling a pending request."""
         mock_analysis_request.status = AnalysisStatus.FAILED
-        mock_service.cancel_request = AsyncMock(return_value=mock_analysis_request)
+        mock_service.cancel_request_cross_partition = AsyncMock(return_value=mock_analysis_request)
 
         response = client.post("/api/v1/analysis-requests/req-123/cancel")
 
@@ -245,7 +245,7 @@ class TestCancelAnalysisRequest:
 
     def test_cancel_request_not_found(self, client, mock_service):
         """Test 404 when cancelling non-existent request."""
-        mock_service.cancel_request = AsyncMock(return_value=None)
+        mock_service.cancel_request_cross_partition = AsyncMock(return_value=None)
 
         response = client.post("/api/v1/analysis-requests/nonexistent/cancel")
 

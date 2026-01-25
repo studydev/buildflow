@@ -96,6 +96,63 @@ class AnalysisRequestRepository:
             return AnalysisRequest.from_cosmos_item(items[0])
         return None
 
+    async def list_all(
+        self,
+        page: int = 1,
+        limit: int = 20,
+        status: Optional[AnalysisStatus] = None,
+    ) -> tuple[list[AnalysisRequest], int]:
+        """
+        List all analysis requests (for all users).
+
+        Args:
+            page: Page number (1-indexed)
+            limit: Max items to return
+            status: Optional status filter
+
+        Returns:
+            Tuple of (requests list, total count)
+        """
+        offset = (page - 1) * limit
+
+        # Build WHERE clause
+        where_clause = "c.type = 'analysis_request'"
+        parameters: list = []
+
+        if status:
+            where_clause += " AND c.status = @status"
+            parameters.append({"name": "@status", "value": status.value})
+
+        # Count query
+        count_query = f"SELECT VALUE COUNT(1) FROM c WHERE {where_clause}"
+        count_result = list(self.container.query_items(
+            query=count_query,
+            parameters=parameters,
+            enable_cross_partition_query=True,
+        ))
+        total = count_result[0] if count_result else 0
+
+        # Data query with pagination
+        query = f"""
+            SELECT * FROM c
+            WHERE {where_clause}
+            ORDER BY c.created_at DESC
+            OFFSET @offset LIMIT @limit
+        """
+        parameters.extend([
+            {"name": "@offset", "value": offset},
+            {"name": "@limit", "value": limit},
+        ])
+
+        items = list(self.container.query_items(
+            query=query,
+            parameters=parameters,
+            enable_cross_partition_query=True,
+        ))
+
+        requests = [AnalysisRequest.from_cosmos_item(item) for item in items]
+        return requests, total
+
     async def list_by_user(
         self,
         user_id: str,
@@ -170,6 +227,33 @@ class AnalysisRequestRepository:
 
         self.container.upsert_item(body=item)
         logger.info(f"Updated analysis request: {request.id}, status: {request.status.value}")
+        return request
+
+    async def remove_content_id(
+        self,
+        request_id: str,
+        user_id: str,
+        content_id: str,
+    ) -> Optional[AnalysisRequest]:
+        """
+        Remove a content ID from an analysis request's content_ids list.
+
+        Args:
+            request_id: Analysis request ID
+            user_id: User ID (partition key)
+            content_id: Content ID to remove
+
+        Returns:
+            Updated AnalysisRequest if found and updated
+        """
+        request = await self.get_by_id(request_id, user_id)
+        if not request:
+            return None
+
+        if content_id in request.content_ids:
+            request.content_ids.remove(content_id)
+            return await self.update(request)
+
         return request
 
     async def update_status(
@@ -300,6 +384,34 @@ class AnalysisRequestRepository:
         except Exception as e:
             if "NotFound" in str(e) or "404" in str(e):
                 return False
+            raise
+
+    async def delete_by_id(self, request_id: str) -> bool:
+        """
+        Delete an analysis request by ID without user verification.
+
+        Note: Use this only when ownership has already been verified
+        at a higher level (e.g., through content ownership).
+
+        Args:
+            request_id: Request ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        try:
+            # Container uses /id as partition key
+            self.container.delete_item(
+                item=request_id,
+                partition_key=request_id,
+            )
+            logger.info(f"Deleted analysis request: {request_id}")
+            return True
+        except Exception as e:
+            if "NotFound" in str(e) or "404" in str(e):
+                logger.warning(f"Analysis request not found for deletion: {request_id}")
+                return False
+            logger.error(f"Error deleting analysis request {request_id}: {e}")
             raise
 
 

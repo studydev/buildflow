@@ -14,6 +14,7 @@ export interface ContentItem {
   title: string
   description: string
   content_type: string
+  status?: string  // draft, published, archived
   categories: string[]
   level?: string
   duration_minutes?: number
@@ -40,6 +41,8 @@ export interface ContentItem {
   summary_kr?: string
   prerequisites_kr?: string[]
   learning_outcomes_kr?: string[]
+  // Link to original analysis request
+  analysis_request_id?: string
 }
 
 export interface ContentListResponse {
@@ -171,6 +174,102 @@ export const useContentStore = defineStore('content', () => {
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch content'
       console.error('Failed to fetch content:', e)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Fetch current user's content (all statuses) for contributor page
+   */
+  async function fetchMyContent(options: {
+    page?: number
+    limit?: number
+    status?: string | null
+    append?: boolean
+  } = {}) {
+    const pageNum = options.page ?? page.value
+    const limitNum = options.limit ?? limit.value
+    const statusFilter = options.status ?? null
+    const append = options.append ?? false
+    
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      const params = new URLSearchParams()
+      params.set('page', String(pageNum))
+      params.set('limit', String(limitNum))
+      if (statusFilter) {
+        params.set('status', statusFilter)
+      }
+      
+      const data = await apiRequest<ContentListResponse>(
+        `/content/my?${params.toString()}`
+      )
+      
+      if (append) {
+        items.value = [...items.value, ...data.items]
+      } else {
+        items.value = data.items
+      }
+      
+      total.value = data.total
+      page.value = data.page
+      limit.value = data.limit
+      hasMore.value = data.has_more
+      
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to fetch my content'
+      console.error('Failed to fetch my content:', e)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Fetch all content (all statuses, all contributors) for contributor management page
+   */
+  async function fetchAllContent(options: {
+    page?: number
+    limit?: number
+    status?: string | null
+    append?: boolean
+  } = {}) {
+    const pageNum = options.page ?? page.value
+    const limitNum = options.limit ?? limit.value
+    const statusFilter = options.status ?? null
+    const append = options.append ?? false
+    
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      const params = new URLSearchParams()
+      params.set('page', String(pageNum))
+      params.set('limit', String(limitNum))
+      if (statusFilter) {
+        params.set('status', statusFilter)
+      }
+      
+      const data = await apiRequest<ContentListResponse>(
+        `/content/all?${params.toString()}`
+      )
+      
+      if (append) {
+        items.value = [...items.value, ...data.items]
+      } else {
+        items.value = data.items
+      }
+      
+      total.value = data.total
+      page.value = data.page
+      limit.value = data.limit
+      hasMore.value = data.has_more
+      
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to fetch all content'
+      console.error('Failed to fetch all content:', e)
     } finally {
       isLoading.value = false
     }
@@ -395,21 +494,44 @@ export const useContentStore = defineStore('content', () => {
         }
       )
       
-      // Update local item or remove if archived
+      // Update local item with new status
       const index = items.value.findIndex(item => item.id === id)
       if (index !== -1) {
-        if (status === 'archived') {
-          items.value.splice(index, 1)
-          total.value--
-        } else {
-          items.value[index] = updatedItem
-        }
+        items.value[index] = updatedItem
       }
       
       return updatedItem
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to update status'
       console.error('Failed to update status:', e)
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+  
+  async function syncFromAnalysis(id: string): Promise<ContentItem | null> {
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      const updatedItem = await apiRequest<ContentItem>(
+        `/content/${id}/sync-from-analysis`,
+        {
+          method: 'POST',
+        }
+      )
+      
+      // Update local item with synced data
+      const index = items.value.findIndex(item => item.id === id)
+      if (index !== -1) {
+        items.value[index] = updatedItem
+      }
+      
+      return updatedItem
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to sync from analysis'
+      console.error('Failed to sync from analysis:', e)
       return null
     } finally {
       isLoading.value = false
@@ -439,6 +561,35 @@ export const useContentStore = defineStore('content', () => {
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to delete content'
       console.error('Failed to delete content:', e)
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+  
+  async function permanentDelete(id: string): Promise<boolean> {
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      await apiRequest(
+        `/content/${id}/permanent`,
+        {
+          method: 'DELETE',
+        }
+      )
+      
+      // Remove from local items
+      const index = items.value.findIndex(item => item.id === id)
+      if (index !== -1) {
+        items.value.splice(index, 1)
+        total.value--
+      }
+      
+      return true
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to permanently delete content'
+      console.error('Failed to permanently delete content:', e)
       return false
     } finally {
       isLoading.value = false
@@ -486,6 +637,8 @@ export const useContentStore = defineStore('content', () => {
     
     // Actions
     fetchContent,
+    fetchMyContent,
+    fetchAllContent,
     search,
     advancedSearch,
     loadMore,
@@ -494,7 +647,9 @@ export const useContentStore = defineStore('content', () => {
     getById,
     updateContent,
     updateStatus,
+    syncFromAnalysis,
     deleteContent,
+    permanentDelete,
     reset,
   }
 })

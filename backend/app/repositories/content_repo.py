@@ -117,14 +117,45 @@ class ContentRepository:
             True if deleted, False if not found
         """
         try:
+            logger.info(f"Attempting to delete content: {content_id} with partition key: {contributor_id}")
             self.container.delete_item(
                 item=content_id,
                 partition_key=contributor_id,
             )
-            logger.info(f"Deleted content: {content_id}")
+            logger.info(f"Successfully deleted content: {content_id}")
             return True
         except Exception as e:
-            if "NotFound" in str(e):
+            logger.error(f"Error deleting content {content_id}: {e}")
+            if "NotFound" in str(e) or "404" in str(e):
+                logger.warning(f"Content not found for deletion: {content_id}")
+                return False
+            raise
+
+    async def delete_cross_partition(self, content_id: str) -> bool:
+        """
+        Delete content by ID.
+
+        Note: Container uses /id as partition key (default), so content_id is the partition key.
+
+        Args:
+            content_id: Content ID (also the partition key)
+
+        Returns:
+            True if deleted, False if not found
+        """
+        try:
+            logger.info(f"Attempting to delete content: {content_id}")
+            # Container uses /id as partition key, so content_id IS the partition key
+            self.container.delete_item(
+                item=content_id,
+                partition_key=content_id,
+            )
+            logger.info(f"Successfully deleted content: {content_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting content {content_id}: {e}")
+            if "NotFound" in str(e) or "404" in str(e):
+                logger.warning(f"Content not found for deletion: {content_id}")
                 return False
             raise
 
@@ -176,6 +207,76 @@ class ContentRepository:
             max_item_count=limit,
             offset=offset,
         ))
+
+        contents = [Content.from_cosmos_item(item) for item in items]
+        return contents, total
+
+    async def list_all(
+        self,
+        limit: int = 20,
+        offset: int = 0,
+        status: Optional[str] = None,
+    ) -> tuple[list[Content], int]:
+        """
+        List all content across all contributors (cross-partition).
+
+        Args:
+            limit: Max items to return
+            offset: Number of items to skip
+            status: Optional status filter
+
+        Returns:
+            Tuple of (content list, total count)
+        """
+        # Build query with optional status filter
+        if status:
+            query = """
+                SELECT * FROM c
+                WHERE c.status = @status
+                ORDER BY c.created_at DESC
+            """
+            count_query = """
+                SELECT VALUE COUNT(1) FROM c
+                WHERE c.status = @status
+            """
+            parameters = [{"name": "@status", "value": status}]
+
+            # Get total count
+            count_result = list(self.container.query_items(
+                query=count_query,
+                parameters=parameters,
+                enable_cross_partition_query=True,
+            ))
+            total = count_result[0] if count_result else 0
+
+            # Get items with pagination
+            items = list(self.container.query_items(
+                query=query,
+                parameters=parameters,
+                enable_cross_partition_query=True,
+                max_item_count=limit + offset,
+            ))
+        else:
+            # No parameters needed
+            query = "SELECT * FROM c ORDER BY c.created_at DESC"
+            count_query = "SELECT VALUE COUNT(1) FROM c"
+
+            # Get total count
+            count_result = list(self.container.query_items(
+                query=count_query,
+                enable_cross_partition_query=True,
+            ))
+            total = count_result[0] if count_result else 0
+
+            # Get items with pagination
+            items = list(self.container.query_items(
+                query=query,
+                enable_cross_partition_query=True,
+                max_item_count=limit + offset,
+            ))
+
+        # Manual offset handling
+        items = items[offset:offset + limit]
 
         contents = [Content.from_cosmos_item(item) for item in items]
         return contents, total

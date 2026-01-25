@@ -260,6 +260,21 @@ class AnalysisPipeline:
 
             result = await self._parse_with_retry(repo_info)
 
+            # Merge GitHub metadata from repo_info into result
+            result.stars = repo_info.stars
+            result.forks = repo_info.forks
+            result.watchers = repo_info.watchers
+            result.language = repo_info.language
+            result.license = repo_info.license
+            result.topics = ", ".join(repo_info.topics) if repo_info.topics else None
+            result.owner = repo_info.owner
+            result.contributors = repo_info.contributors_str
+            result.contributors_count = repo_info.contributors_count
+            result.created_at = repo_info.created_at
+            result.updated_at = repo_info.updated_at
+            result.source_url = request.source_url
+            result.homepage_url = repo_info.homepage_url
+
             # Store result in request (don't mark as completed yet)
             request.result = result
             request._analysis_result = result  # Transient for next stage
@@ -362,6 +377,7 @@ class AnalysisPipeline:
                 contributor_id=request.user_id,
                 source_url=request.source_url,
                 result=result,
+                analysis_request_id=request.id,
             )
 
             # Link content to request

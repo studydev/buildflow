@@ -23,24 +23,23 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/contributor/connect',
-    name: 'CreateContent',
-    component: () => import('@/views/contributor/CreateContent.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresContributor: true,
-      title: 'NexusSkill - Repo 등록'
-    }
-  },
-  {
-    path: '/contributor/edit',
-    name: 'ContributeContent',
+    path: '/contributor/manage',
+    name: 'ContentManagement',
     component: () => import('@/views/contributor/ContributeContent.vue'),
     meta: {
       requiresAuth: true,
       requiresContributor: true,
-      title: 'NexusSkill - Repo 편집'
+      title: 'NexusSkill - Repos'
     }
+  },
+  // Legacy redirects
+  {
+    path: '/contributor/connect',
+    redirect: '/contributor/manage'
+  },
+  {
+    path: '/contributor/edit',
+    redirect: '/contributor/manage'
   },
   {
     path: '/content/:id/pipelines',

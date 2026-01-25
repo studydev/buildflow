@@ -87,10 +87,10 @@ watch(() => route.query.login, (newVal) => {
       <!-- Contributor 링크 (contributor 권한 있을 때만) -->
       <router-link 
         v-if="isContributor"
-        to="/contributor/connect"
+        to="/contributor/manage"
         class="px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-primary transition-colors"
       >
-        콘텐츠 관리
+        Repos
       </router-link>
 
       <button 

@@ -141,8 +141,8 @@ async def create_analysis_request(
 @router.get(
     "",
     response_model=APIResponse,
-    summary="List my analysis requests",
-    description="Get a paginated list of the current user's analysis requests.",
+    summary="List all analysis requests",
+    description="Get a paginated list of all analysis requests (all users).",
 )
 async def list_analysis_requests(
     page: int = Query(1, ge=1, description="Page number"),
@@ -151,7 +151,7 @@ async def list_analysis_requests(
     current_user: User = Depends(require_contributor),
     service: AnalysisService = Depends(get_analysis_service),
 ):
-    """List analysis requests for the current user."""
+    """List all analysis requests (for all contributors - internal employees)."""
     # Parse status filter
     status_filter = None
     if status:
@@ -160,8 +160,7 @@ async def list_analysis_requests(
         except ValueError:
             raise ValidationError(f"Invalid status: {status}")
 
-    requests, total = await service.list_user_requests(
-        user_id=current_user.id,
+    requests, total = await service.list_all_requests(
         page=page,
         limit=limit,
         status=status_filter,
@@ -195,8 +194,8 @@ async def get_analysis_request(
     current_user: User = Depends(require_contributor),
     service: AnalysisService = Depends(get_analysis_service),
 ):
-    """Get a specific analysis request by ID."""
-    request = await service.get_request(request_id, current_user.id)
+    """Get a specific analysis request by ID (any contributor can view)."""
+    request = await service.get_request_cross_partition(request_id)
 
     if not request:
         raise NotFoundError(f"Analysis request not found: {request_id}")
@@ -213,15 +212,15 @@ async def get_analysis_request(
     "/{request_id}",
     response_model=APIResponse,
     summary="Delete analysis request",
-    description="Delete an analysis request. Only the owner can delete their requests.",
+    description="Delete an analysis request. All contributors can delete (internal employees).",
 )
 async def delete_analysis_request(
     request_id: str,
     current_user: User = Depends(require_contributor),
     service: AnalysisService = Depends(get_analysis_service),
 ):
-    """Delete an analysis request."""
-    deleted = await service.delete_request(request_id, current_user.id)
+    """Delete an analysis request (any contributor can delete - internal employees)."""
+    deleted = await service.delete_request_cross_partition(request_id)
 
     if not deleted:
         raise NotFoundError(f"Analysis request not found: {request_id}")
@@ -244,8 +243,8 @@ async def cancel_analysis_request(
     current_user: User = Depends(require_contributor),
     service: AnalysisService = Depends(get_analysis_service),
 ):
-    """Cancel an analysis request."""
-    request = await service.cancel_request(request_id, current_user.id)
+    """Cancel an analysis request (any contributor can cancel - internal employees)."""
+    request = await service.cancel_request_cross_partition(request_id)
 
     if not request:
         raise NotFoundError(f"Analysis request not found: {request_id}")

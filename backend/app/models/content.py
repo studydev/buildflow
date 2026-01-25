@@ -19,6 +19,9 @@ class Content(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     contributor_id: Optional[str] = None  # Made optional for pipeline creation
 
+    # Analysis request reference (for bidirectional linking)
+    analysis_request_id: Optional[str] = None  # Reference to the analysis request that created this content
+
     # Basic info
     title: str
     description: str = ""
@@ -93,6 +96,7 @@ class Content(BaseModel):
         return {
             "id": self.id,
             "contributor_id": self.contributor_id,
+            "analysis_request_id": self.analysis_request_id,
             "title": self.title,
             "description": self.description,
             "content_type": self.content_type.value,
@@ -160,6 +164,7 @@ class Content(BaseModel):
         return cls(
             id=item["id"],
             contributor_id=item.get("contributor_id"),
+            analysis_request_id=item.get("analysis_request_id"),
             title=item["title"],
             description=item.get("description", ""),
             content_type=ContentType(item["content_type"]),

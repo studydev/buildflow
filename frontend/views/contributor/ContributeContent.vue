@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useAnalysisStore } from '@/stores/analysis'
 import { useContentStore, type ContentItem as StoreContentItem } from '@/stores/content'
 import type { AnalysisRequest } from '@/stores/analysis'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import LanguageToggle from '@/components/LanguageToggle.vue'
 import {
   Dialog,
   DialogContent,
@@ -13,14 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  PipelineStatus,
-  isTerminalStatus,
-  isActiveStatus,
-  getStatusText,
-  getStatusColorClass,
-  getPipelineTypeText,
-} from '@/types/pipeline'
 
 // Analysis Store
 const analysisStore = useAnalysisStore()
@@ -28,19 +21,65 @@ const analysisStore = useAnalysisStore()
 // Content Store (for real API operations)
 const contentStore = useContentStore()
 
+// Localized text helper function
+const getLocalizedText = (
+  enText: string | undefined, 
+  krText: string | undefined,
+  fallback: string = ''
+): string => {
+  const lang = contentStore.displayLanguage
+  if (lang === 'ko') {
+    return krText || enText || fallback
+  }
+  return enText || krText || fallback
+}
+
+// URL Input State
+const githubUrl = ref('')
+const urlError = ref('')
+
+// URL validation
+const isValidUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+// Handle URL submit
+const handleUrlSubmit = async () => {
+  urlError.value = ''
+  
+  if (!githubUrl.value.trim()) {
+    urlError.value = 'URL을 입력해주세요'
+    return
+  }
+  
+  if (!isValidUrl(githubUrl.value.trim())) {
+    urlError.value = '유효한 URL을 입력해주세요 (예: https://github.com/owner/repo)'
+    return
+  }
+  
+  const newRequest = await analysisStore.submitRequest(githubUrl.value.trim())
+  
+  if (newRequest) {
+    githubUrl.value = ''
+  }
+}
+
 // Edit Modal State
 const isEditModalOpen = ref(false)
 const editingItem = ref<StoreContentItem | null>(null)
 const isSaving = ref(false)
 
 // UI State
-const activeTab = ref<'analysis' | 'content' | 'pipelines'>('analysis')
+const activeTab = ref<'analysis' | 'content'>('analysis')
 const searchQuery = ref('')
 const contentSearchQuery = ref('')
 const statusFilter = ref<string | null>(null)
 const expandedRequests = ref<Set<string>>(new Set())
-const selectedContentForPipeline = ref<StoreContentItem | null>(null)
-const isPipelineModalOpen = ref(false)
 
 // Content search handler with debounce
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
@@ -127,6 +166,38 @@ const handleDelete = async (request: AnalysisRequest) => {
   }
 }
 
+// Re-fetch completed analysis (re-collect from GitHub)
+const handleRefetch = async (request: AnalysisRequest) => {
+  if (confirm('GitHub에서 콘텐츠를 다시 수집하시겠습니까? 기존 분석 결과가 새로운 결과로 대체됩니다.')) {
+    await analysisStore.retryRequest(request.id)
+  }
+}
+
+// Edit content generated from analysis
+const handleEditContent = async (contentId: string) => {
+  // Fetch the content details and open edit modal
+  const content = await contentStore.getById(contentId)
+  if (content) {
+    openEditModal(content)
+  } else {
+    alert('콘텐츠를 불러오는데 실패했습니다.')
+  }
+}
+
+// Publish content from analysis
+const handlePublishContent = async (contentId: string) => {
+  if (!confirm('이 콘텐츠를 게시하시겠습니까?')) return
+  
+  const result = await contentStore.updateStatus(contentId, 'published')
+  if (result) {
+    alert('콘텐츠가 게시되었습니다.')
+    // Refresh the content list
+    await contentStore.fetchContent()
+  } else {
+    alert('게시에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+  }
+}
+
 const toggleExpand = (requestId: string) => {
   if (expandedRequests.value.has(requestId)) {
     expandedRequests.value.delete(requestId)
@@ -139,70 +210,40 @@ const isExpanded = (requestId: string) => {
   return expandedRequests.value.has(requestId)
 }
 
-// Pipeline-related computed and methods
-const contentPipelineRuns = computed(() => {
-  if (!selectedContentForPipeline.value) return []
-  return analysisStore.pipelineRuns.filter(
-    run => run.content_id === selectedContentForPipeline.value?.id
-  )
-})
-
-const latestPipelineRun = computed(() => {
-  if (contentPipelineRuns.value.length === 0) return null
-  return [...contentPipelineRuns.value].sort((a, b) => 
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  )[0]
-})
-
-const formatPipelineDate = (dateString?: string) => {
-  if (!dateString) return '-'
-  return new Date(dateString).toLocaleString('ko-KR', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-}
-
-// Pipeline actions
-const openPipelineModal = async (item: StoreContentItem) => {
-  selectedContentForPipeline.value = item
-  isPipelineModalOpen.value = true
-  // Fetch pipeline history for this content
-  await analysisStore.getPipelineHistory(item.id)
-}
-
-const handleRetryPipeline = async (runId: string) => {
-  await analysisStore.retryPipeline(runId)
-}
-
-const handleCancelPipeline = async (runId: string) => {
-  if (confirm('정말로 이 파이프라인을 취소하시겠습니까?')) {
-    await analysisStore.cancelPipeline(runId)
-  }
-}
-
-const startNewPipeline = async (contentId: string, pipelineType: 'analysis' | 'enrichment') => {
-  await analysisStore.enqueuePipeline({
-    content_id: contentId,
-    pipeline_type: pipelineType,
-  })
-}
-
-// Watch for pipeline status updates to refresh content
-watch(() => analysisStore.currentPipeline?.status, (newStatus) => {
-  if (newStatus && isTerminalStatus(newStatus)) {
-    // Refresh content when pipeline completes
-    contentStore.fetchContent()
-  }
-})
-
 // Open edit modal with store content item
 const openEditModal = (item: StoreContentItem) => {
   editingItem.value = { ...item }
   isEditModalOpen.value = true
+}
+
+// Sync from analysis request
+const isSyncing = ref(false)
+const handleSyncFromAnalysis = async () => {
+  if (!editingItem.value?.id || !editingItem.value?.analysis_request_id) {
+    alert('연결된 분석 요청이 없습니다.')
+    return
+  }
+  
+  isSyncing.value = true
+  
+  try {
+    const result = await contentStore.syncFromAnalysis(editingItem.value.id)
+    
+    if (result) {
+      // Update editing item with synced data
+      editingItem.value = { ...result }
+      // Refresh content list
+      await contentStore.fetchAllContent()
+      alert('원본 데이터와 동기화되었습니다.')
+    } else {
+      alert('동기화에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+    }
+  } catch (e) {
+    console.error('Failed to sync from analysis:', e)
+    alert('동기화에 실패했습니다.')
+  } finally {
+    isSyncing.value = false
+  }
 }
 
 // Save edit via API
@@ -245,39 +286,61 @@ const openUrl = (url: string) => {
   window.open(url, '_blank')
 }
 
-// Publish content
-const handlePublish = async (item: StoreContentItem) => {
-  if (!confirm('이 콘텐츠를 게시하시겠습니까?')) return
+// Archive content (soft delete)
+const handleArchive = async (item: StoreContentItem) => {
+  if (!confirm('이 콘텐츠를 아카이브하시겠습니까?')) return
+  
+  const result = await contentStore.updateStatus(item.id, 'archived')
+  if (result) {
+    // Refresh the list to show updated status
+    await contentStore.fetchAllContent()
+  } else {
+    alert('아카이브에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+  }
+}
+
+// Restore archived content to published
+const handleRestore = async (item: StoreContentItem) => {
+  if (!confirm('이 콘텐츠를 다시 게시하시겠습니까?')) return
   
   const result = await contentStore.updateStatus(item.id, 'published')
   if (result) {
-    alert('콘텐츠가 게시되었습니다.')
+    // Refresh the list to show updated status
+    await contentStore.fetchAllContent()
   } else {
     alert('게시에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
   }
 }
 
-// Delete content
-const handleDeleteContent = async (item: StoreContentItem) => {
-  if (!confirm('이 콘텐츠를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return
+// Permanently delete content and linked analysis request
+const handlePermanentDelete = async (item: StoreContentItem) => {
+  const confirmMessage = item.analysis_request_id 
+    ? '이 콘텐츠와 연결된 분석 요청을 모두 영구 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다!'
+    : '이 콘텐츠를 영구 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다!'
   
-  const result = await contentStore.deleteContent(item.id)
+  if (!confirm(confirmMessage)) return
+  
+  const result = await contentStore.permanentDelete(item.id)
   if (result) {
-    alert('콘텐츠가 삭제되었습니다.')
+    // Refresh the list
+    await contentStore.fetchAllContent()
+    // Also refresh analysis requests if linked
+    if (item.analysis_request_id) {
+      await analysisStore.fetchRequests()
+    }
   } else {
-    alert('삭제에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+    alert('영구 삭제에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
   }
 }
 
 // Lifecycle
 onMounted(() => {
   analysisStore.fetchRequests()
-  contentStore.fetchContent()
+  contentStore.fetchAllContent()  // Fetch all content (all statuses, all contributors)
 })
 
 onUnmounted(() => {
   analysisStore.stopAllPolling()
-  analysisStore.stopAllPipelinePolling()
 })
 </script>
 
@@ -286,10 +349,10 @@ onUnmounted(() => {
     <!-- Header -->
     <div class="mb-8">
       <h1 class="font-header text-3xl font-bold text-[var(--text-primary)] mb-2">
-        Contribute Content
+        Repos
       </h1>
       <p class="text-[var(--text-secondary)]">
-        GitHub 리포지토리를 분석하여 학습 콘텐츠를 생성하세요
+        GitHub 리포지토리를 분석하고 학습 콘텐츠를 관리하세요
       </p>
     </div>
 
@@ -319,28 +382,53 @@ onUnmounted(() => {
             : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
         ]"
       >
-        등록 Repo
+        퍼블리싱 콘텐츠
         <span v-if="activeTab === 'content'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></span>
-      </button>
-      <button
-        @click="activeTab = 'pipelines'"
-        :class="[
-          'px-4 py-3 text-sm font-header font-medium transition-colors relative',
-          activeTab === 'pipelines' 
-            ? 'text-primary' 
-            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-        ]"
-      >
-        파이프라인
-        <span v-if="analysisStore.pipelineRuns.filter(r => isActiveStatus(r.status)).length > 0" class="ml-1.5 px-1.5 py-0.5 bg-blue-500/10 text-blue-500 text-xs rounded-full">
-          {{ analysisStore.pipelineRuns.filter(r => isActiveStatus(r.status)).length }}
-        </span>
-        <span v-if="activeTab === 'pipelines'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></span>
       </button>
     </div>
 
     <!-- Analysis Requests Tab -->
     <div v-if="activeTab === 'analysis'" class="space-y-6">
+      <!-- GitHub URL 입력 폼 -->
+      <div class="card p-6">
+        <h2 class="font-header text-lg font-semibold text-[var(--text-primary)] mb-4">
+          GitHub Repository URL
+        </h2>
+        
+        <form @submit.prevent="handleUrlSubmit" class="space-y-3">
+          <div class="flex gap-3">
+            <input
+              v-model="githubUrl"
+              type="url"
+              placeholder="https://github.com/username/repository"
+              class="flex-1 px-4 py-2.5 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+              :class="{ 'border-red-500 focus:border-red-500': urlError }"
+              :disabled="analysisStore.isSubmitting"
+            />
+            <button 
+              type="submit" 
+              class="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-header font-semibold rounded-lg transition-colors disabled:opacity-50"
+              :disabled="analysisStore.isSubmitting"
+            >
+              <span v-if="analysisStore.isSubmitting" class="flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                제출 중...
+              </span>
+              <span v-else>분석 요청</span>
+            </button>
+          </div>
+          
+          <p v-if="urlError" class="text-sm text-red-500">{{ urlError }}</p>
+          <p v-else-if="analysisStore.error" class="text-sm text-red-500">{{ analysisStore.error }}</p>
+          <p v-else class="text-sm text-[var(--text-tertiary)]">
+            💡 저장소의 README.md를 분석하여 자동으로 콘텐츠 정보를 추출합니다
+          </p>
+        </form>
+      </div>
+
       <!-- Search and Filters -->
       <div class="flex gap-4 items-center">
         <div class="relative flex-1 max-w-md">
@@ -549,6 +637,15 @@ onUnmounted(() => {
                 <div class="flex items-center justify-end gap-2">
                   <template v-if="request.status === 'completed'">
                     <button
+                      @click="handleRefetch(request)"
+                      class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-blue-500 hover:bg-blue-500/10 transition-colors"
+                      title="GitHub에서 재수집"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                      </svg>
+                    </button>
+                    <button
                       @click="toggleExpand(request.id)"
                       class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-primary hover:bg-primary/10 transition-colors"
                       :title="isExpanded(request.id) ? '접기' : '상세 보기'"
@@ -676,19 +773,81 @@ onUnmounted(() => {
                   <!-- Generated Contents -->
                   <div v-if="request.content_ids && request.content_ids.length > 0">
                     <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">생성된 콘텐츠 ({{ request.content_ids.length }}개)</p>
-                    <div class="flex flex-wrap gap-2">
-                      <router-link
+                    <div class="space-y-2">
+                      <div
                         v-for="contentId in request.content_ids"
                         :key="contentId"
-                        :to="`/content/${contentId}`"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg text-sm text-primary hover:border-primary transition-colors"
+                        class="flex items-center justify-between p-3 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg"
                       >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        {{ contentId.slice(0, 8) }}...
-                      </router-link>
+                        <router-link
+                          :to="`/content/${contentId}`"
+                          class="flex items-center gap-1.5 text-sm text-primary hover:underline"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                          </svg>
+                          {{ contentId.slice(0, 8) }}...
+                        </router-link>
+                        <div class="flex items-center gap-2">
+                          <button
+                            @click="handleEditContent(contentId)"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:text-primary bg-[var(--bg-secondary)] hover:bg-primary/10 rounded-lg transition-colors"
+                            title="콘텐츠 수정"
+                          >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                            수정
+                          </button>
+                          <button
+                            @click="handlePublishContent(contentId)"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                            title="콘텐츠 퍼블리싱"
+                          >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            퍼블리싱
+                          </button>
+                        </div>
+                      </div>
                     </div>
+                  </div>
+                  
+                  <!-- Action Buttons -->
+                  <div class="mt-4 pt-4 border-t border-[var(--border)] flex flex-wrap gap-3">
+                    <button
+                      @click="handleRefetch(request)"
+                      class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-lg transition-colors"
+                      title="GitHub에서 다시 수집"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                      </svg>
+                      재수집
+                    </button>
+                    <button
+                      v-if="request.content_ids && request.content_ids.length > 0"
+                      @click="handleEditContent(request.content_ids[0])"
+                      class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primary-hover rounded-lg transition-colors"
+                      title="콘텐츠 수정"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                      </svg>
+                      수정
+                    </button>
+                    <button
+                      v-if="request.content_ids && request.content_ids.length > 0"
+                      @click="handlePublishContent(request.content_ids[0])"
+                      class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                      title="콘텐츠 퍼블리싱"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                      </svg>
+                      퍼블리싱
+                    </button>
                   </div>
                   
                   <!-- Completed At -->
@@ -774,9 +933,9 @@ onUnmounted(() => {
 
     <!-- Content Tab (API-connected) -->
     <div v-if="activeTab === 'content'" class="space-y-6">
-      <!-- 검색바 -->
-      <div class="max-w-3xl">
-        <div class="relative">
+      <!-- 검색바 및 언어 토글 -->
+      <div class="flex items-center justify-between gap-4">
+        <div class="relative flex-1 max-w-3xl">
           <svg 
             class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" 
             width="20" 
@@ -795,6 +954,7 @@ onUnmounted(() => {
             class="w-full pl-11 pr-4 py-3 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
           />
         </div>
+        <LanguageToggle />
       </div>
 
       <!-- Loading State -->
@@ -814,8 +974,21 @@ onUnmounted(() => {
           :key="item.id"
           class="card cursor-pointer hover:-translate-y-1 overflow-hidden flex flex-col"
         >
-          <div class="h-32 bg-primary flex items-center justify-center text-white font-header font-bold text-xl px-6 text-center leading-tight">
-            {{ item.title }}
+          <div class="h-32 bg-primary flex items-center justify-center text-white font-header font-bold text-xl px-6 text-center leading-tight relative">
+            <!-- Status Badge for Archived Content -->
+            <span
+              v-if="item.status === 'archived'"
+              class="absolute top-2 right-2 px-2 py-1 rounded-md text-xs font-header font-semibold uppercase tracking-wide bg-red-600/90 text-white border border-red-500/50"
+            >
+              Archived
+            </span>
+            <span
+              v-else-if="item.status === 'draft'"
+              class="absolute top-2 right-2 px-2 py-1 rounded-md text-xs font-header font-semibold uppercase tracking-wide bg-yellow-600/80 text-yellow-100 border border-yellow-500/50"
+            >
+              Draft
+            </span>
+            {{ getLocalizedText(item.title, item.title_kr) }}
           </div>
           
           <div class="p-5 flex flex-col flex-1">
@@ -842,8 +1015,8 @@ onUnmounted(() => {
             </div>
 
             
-            <p class="text-sm text-[var(--text-secondary)] leading-relaxed mb-4 line-clamp-3">
-              {{ item.description }}
+            <p class="text-sm text-[var(--text-secondary)] leading-relaxed mb-4 line-clamp-4">
+              {{ getLocalizedText(item.summary_short || item.description, item.summary_kr || item.description_kr) }}
             </p>
 
             <div class="flex gap-2 pt-4 mt-auto border-t border-[var(--border)]">
@@ -857,43 +1030,56 @@ onUnmounted(() => {
                 </svg>
                 <span>GitHub</span>
               </button>
-              <button
-                @click.stop="openPipelineModal(item)"
-                class="flex-1 px-4 py-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white"
-                title="파이프라인 상태"
-              >
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                  <path d="M9 12l2 2 4-4"></path>
-                </svg>
-                <span>Pipeline</span>
-              </button>
+              <!-- Edit Button (always visible) -->
               <button
                 @click.stop="openEditModal(item)"
-                class="p-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center bg-primary hover:bg-primary-hover text-white"
+                class="flex-1 px-4 py-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center gap-1.5 bg-primary hover:bg-primary-hover text-white"
                 title="편집"
               >
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
+                <span>편집</span>
               </button>
+              <!-- Restore Button for Archived Content (right of Edit) -->
               <button
-                @click.stop="handlePublish(item)"
+                v-if="item.status === 'archived'"
+                @click.stop="handleRestore(item)"
                 class="flex-1 px-4 py-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                title="복원"
               >
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M5 12l5 5L20 7"></path>
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                  <path d="M3 3v5h5"></path>
                 </svg>
-                <span>Publish</span>
+                <span>복원</span>
               </button>
+              <!-- Permanent Delete Button for Archived Content -->
               <button
-                @click.stop="handleDeleteContent(item)"
+                v-if="item.status === 'archived'"
+                @click.stop="handlePermanentDelete(item)"
                 class="p-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center bg-red-600 hover:bg-red-700 text-white"
-                title="삭제"
+                title="영구 삭제 (콘텐츠 + 분석 요청)"
               >
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  <path d="M3 6h18"></path>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+              </button>
+              <!-- Archive Button (right of Edit, not for archived items) -->
+              <button
+                v-if="item.status !== 'archived'"
+                @click.stop="handleArchive(item)"
+                class="p-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center bg-amber-600 hover:bg-amber-700 text-white"
+                title="아카이브"
+              >
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 8v13H3V8"></path>
+                  <path d="M1 3h22v5H1z"></path>
+                  <path d="M10 12h4"></path>
                 </svg>
               </button>
             </div>
@@ -911,251 +1097,6 @@ onUnmounted(() => {
         </button>
       </div>
     </div>
-
-    <!-- Pipelines Tab -->
-    <div v-if="activeTab === 'pipelines'" class="space-y-6">
-      <div class="flex justify-between items-center">
-        <h3 class="text-lg font-header font-semibold text-[var(--text-primary)]">
-          파이프라인 실행 현황
-        </h3>
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="analysisStore.isLoading" class="text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p class="mt-4 text-[var(--text-secondary)]">파이프라인을 불러오는 중...</p>
-      </div>
-
-      <!-- Empty State -->
-      <div v-else-if="analysisStore.pipelineRuns.length === 0" class="text-center py-12">
-        <svg class="mx-auto h-12 w-12 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-        </svg>
-        <h3 class="mt-4 text-lg font-header font-semibold text-[var(--text-primary)]">실행된 파이프라인이 없습니다</h3>
-        <p class="mt-2 text-[var(--text-secondary)]">콘텐츠를 분석하면 파이프라인 실행 기록이 여기에 표시됩니다</p>
-      </div>
-
-      <!-- Pipeline Runs Table -->
-      <div v-else class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl overflow-hidden">
-        <table class="w-full">
-          <thead>
-            <tr class="bg-[var(--bg-secondary)] border-b border-[var(--border)]">
-              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">ID</th>
-              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">타입</th>
-              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">상태</th>
-              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">생성일</th>
-              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">시작/완료</th>
-              <th class="px-4 py-3 text-right text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">작업</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[var(--border)]">
-            <tr v-for="run in analysisStore.pipelineRuns" :key="run.id" class="hover:bg-[var(--bg-secondary)]/50 transition-colors">
-              <td class="px-4 py-4">
-                <span class="text-sm font-mono text-[var(--text-secondary)]">{{ run.id.slice(0, 8) }}...</span>
-              </td>
-              <td class="px-4 py-4">
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-600 border border-purple-500/20">
-                  {{ getPipelineTypeText(run.pipeline_type) }}
-                </span>
-              </td>
-              <td class="px-4 py-4">
-                <span :class="['inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border', getStatusColorClass(run.status)]">
-                  <span v-if="isActiveStatus(run.status)" class="w-2 h-2 mr-1.5 rounded-full bg-current animate-pulse"></span>
-                  {{ getStatusText(run.status) }}
-                </span>
-              </td>
-              <td class="px-4 py-4 text-sm text-[var(--text-secondary)]">
-                {{ formatPipelineDate(run.created_at) }}
-              </td>
-              <td class="px-4 py-4">
-                <div class="text-xs text-[var(--text-secondary)] space-y-1">
-                  <div v-if="run.started_at">시작: {{ formatPipelineDate(run.started_at) }}</div>
-                  <div v-if="run.completed_at">완료: {{ formatPipelineDate(run.completed_at) }}</div>
-                </div>
-              </td>
-              <td class="px-4 py-4 text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <template v-if="run.status === PipelineStatus.FAILED">
-                    <button
-                      @click="handleRetryPipeline(run.id)"
-                      class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-primary hover:bg-primary/10 transition-colors"
-                      title="재시도"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                      </svg>
-                    </button>
-                  </template>
-                  <template v-if="isActiveStatus(run.status)">
-                    <button
-                      @click="handleCancelPipeline(run.id)"
-                      class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-yellow-500 hover:bg-yellow-500/10 transition-colors"
-                      title="취소"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                      </svg>
-                    </button>
-                  </template>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Active Polling Indicator -->
-      <div v-if="analysisStore.pipelinePollingCount > 0" class="text-center text-sm text-[var(--text-secondary)]">
-        <span class="inline-flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-          {{ analysisStore.pipelinePollingCount }}개 파이프라인 모니터링 중...
-        </span>
-      </div>
-    </div>
-
-    <!-- Pipeline Status Modal -->
-    <Dialog v-model:open="isPipelineModalOpen">
-      <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle class="text-xl font-header">파이프라인 상태</DialogTitle>
-          <DialogDescription>
-            {{ selectedContentForPipeline?.title || '콘텐츠' }}의 파이프라인 실행 기록
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div class="py-4 space-y-6">
-          <!-- Quick Actions -->
-          <div class="flex gap-3">
-            <button
-              @click="startNewPipeline(selectedContentForPipeline?.id || '', 'analysis')"
-              class="flex-1 px-4 py-3 rounded-lg text-sm font-header font-semibold bg-primary hover:bg-primary-hover text-white transition-colors flex items-center justify-center gap-2"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-              </svg>
-              분석 파이프라인 실행
-            </button>
-            <button
-              @click="startNewPipeline(selectedContentForPipeline?.id || '', 'enrichment')"
-              class="flex-1 px-4 py-3 rounded-lg text-sm font-header font-semibold bg-purple-600 hover:bg-purple-700 text-white transition-colors flex items-center justify-center gap-2"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
-              </svg>
-              보강 파이프라인 실행
-            </button>
-          </div>
-
-          <!-- Latest Run Status -->
-          <div v-if="latestPipelineRun" class="p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)]">
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="font-header font-semibold text-[var(--text-primary)]">최근 실행</h4>
-              <span :class="['inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border', getStatusColorClass(latestPipelineRun.status)]">
-                <span v-if="isActiveStatus(latestPipelineRun.status)" class="w-2 h-2 mr-1.5 rounded-full bg-current animate-pulse"></span>
-                {{ getStatusText(latestPipelineRun.status) }}
-              </span>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p class="text-[var(--text-tertiary)]">타입</p>
-                <p class="text-[var(--text-primary)] font-medium">{{ getPipelineTypeText(latestPipelineRun.pipeline_type) }}</p>
-              </div>
-              <div>
-                <p class="text-[var(--text-tertiary)]">생성일</p>
-                <p class="text-[var(--text-primary)]">{{ formatPipelineDate(latestPipelineRun.created_at) }}</p>
-              </div>
-              <div v-if="latestPipelineRun.started_at">
-                <p class="text-[var(--text-tertiary)]">시작일</p>
-                <p class="text-[var(--text-primary)]">{{ formatPipelineDate(latestPipelineRun.started_at) }}</p>
-              </div>
-              <div v-if="latestPipelineRun.completed_at">
-                <p class="text-[var(--text-tertiary)]">완료일</p>
-                <p class="text-[var(--text-primary)]">{{ formatPipelineDate(latestPipelineRun.completed_at) }}</p>
-              </div>
-            </div>
-
-            <!-- Error Message -->
-            <div v-if="latestPipelineRun.error_message" class="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-              <p class="text-xs font-semibold text-red-500 uppercase tracking-wide mb-1">에러</p>
-              <p class="text-sm text-red-600">{{ latestPipelineRun.error_message }}</p>
-            </div>
-
-            <!-- Retry Count -->
-            <div v-if="latestPipelineRun.retry_count && latestPipelineRun.retry_count > 0" class="mt-3 text-xs text-[var(--text-tertiary)]">
-              재시도 횟수: {{ latestPipelineRun.retry_count }} / {{ latestPipelineRun.max_retries || 3 }}
-            </div>
-          </div>
-
-          <!-- Pipeline History -->
-          <div v-if="contentPipelineRuns.length > 0">
-            <h4 class="font-header font-semibold text-[var(--text-primary)] mb-3">실행 기록</h4>
-            <div class="space-y-2">
-              <div 
-                v-for="run in contentPipelineRuns" 
-                :key="run.id"
-                class="flex items-center justify-between p-3 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-colors"
-              >
-                <div class="flex items-center gap-3">
-                  <span :class="['inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border', getStatusColorClass(run.status)]">
-                    {{ getStatusText(run.status) }}
-                  </span>
-                  <span class="text-xs text-[var(--text-secondary)]">{{ getPipelineTypeText(run.pipeline_type) }}</span>
-                  <span class="text-xs text-[var(--text-tertiary)]">{{ formatPipelineDate(run.created_at) }}</span>
-                </div>
-                <div class="flex gap-1">
-                  <button
-                    v-if="run.status === PipelineStatus.FAILED"
-                    @click="handleRetryPipeline(run.id)"
-                    class="p-1.5 rounded text-[var(--text-secondary)] hover:text-primary hover:bg-primary/10 transition-colors"
-                    title="재시도"
-                  >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
-                  </button>
-                  <button
-                    v-if="isActiveStatus(run.status)"
-                    @click="handleCancelPipeline(run.id)"
-                    class="p-1.5 rounded text-[var(--text-secondary)] hover:text-yellow-500 hover:bg-yellow-500/10 transition-colors"
-                    title="취소"
-                  >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Empty History -->
-          <div v-else class="text-center py-8 text-[var(--text-secondary)]">
-            <p>이 콘텐츠에 대한 파이프라인 실행 기록이 없습니다</p>
-          </div>
-        </div>
-
-        <DialogFooter class="flex gap-2">
-          <router-link
-            v-if="selectedContentForPipeline"
-            :to="`/content/${selectedContentForPipeline.id}/pipelines`"
-            class="px-4 py-2.5 rounded-lg text-sm font-header font-semibold transition-all bg-primary hover:bg-primary-hover text-white flex items-center gap-2"
-            @click="isPipelineModalOpen = false"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-            전체 히스토리 보기
-          </router-link>
-          <button 
-            @click="isPipelineModalOpen = false"
-            class="px-4 py-2.5 rounded-lg text-sm font-header font-semibold transition-all bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--border-hover)]"
-          >
-            닫기
-          </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
 
     <!-- 편집 모달 -->
     <Dialog v-model:open="isEditModalOpen">
@@ -1247,22 +1188,41 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <DialogFooter class="flex gap-2">
-          <button 
-            @click="isEditModalOpen = false"
-            :disabled="isSaving"
-            class="px-4 py-2.5 rounded-lg text-sm font-header font-semibold transition-all bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--border-hover)] disabled:opacity-50"
-          >
-            취소
-          </button>
-          <button 
-            @click="saveEdit"
-            :disabled="isSaving"
-            class="px-4 py-2.5 rounded-lg text-sm font-header font-semibold transition-all bg-primary hover:bg-primary-hover text-white disabled:opacity-50 flex items-center gap-2"
-          >
-            <span v-if="isSaving" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-            {{ isSaving ? '저장 중...' : '저장' }}
-          </button>
+        <DialogFooter class="flex justify-between gap-2">
+          <!-- 왼쪽: 원본 Sync 버튼 -->
+          <div class="flex">
+            <button 
+              @click="handleSyncFromAnalysis"
+              :disabled="isSaving || isSyncing || !editingItem?.analysis_request_id"
+              class="px-4 py-2.5 rounded-lg text-sm font-header font-semibold transition-all bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              :title="editingItem?.analysis_request_id ? '원본 분석 데이터와 동기화' : '연결된 분석 요청이 없습니다'"
+            >
+              <span v-if="isSyncing" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {{ isSyncing ? '동기화 중...' : '원본 Sync' }}
+            </button>
+          </div>
+          
+          <!-- 오른쪽: 취소/저장 버튼 -->
+          <div class="flex gap-2">
+            <button 
+              @click="isEditModalOpen = false"
+              :disabled="isSaving"
+              class="px-4 py-2.5 rounded-lg text-sm font-header font-semibold transition-all bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--border-hover)] disabled:opacity-50"
+            >
+              취소
+            </button>
+            <button 
+              @click="saveEdit"
+              :disabled="isSaving"
+              class="px-4 py-2.5 rounded-lg text-sm font-header font-semibold transition-all bg-primary hover:bg-primary-hover text-white disabled:opacity-50 flex items-center gap-2"
+            >
+              <span v-if="isSaving" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+              {{ isSaving ? '저장 중...' : '저장' }}
+            </button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

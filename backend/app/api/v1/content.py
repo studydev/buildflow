@@ -54,6 +54,87 @@ def _content_to_response(c: Content) -> ContentResponse:
 
 
 @router.get(
+    "/my",
+    response_model=APIResponse,
+    summary="List my content",
+    description="Get paginated list of contributor's own content (all statuses)",
+)
+async def list_my_content(
+    request: Request,
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    status: Optional[str] = Query(None, description="Filter by status (draft, published, archived)"),
+    current_user: UserPublic = Depends(require_contributor),
+) -> JSONResponse:
+    """
+    List current user's content with pagination (all statuses).
+
+    - Requires contributor role
+    - Returns all content owned by the current user
+    - **page**: Page number (1-indexed)
+    - **limit**: Items per page (max 100)
+    - **status**: Optional status filter
+    """
+    service = get_content_service()
+    result = await service.list_by_contributor(
+        contributor_id=current_user.id,
+        page=page,
+        limit=limit,
+        status=status,
+    )
+
+    correlation_id = getattr(request.state, "correlation_id", "")
+
+    response = APIResponse(
+        success=True,
+        data=result.model_dump(mode="json"),
+        meta=Meta.create(correlation_id),
+    )
+
+    return JSONResponse(content=response.model_dump(mode="json"))
+
+
+@router.get(
+    "/all",
+    response_model=APIResponse,
+    summary="List all content",
+    description="Get paginated list of all content items (all statuses, all contributors)",
+)
+async def list_all_content(
+    request: Request,
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    status: Optional[str] = Query(None, description="Filter by status (draft, published, archived)"),
+    current_user: UserPublic = Depends(require_contributor),
+) -> JSONResponse:
+    """
+    List all content with pagination (all statuses, all contributors).
+
+    - Requires contributor role
+    - Returns all content from all contributors
+    - **page**: Page number (1-indexed)
+    - **limit**: Items per page (max 100)
+    - **status**: Optional status filter
+    """
+    service = get_content_service()
+    result = await service.list_all(
+        page=page,
+        limit=limit,
+        status=status,
+    )
+
+    correlation_id = getattr(request.state, "correlation_id", "")
+
+    response = APIResponse(
+        success=True,
+        data=result.model_dump(mode="json"),
+        meta=Meta.create(correlation_id),
+    )
+
+    return JSONResponse(content=response.model_dump(mode="json"))
+
+
+@router.get(
     "",
     response_model=APIResponse,
     summary="List published content",
@@ -223,7 +304,7 @@ async def update_content(
     Update an existing content item.
 
     - Requires contributor role
-    - Only the content owner can update
+    - All contributors can update any content (internal employees)
     - **content_id**: Content unique identifier
     """
     service = get_content_service()
@@ -237,12 +318,7 @@ async def update_content(
             detail="Content not found",
         )
 
-    # Check ownership
-    if content.contributor_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update your own content",
-        )
+    # All contributors can edit content (internal employees)
 
     # Update content
     updated = await service.update(content_id, body)
@@ -281,7 +357,7 @@ async def update_content_status(
     Update content status (publish/archive).
 
     - Requires contributor role
-    - Only the content owner can change status
+    - All contributors can change status (internal employees)
     - Valid transitions: draft → published, published → archived
     - **content_id**: Content unique identifier
     - **status**: 'published' or 'archived'
@@ -305,12 +381,7 @@ async def update_content_status(
             detail="Content not found",
         )
 
-    # Check ownership
-    if content.contributor_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update status of your own content",
-        )
+    # All contributors can change status (internal employees)
 
     # Update status
     updated = await service.update_status(content_id, body.status)
@@ -322,6 +393,156 @@ async def update_content_status(
     response = APIResponse(
         success=True,
         data=content_response.model_dump(mode="json"),
+        meta=Meta.create(correlation_id),
+    )
+
+    return JSONResponse(content=response.model_dump(mode="json"))
+
+
+@router.post(
+    "/{content_id}/sync-from-analysis",
+    response_model=APIResponse,
+    summary="Sync content from analysis request",
+    description="Update content fields from the linked analysis request result",
+)
+async def sync_from_analysis(
+    request: Request,
+    content_id: str,
+    current_user: UserPublic = Depends(require_contributor),
+) -> JSONResponse:
+    """
+    Sync content fields from the linked analysis request.
+
+    - Requires contributor role
+    - All contributors can sync (internal employees)
+    - Updates content with latest data from analysis_request.result
+    - **content_id**: Content unique identifier
+    """
+    service = get_content_service()
+
+    # Get existing content
+    content = await service.get_by_id(content_id)
+
+    if content is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content not found",
+        )
+
+    # All contributors can sync content (internal employees)
+
+    # Check if content has linked analysis_request_id
+    if not content.analysis_request_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Content has no linked analysis request",
+        )
+
+    # Perform sync
+    updated = await service.sync_from_analysis(content_id)
+
+    if updated is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to sync from analysis request",
+        )
+
+    content_response = _content_to_response(updated)
+
+    correlation_id = getattr(request.state, "correlation_id", "")
+
+    response = APIResponse(
+        success=True,
+        data=content_response.model_dump(mode="json"),
+        meta=Meta.create(correlation_id),
+    )
+
+    return JSONResponse(content=response.model_dump(mode="json"))
+
+
+@router.delete(
+    "/{content_id}/permanent",
+    response_model=APIResponse,
+    summary="Permanently delete content and linked analysis request",
+    description="Hard delete content and its linked analysis request from the database",
+)
+async def permanent_delete_content(
+    request: Request,
+    content_id: str,
+    current_user: UserPublic = Depends(require_contributor),
+) -> JSONResponse:
+    """
+    Permanently delete content and linked analysis request.
+
+    - Requires contributor role
+    - Only the content owner or bypass user can permanently delete
+    - This is a HARD delete - content will be permanently removed
+    - Also deletes the linked analysis_request if exists
+    - **content_id**: Content unique identifier
+    """
+    from app.config import get_settings
+    from app.repositories.analysis_repo import get_analysis_repo
+
+    settings = get_settings()
+    service = get_content_service()
+
+    # Get existing content
+    content = await service.get_by_id(content_id)
+
+    if content is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content not found",
+        )
+
+    # Check ownership or bypass permission for permanent delete
+    is_owner = content.contributor_id == current_user.id
+    is_bypass = (
+        settings.dev_bypass_email
+        and current_user.email.lower() == settings.dev_bypass_email.lower()
+    )
+
+    if not is_owner and not is_bypass:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the content owner or authorized users can permanently delete content",
+        )
+
+    # Delete linked analysis_request first (if any)
+    deleted_analysis = False
+    if content.analysis_request_id:
+        analysis_repo = get_analysis_repo()
+        # Use delete_by_id since we already verified content ownership
+        deleted_analysis = await analysis_repo.delete_by_id(
+            request_id=content.analysis_request_id,
+        )
+
+    # Hard delete the content using cross-partition delete
+    try:
+        deleted_content = await service.repo.delete_cross_partition(
+            content_id=content_id,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete content: {str(e)}",
+        )
+
+    if not deleted_content:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Content not found or already deleted (id={content_id}, contributor={content.contributor_id})",
+        )
+
+    correlation_id = getattr(request.state, "correlation_id", "")
+
+    response = APIResponse(
+        success=True,
+        data={
+            "message": "Content permanently deleted",
+            "content_deleted": deleted_content,
+            "analysis_request_deleted": deleted_analysis,
+        },
         meta=Meta.create(correlation_id),
     )
 
@@ -343,10 +564,13 @@ async def delete_content(
     Soft delete content (set status to archived).
 
     - Requires contributor role
-    - Only the content owner can delete
+    - All contributors can archive content (internal employees)
     - This is a soft delete (status → archived), not a hard delete
+    - Also removes the content ID from the linked analysis request
     - **content_id**: Content unique identifier
     """
+    from app.repositories.analysis_repo import get_analysis_repo
+
     service = get_content_service()
 
     # Get existing content
@@ -358,15 +582,19 @@ async def delete_content(
             detail="Content not found",
         )
 
-    # Check ownership
-    if content.contributor_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only delete your own content",
-        )
+    # All contributors can archive content (internal employees)
 
     # Soft delete (archive)
     await service.update_status(content_id, "archived")
+
+    # Remove content_id from linked analysis_request (if any)
+    if content.analysis_request_id:
+        analysis_repo = get_analysis_repo()
+        await analysis_repo.remove_content_id(
+            request_id=content.analysis_request_id,
+            user_id=current_user.id,
+            content_id=content_id,
+        )
 
     correlation_id = getattr(request.state, "correlation_id", "")
 

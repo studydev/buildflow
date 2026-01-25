@@ -217,6 +217,39 @@ class AnalysisService:
             logger.error(f"Failed to get analysis request {request_id}: {e}")
             return None
 
+    async def get_request_cross_partition(
+        self,
+        request_id: str,
+    ) -> Optional[AnalysisRequest]:
+        """Get an analysis request by ID (for any user)."""
+        try:
+            return await self.repo.get_by_id_cross_partition(request_id)
+        except Exception as e:
+            logger.error(f"Failed to get analysis request {request_id}: {e}")
+            return None
+
+    async def list_all_requests(
+        self,
+        page: int = 1,
+        limit: int = 20,
+        status: Optional[AnalysisStatus] = None,
+    ) -> Tuple[List[AnalysisRequest], int]:
+        """
+        List all analysis requests (for all users).
+
+        Returns:
+            Tuple of (requests, total_count)
+        """
+        try:
+            return await self.repo.list_all(
+                page=page,
+                limit=limit,
+                status=status,
+            )
+        except Exception as e:
+            logger.error(f"Failed to list all requests: {e}")
+            return [], 0
+
     async def list_user_requests(
         self,
         user_id: str,
@@ -262,6 +295,25 @@ class AnalysisService:
             logger.error(f"Failed to update status for request {request_id}: {e}")
             return None
 
+    async def update_status_cross_partition(
+        self,
+        request_id: str,
+        status: AnalysisStatus,
+        message: Optional[str] = None,
+        progress: Optional[int] = None,
+    ) -> Optional[AnalysisRequest]:
+        """Update the status of an analysis request (cross-partition)."""
+        try:
+            request = await self.repo.get_by_id_cross_partition(request_id)
+            if not request:
+                return None
+
+            request.update_status(status, message, progress)
+            return await self.repo.update(request)
+        except Exception as e:
+            logger.error(f"Failed to update status for request {request_id}: {e}")
+            return None
+
     async def cancel_request(
         self,
         request_id: str,
@@ -286,6 +338,28 @@ class AnalysisService:
             message="Cancelled by user",
         )
 
+    async def cancel_request_cross_partition(
+        self,
+        request_id: str,
+    ) -> Optional[AnalysisRequest]:
+        """Cancel a pending analysis request (for any user - internal employees)."""
+        request = await self.get_request_cross_partition(request_id)
+        if not request:
+            return None
+
+        # Only pending or in-progress requests can be cancelled
+        if request.status in (AnalysisStatus.COMPLETED, AnalysisStatus.FAILED):
+            logger.warning(
+                f"Cannot cancel request {request_id} with status {request.status}"
+            )
+            return request
+
+        return await self.update_status_cross_partition(
+            request_id=request_id,
+            status=AnalysisStatus.FAILED,
+            message="Cancelled by contributor",
+        )
+
     async def delete_request(
         self,
         request_id: str,
@@ -294,6 +368,17 @@ class AnalysisService:
         """Delete an analysis request."""
         try:
             return await self.repo.delete(request_id, user_id)
+        except Exception as e:
+            logger.error(f"Failed to delete request {request_id}: {e}")
+            return False
+
+    async def delete_request_cross_partition(
+        self,
+        request_id: str,
+    ) -> bool:
+        """Delete an analysis request (for any user - internal employees)."""
+        try:
+            return await self.repo.delete_by_id(request_id)
         except Exception as e:
             logger.error(f"Failed to delete request {request_id}: {e}")
             return False
