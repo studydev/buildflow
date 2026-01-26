@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2026-01-22
 
 ## Active Technologies
+- Python 3.11, TypeScript 5.x + FastAPI, httpx, Azure AI Search REST API, Azure OpenAI (text-embedding-3-small), Vue 3, Pinia (002-ai-search-hybrid)
+- Azure Cosmos DB (contents), Azure AI Search (buildflow-content index) (002-ai-search-hybrid)
 
 - Python 3.11 (Backend), TypeScript 5.x (Frontend) + FastAPI, Vue 3, Pinia, Azure Communication Services SDK (001-otp-email-auth)
 
@@ -23,6 +25,7 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.11 (Backend), TypeScript 5.x (Frontend): Follow standard conventions
 
 ## Recent Changes
+- 002-ai-search-hybrid: Added Python 3.11, TypeScript 5.x + FastAPI, httpx, Azure AI Search REST API, Azure OpenAI (text-embedding-3-small), Vue 3, Pinia
 
 - 001-otp-email-auth: Added Python 3.11 (Backend), TypeScript 5.x (Frontend) + FastAPI, Vue 3, Pinia, Azure Communication Services SDK
 

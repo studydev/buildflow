@@ -28,7 +28,7 @@ from app.services.search_service import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/search", tags=["Search"])
+router = APIRouter(tags=["Search"])
 
 
 # =============================================================================
@@ -48,6 +48,13 @@ class SortOption(str, Enum):
     RELEVANCE = "relevance"
     POPULARITY = "popularity"
     RECENT = "recent"
+    STARS = "stars"
+
+
+class SortOrder(str, Enum):
+    """Sort order direction."""
+    DESC = "desc"
+    ASC = "asc"
 
 
 class SearchResultItem(BaseModel):
@@ -55,14 +62,31 @@ class SearchResultItem(BaseModel):
 
     id: str
     title: str
+    title_kr: Optional[str] = None
     description: Optional[str] = None
+    description_kr: Optional[str] = None
     summary: Optional[str] = None
+    summary_kr: Optional[str] = None
+    summary_short: Optional[str] = None  # Alias for frontend compatibility
     categories: List[str] = Field(default_factory=list)
     technologies: List[str] = Field(default_factory=list)
     difficulty_level: Optional[str] = None
+    level: Optional[str] = None  # Alias for frontend compatibility
     popularity_score: float = 0.0
     stars: int = 0
     score: float = 0.0
+    # UI display fields
+    source_url: Optional[str] = None
+    video_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    icon: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    view_count: int = 0
+    last_commit_date: Optional[str] = None
+    learning_outcomes: List[str] = Field(default_factory=list)
+    learning_outcomes_kr: List[str] = Field(default_factory=list)
+    prerequisites: List[str] = Field(default_factory=list)
+    prerequisites_kr: List[str] = Field(default_factory=list)
 
 
 class FacetValue(BaseModel):
@@ -97,19 +121,22 @@ class SearchResponse(BaseModel):
 )
 async def search_content(
     request: Request,
-    q: str = Query(..., min_length=1, max_length=500, description="Search query"),
+    q: str = Query("", max_length=500, description="Search query (empty for all content)"),
     mode: SearchMode = Query(SearchMode.HYBRID, description="Search mode"),
     categories: Optional[List[str]] = Query(None, description="Filter by categories"),
     technologies: Optional[List[str]] = Query(None, description="Filter by technologies"),
     difficulty: Optional[str] = Query(None, description="Filter by difficulty level"),
     min_stars: Optional[int] = Query(None, ge=0, description="Minimum stars filter"),
-    sort: SortOption = Query(SortOption.RELEVANCE, description="Sort order"),
+    sort: SortOption = Query(SortOption.RELEVANCE, description="Sort field"),
+    sort_order: SortOrder = Query(SortOrder.DESC, description="Sort order (asc or desc)"),
     limit: int = Query(20, ge=1, le=100, description="Results per page"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     user: Optional[UserPublic] = Depends(get_current_user_optional),
 ):
     """
     Search content with various filters and modes.
+
+    Empty query returns all content (equivalent to q=*).
 
     Per tasks.md T403:
     - Supports hybrid, keyword, and vector search modes
@@ -125,6 +152,11 @@ async def search_content(
     search_service = get_search_service()
     llm_service = get_llm_service()
 
+    # Normalize query - empty query means "get all"
+    search_query = q.strip() if q else "*"
+    if not search_query:
+        search_query = "*"
+
     # Build filters
     # Enforce visibility based on authentication
     visibility = None if user else "public"
@@ -137,12 +169,26 @@ async def search_content(
         visibility=visibility,
     )
 
+    # Build orderby expression for Azure AI Search
+    # relevance = no explicit orderby (use search score)
+    orderby = None
+    if sort != SortOption.RELEVANCE:
+        sort_field_map = {
+            SortOption.POPULARITY: "popularity_score",
+            SortOption.RECENT: "last_commit_date",
+            SortOption.STARS: "stars",
+        }
+        sort_field = sort_field_map.get(sort)
+        if sort_field:
+            orderby = f"{sort_field} {sort_order.value}"
+
     # Generate embedding for hybrid/vector search
+    # Skip embedding for wildcard queries
     embedding = None
-    if mode in (SearchMode.HYBRID, SearchMode.VECTOR):
+    if mode in (SearchMode.HYBRID, SearchMode.VECTOR) and search_query != "*":
         if llm_service.is_configured:
             try:
-                embedding = await llm_service.generate_embedding(q)
+                embedding = await llm_service.generate_embedding(search_query)
             except Exception as e:
                 logger.warning(f"Failed to generate embedding, falling back to keyword: {e}")
                 if mode == SearchMode.VECTOR:
@@ -151,18 +197,20 @@ async def search_content(
     # Execute search based on mode
     if mode == SearchMode.HYBRID:
         results = await search_service.hybrid_search(
-            query=q,
+            query=search_query,
             filters=filters,
             limit=limit,
             offset=offset,
             embedding=embedding,
+            orderby=orderby,
         )
     elif mode == SearchMode.KEYWORD:
         results = await search_service.keyword_search(
-            query=q,
+            query=search_query,
             filters=filters,
             limit=limit,
             offset=offset,
+            orderby=orderby,
         )
     else:  # VECTOR
         if not embedding:
@@ -172,6 +220,7 @@ async def search_content(
             filters=filters,
             limit=limit,
             offset=offset,
+            orderby=orderby,
         )
 
     # Convert to response format
@@ -180,20 +229,36 @@ async def search_content(
             SearchResultItem(
                 id=item.id,
                 title=item.title,
+                title_kr=item.title_kr,
                 description=item.description,
+                description_kr=item.description_kr,
                 summary=item.summary,
+                summary_kr=item.summary_kr,
+                summary_short=item.summary,  # Alias
                 categories=item.categories,
                 technologies=item.technologies,
                 difficulty_level=item.difficulty_level,
+                level=item.difficulty_level,  # Alias
                 popularity_score=item.popularity_score,
                 stars=item.stars,
                 score=item.score,
+                source_url=item.source_url,
+                video_url=item.video_url,
+                thumbnail_url=item.thumbnail_url,
+                icon=item.icon,
+                duration_minutes=item.duration_minutes,
+                view_count=item.view_count,
+                last_commit_date=item.last_commit_date,
+                learning_outcomes=item.learning_outcomes,
+                learning_outcomes_kr=item.learning_outcomes_kr,
+                prerequisites=item.prerequisites,
+                prerequisites_kr=item.prerequisites_kr,
             )
             for item in results.items
         ],
         total=results.total,
         facets=results.facets,
-        query=q,
+        query=search_query,
         mode=mode.value,
         limit=limit,
         offset=offset,

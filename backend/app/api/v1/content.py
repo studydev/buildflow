@@ -18,6 +18,7 @@ from app.schemas.content import (
     ContentUpdateRequest,
 )
 from app.services.content_service import get_content_service
+from app.services.search_service import get_search_service
 
 logger = logging.getLogger(__name__)
 
@@ -523,6 +524,31 @@ async def permanent_delete_content(
             request_id=content.analysis_request_id,
         )
 
+    # Delete thumbnail from blob storage if exists
+    thumbnail_deleted = False
+    if content.thumbnail_url:
+        try:
+            from app.services.storage_service import REPO_IMAGES_CONTAINER, StorageService
+            storage_service = StorageService()
+            # Blob path format: {content_id}/thumbnail.png
+            blob_path = f"{content_id}/thumbnail.png"
+            await storage_service.delete_blob(REPO_IMAGES_CONTAINER, blob_path)
+            thumbnail_deleted = True
+            logger.info(f"Deleted thumbnail for content: {content_id}")
+        except Exception as e:
+            logger.warning(f"Failed to delete thumbnail for {content_id}: {e}")
+
+    # Delete from AI Search index
+    search_deleted = False
+    try:
+        search_service = get_search_service()
+        if search_service.is_configured:
+            await search_service.delete_document(content_id)
+            search_deleted = True
+            logger.info(f"Deleted content {content_id} from search index")
+    except Exception as e:
+        logger.warning(f"Failed to delete {content_id} from search index: {e}")
+
     # Hard delete the content using cross-partition delete
     try:
         deleted_content = await service.repo.delete_cross_partition(
@@ -548,6 +574,8 @@ async def permanent_delete_content(
             "message": "Content permanently deleted",
             "content_deleted": deleted_content,
             "analysis_request_deleted": deleted_analysis,
+            "thumbnail_deleted": thumbnail_deleted,
+            "search_index_deleted": search_deleted,
         },
         meta=Meta.create(correlation_id),
     )

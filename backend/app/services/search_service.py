@@ -59,10 +59,24 @@ INDEX_SCHEMA = {
             "filterable": False,
         },
         {
+            "name": "description_kr",
+            "type": "Edm.String",
+            "searchable": True,
+            "filterable": False,
+            "analyzer": "ko.microsoft",
+        },
+        {
             "name": "summary",
             "type": "Edm.String",
             "searchable": True,
             "filterable": False,
+        },
+        {
+            "name": "summary_kr",
+            "type": "Edm.String",
+            "searchable": True,
+            "filterable": False,
+            "analyzer": "ko.microsoft",
         },
 
         # Filterable/Facetable collections
@@ -101,6 +115,74 @@ INDEX_SCHEMA = {
             "searchable": False,
             "filterable": True,
             "facetable": True,
+        },
+
+        # UI Display fields - URLs
+        {
+            "name": "source_url",
+            "type": "Edm.String",
+            "searchable": False,
+            "filterable": False,
+        },
+        {
+            "name": "video_url",
+            "type": "Edm.String",
+            "searchable": False,
+            "filterable": False,
+        },
+        {
+            "name": "thumbnail_url",
+            "type": "Edm.String",
+            "searchable": False,
+            "filterable": False,
+        },
+        {
+            "name": "icon",
+            "type": "Edm.String",
+            "searchable": False,
+            "filterable": False,
+        },
+
+        # UI Display fields - Metrics
+        {
+            "name": "duration_minutes",
+            "type": "Edm.Int32",
+            "searchable": False,
+            "filterable": True,
+            "sortable": True,
+        },
+        {
+            "name": "view_count",
+            "type": "Edm.Int32",
+            "searchable": False,
+            "filterable": True,
+            "sortable": True,
+        },
+
+        # UI Display fields - Learning outcomes / Prerequisites (as string for display)
+        {
+            "name": "learning_outcomes",
+            "type": "Collection(Edm.String)",
+            "searchable": False,
+            "filterable": False,
+        },
+        {
+            "name": "learning_outcomes_kr",
+            "type": "Collection(Edm.String)",
+            "searchable": False,
+            "filterable": False,
+        },
+        {
+            "name": "prerequisites",
+            "type": "Collection(Edm.String)",
+            "searchable": False,
+            "filterable": False,
+        },
+        {
+            "name": "prerequisites_kr",
+            "type": "Collection(Edm.String)",
+            "searchable": False,
+            "filterable": False,
         },
 
         # Sortable metrics
@@ -242,14 +324,29 @@ class SearchResult:
 
     id: str
     title: str
+    title_kr: Optional[str] = None
     description: Optional[str] = None
+    description_kr: Optional[str] = None
     summary: Optional[str] = None
+    summary_kr: Optional[str] = None
     categories: List[str] = field(default_factory=list)
     technologies: List[str] = field(default_factory=list)
     difficulty_level: Optional[str] = None
     popularity_score: float = 0.0
     stars: int = 0
     score: float = 0.0
+    # UI display fields
+    source_url: Optional[str] = None
+    video_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    icon: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    view_count: int = 0
+    last_commit_date: Optional[str] = None
+    learning_outcomes: List[str] = field(default_factory=list)
+    learning_outcomes_kr: List[str] = field(default_factory=list)
+    prerequisites: List[str] = field(default_factory=list)
+    prerequisites_kr: List[str] = field(default_factory=list)
 
     @classmethod
     def from_document(cls, doc: Dict[str, Any]) -> "SearchResult":
@@ -257,14 +354,28 @@ class SearchResult:
         return cls(
             id=doc.get("id", ""),
             title=doc.get("title", ""),
+            title_kr=doc.get("title_kr"),
             description=doc.get("description"),
+            description_kr=doc.get("description_kr"),
             summary=doc.get("summary"),
+            summary_kr=doc.get("summary_kr"),
             categories=doc.get("categories", []),
             technologies=doc.get("technologies", []),
             difficulty_level=doc.get("difficulty_level"),
             popularity_score=doc.get("popularity_score", 0.0),
             stars=doc.get("stars", 0),
             score=doc.get("@search.score", 0.0),
+            source_url=doc.get("source_url"),
+            video_url=doc.get("video_url"),
+            thumbnail_url=doc.get("thumbnail_url"),
+            icon=doc.get("icon"),
+            duration_minutes=doc.get("duration_minutes"),
+            view_count=doc.get("view_count", 0),
+            last_commit_date=doc.get("last_commit_date"),
+            learning_outcomes=doc.get("learning_outcomes", []),
+            learning_outcomes_kr=doc.get("learning_outcomes_kr", []),
+            prerequisites=doc.get("prerequisites", []),
+            prerequisites_kr=doc.get("prerequisites_kr", []),
         )
 
 
@@ -283,14 +394,30 @@ class SearchResults:
                 {
                     "id": item.id,
                     "title": item.title,
+                    "title_kr": item.title_kr,
                     "description": item.description,
+                    "description_kr": item.description_kr,
                     "summary": item.summary,
+                    "summary_kr": item.summary_kr,
+                    "summary_short": item.summary,  # Alias for frontend compatibility
                     "categories": item.categories,
                     "technologies": item.technologies,
                     "difficulty_level": item.difficulty_level,
+                    "level": item.difficulty_level,  # Alias for frontend compatibility
                     "popularity_score": item.popularity_score,
                     "stars": item.stars,
                     "score": item.score,
+                    "source_url": item.source_url,
+                    "video_url": item.video_url,
+                    "thumbnail_url": item.thumbnail_url,
+                    "icon": item.icon,
+                    "duration_minutes": item.duration_minutes,
+                    "view_count": item.view_count,
+                    "last_commit_date": item.last_commit_date,
+                    "learning_outcomes": item.learning_outcomes,
+                    "learning_outcomes_kr": item.learning_outcomes_kr,
+                    "prerequisites": item.prerequisites,
+                    "prerequisites_kr": item.prerequisites_kr,
                 }
                 for item in self.items
             ],
@@ -408,7 +535,7 @@ class SearchService:
                 headers=self._get_headers(),
             )
 
-            if response.status_code in (200, 201):
+            if response.status_code in (200, 201, 204):
                 logger.info(f"Search index '{self.index_name}' created/updated successfully")
                 return True
             else:
@@ -533,27 +660,68 @@ class SearchService:
         embedding: Optional[List[float]] = None,
     ) -> Dict[str, Any]:
         """Convert Content model to search document."""
+        # Format datetime for Azure AI Search (ISO8601 with Z suffix)
+        def format_dt(dt_val):
+            if not dt_val:
+                return None
+            if hasattr(dt_val, 'isoformat'):
+                iso = dt_val.isoformat()
+                return iso if iso.endswith('Z') else iso.split('+')[0] + 'Z'
+            return str(dt_val)
+
+        # Safely get summary (may be summary_short, summary_long, or description)
+        summary = (
+            getattr(content, "summary_short", None)
+            or getattr(content, "summary_long", None)
+            or content.description[:500] if content.description else None
+        )
+
+        # Safely get difficulty level (may be "level" or "difficulty_level")
+        difficulty = getattr(content, "level", None) or getattr(content, "difficulty_level", None)
+
+        # Determine visibility based on content status
+        # PUBLISHED → public (visible to everyone)
+        # DRAFT/ARCHIVED → internal (visible only to authenticated users)
+        content_status = getattr(content, "status", None)
+        if content_status:
+            status_value = content_status.value if hasattr(content_status, "value") else str(content_status)
+            visibility = "public" if status_value == "published" else "internal"
+        else:
+            # Fallback to visibility field if status not available
+            visibility_attr = getattr(content, "visibility", None)
+            visibility = visibility_attr.value if hasattr(visibility_attr, "value") else "internal"
+
+        # Safely get popularity score
+        popularity = getattr(content, "popularity_score", None) or 0.0
+
         doc = {
             "id": str(content.id),
             "title": content.title,
             "title_kr": getattr(content, "title_kr", None),
             "description": content.description,
-            "summary": content.summary_short or content.summary_long,
+            "description_kr": getattr(content, "description_kr", None),
+            "summary": summary,
+            "summary_kr": getattr(content, "summary_kr", None),
             "categories": content.categories or [],
             "technologies": content.technologies or [],
-            "difficulty_level": content.difficulty_level,
-            "visibility": content.visibility.value if content.visibility else "internal",
+            "difficulty_level": difficulty,
+            "visibility": visibility,
             "content_type": content.content_type.value if content.content_type else None,
-            "popularity_score": content.popularity_score or 0.0,
+            "popularity_score": popularity,
             "stars": content.stars or 0,
-            "last_commit_date": (
-                content.last_commit_date.isoformat()
-                if content.last_commit_date else None
-            ),
-            "created_at": (
-                content.created_at.isoformat()
-                if content.created_at else None
-            ),
+            "last_commit_date": format_dt(getattr(content, "last_commit_date", None)),
+            "created_at": format_dt(getattr(content, "created_at", None)),
+            # UI display fields
+            "source_url": getattr(content, "source_url", None),
+            "video_url": getattr(content, "video_url", None),
+            "thumbnail_url": getattr(content, "thumbnail_url", None),
+            "icon": getattr(content, "icon", None),
+            "duration_minutes": getattr(content, "duration_minutes", None),
+            "view_count": getattr(content, "view_count", 0) or 0,
+            "learning_outcomes": getattr(content, "learning_outcomes", []) or [],
+            "learning_outcomes_kr": getattr(content, "learning_outcomes_kr", []) or [],
+            "prerequisites": getattr(content, "prerequisites", []) or [],
+            "prerequisites_kr": getattr(content, "prerequisites_kr", []) or [],
         }
 
         if embedding:
@@ -573,6 +741,7 @@ class SearchService:
         limit: int = 20,
         offset: int = 0,
         embedding: Optional[List[float]] = None,
+        orderby: Optional[str] = None,
     ) -> SearchResults:
         """
         Perform hybrid search (keyword + vector).
@@ -583,6 +752,7 @@ class SearchService:
             limit: Maximum results
             offset: Pagination offset
             embedding: Query embedding for vector search
+            orderby: Sort expression (e.g., "stars desc")
 
         Returns:
             SearchResults with items, total, and facets
@@ -595,7 +765,12 @@ class SearchService:
             "skip": offset,
             "count": True,
             "facets": ["categories,count:20", "technologies,count:20", "difficulty_level"],
-            "select": "id,title,description,summary,categories,technologies,difficulty_level,popularity_score,stars",
+            "select": (
+                "id,title,title_kr,description,description_kr,summary,summary_kr,"
+                "categories,technologies,difficulty_level,popularity_score,stars,"
+                "source_url,video_url,thumbnail_url,icon,duration_minutes,view_count,"
+                "last_commit_date,learning_outcomes,learning_outcomes_kr,prerequisites,prerequisites_kr"
+            ),
         }
 
         # Add filter
@@ -603,6 +778,10 @@ class SearchService:
             odata_filter = filters.to_odata_filter()
             if odata_filter:
                 search_body["filter"] = odata_filter
+
+        # Add orderby for explicit sorting
+        if orderby:
+            search_body["orderby"] = orderby
 
         # Add vector search if embedding provided
         if embedding:
@@ -623,6 +802,7 @@ class SearchService:
         filters: Optional[SearchFilters] = None,
         limit: int = 20,
         offset: int = 0,
+        orderby: Optional[str] = None,
     ) -> SearchResults:
         """
         Perform keyword-only search.
@@ -632,6 +812,7 @@ class SearchService:
             filters: Optional search filters
             limit: Maximum results
             offset: Pagination offset
+            orderby: Sort expression (e.g., "stars desc")
 
         Returns:
             SearchResults with items, total, and facets
@@ -644,13 +825,22 @@ class SearchService:
             "skip": offset,
             "count": True,
             "facets": ["categories,count:20", "technologies,count:20", "difficulty_level"],
-            "select": "id,title,description,summary,categories,technologies,difficulty_level,popularity_score,stars",
+            "select": (
+                "id,title,title_kr,description,description_kr,summary,summary_kr,"
+                "categories,technologies,difficulty_level,popularity_score,stars,"
+                "source_url,video_url,thumbnail_url,icon,duration_minutes,view_count,"
+                "last_commit_date,learning_outcomes,learning_outcomes_kr,prerequisites,prerequisites_kr"
+            ),
         }
 
         if filters:
             odata_filter = filters.to_odata_filter()
             if odata_filter:
                 search_body["filter"] = odata_filter
+
+        # Add orderby for explicit sorting
+        if orderby:
+            search_body["orderby"] = orderby
 
         return await self._execute_search(search_body)
 
@@ -660,6 +850,7 @@ class SearchService:
         filters: Optional[SearchFilters] = None,
         limit: int = 20,
         offset: int = 0,
+        orderby: Optional[str] = None,
     ) -> SearchResults:
         """
         Perform vector-only search.
@@ -669,6 +860,7 @@ class SearchService:
             filters: Optional search filters
             limit: Maximum results
             offset: Pagination offset
+            orderby: Sort expression (e.g., "stars desc")
 
         Returns:
             SearchResults with items, total, and facets
@@ -679,7 +871,12 @@ class SearchService:
             "skip": offset,
             "count": True,
             "facets": ["categories,count:20", "technologies,count:20", "difficulty_level"],
-            "select": "id,title,description,summary,categories,technologies,difficulty_level,popularity_score,stars",
+            "select": (
+                "id,title,title_kr,description,description_kr,summary,summary_kr,"
+                "categories,technologies,difficulty_level,popularity_score,stars,"
+                "source_url,video_url,thumbnail_url,icon,duration_minutes,view_count,"
+                "last_commit_date,learning_outcomes,learning_outcomes_kr,prerequisites,prerequisites_kr"
+            ),
             "vectorQueries": [
                 {
                     "kind": "vector",
@@ -694,6 +891,10 @@ class SearchService:
             odata_filter = filters.to_odata_filter()
             if odata_filter:
                 search_body["filter"] = odata_filter
+
+        # Add orderby for explicit sorting
+        if orderby:
+            search_body["orderby"] = orderby
 
         return await self._execute_search(search_body)
 

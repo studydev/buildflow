@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import ContentGrid from '@/components/ContentGrid.vue'
 import LanguageToggle from '@/components/LanguageToggle.vue'
-import { useContentStore, type SortOption } from '@/stores/content'
+import { useContentStore, type SortOption, type SearchMode } from '@/stores/content'
 import { useRoute, useRouter } from 'vue-router'
 
 const contentStore = useContentStore()
@@ -27,6 +27,11 @@ const selectedSortOption = computed({
   set: (val) => { contentStore.sortOption = val }
 })
 
+const selectedSortOrder = computed({
+  get: () => contentStore.sortOrder,
+  set: (val) => { contentStore.sortOrder = val }
+})
+
 const selectedDifficultyLevel = computed({
   get: () => contentStore.selectedDifficulty,
   set: (val) => { contentStore.selectedDifficulty = val }
@@ -37,42 +42,12 @@ const minStarsFilter = computed({
   set: (val) => { contentStore.minStars = val }
 })
 
-// Technology multi-select
-const availableTechnologies = [
-  'Azure', 'Python', 'TypeScript', 'JavaScript', 'React', 'Vue', 
-  'Docker', 'Kubernetes', 'Terraform', 'Bicep', 'GitHub Actions',
-  'OpenAI', 'Azure AI', 'Cosmos DB', 'PostgreSQL', 'Redis'
-]
-
-function toggleTechnology(tech: string) {
-  const techs = [...contentStore.selectedTechnologies]
-  const index = techs.indexOf(tech)
-  if (index === -1) {
-    techs.push(tech)
-  } else {
-    techs.splice(index, 1)
-  }
-  contentStore.selectedTechnologies = techs
-}
-
-function isTechSelected(tech: string) {
-  return contentStore.selectedTechnologies.includes(tech)
-}
-
-// Difficulty levels
-const difficultyLevels = [
-  { label: 'All Levels', value: null },
-  { label: 'Beginner', value: 'beginner' },
-  { label: 'Intermediate', value: 'intermediate' },
-  { label: 'Advanced', value: 'advanced' },
-]
-
 // Sort options
 const sortOptions = [
   { label: 'Relevance', value: 'relevance' },
-  { label: 'Most Popular', value: 'popularity' },
-  { label: 'Most Stars', value: 'stars' },
-  { label: 'Recently Updated', value: 'recent' },
+  { label: 'Popular', value: 'popularity' },
+  { label: 'Stars', value: 'stars' },
+  { label: 'Updated', value: 'recent' },
 ]
 
 // Search modes
@@ -255,131 +230,72 @@ initFromUrl()
       >
         <div 
           v-if="showAdvancedFilters"
-          class="mt-4 p-5 bg-[var(--card-bg)] border border-[var(--border)] rounded-xl"
+          class="mt-4 px-4 py-2.5 bg-[var(--card-bg)] border border-[var(--border)] rounded-xl flex items-center gap-3 flex-wrap"
         >
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-header font-semibold text-[var(--text-primary)]">Advanced Filters</h3>
+          <!-- Search Mode Toggle -->
+          <div class="flex items-center gap-1 bg-[var(--bg-secondary)] rounded-lg p-0.5 border border-[var(--border)]">
             <button
-              @click="clearAllFilters"
-              class="text-sm text-[var(--text-tertiary)] hover:text-primary transition-colors"
+              v-for="mode in searchModes"
+              :key="mode.value"
+              @click="selectedSearchMode = mode.value as SearchMode"
+              :class="[
+                'px-2.5 py-1 rounded-md text-xs font-semibold transition-all',
+                selectedSearchMode === mode.value
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              ]"
+              :title="mode.description"
             >
-              Clear all
+              {{ mode.label }}
             </button>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            <!-- Search Mode -->
-            <div>
-              <label class="block text-xs font-medium text-[var(--text-secondary)] mb-2">Search Mode</label>
-              <div class="space-y-2">
-                <label
-                  v-for="mode in searchModes"
-                  :key="mode.value"
-                  :class="[
-                    'flex items-start gap-2 p-2 rounded-lg cursor-pointer transition-colors',
-                    selectedSearchMode === mode.value
-                      ? 'bg-primary/10 border border-primary/30'
-                      : 'hover:bg-[var(--bg-secondary)]'
-                  ]"
-                >
-                  <input
-                    type="radio"
-                    name="searchMode"
-                    :value="mode.value"
-                    v-model="selectedSearchMode"
-                    class="mt-0.5 accent-primary"
-                  />
-                  <div>
-                    <div class="text-sm font-medium text-[var(--text-primary)]">{{ mode.label }}</div>
-                    <div class="text-xs text-[var(--text-tertiary)]">{{ mode.description }}</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <!-- Difficulty Level -->
-            <div>
-              <label class="block text-xs font-medium text-[var(--text-secondary)] mb-2">Difficulty</label>
-              <select
-                v-model="selectedDifficultyLevel"
-                class="w-full px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:border-primary"
-              >
-                <option 
-                  v-for="level in difficultyLevels" 
-                  :key="level.label" 
-                  :value="level.value"
-                >
-                  {{ level.label }}
-                </option>
-              </select>
-
-              <!-- Min Stars -->
-              <label class="block text-xs font-medium text-[var(--text-secondary)] mt-4 mb-2">
-                Minimum Stars: {{ minStarsFilter || 'Any' }}
-              </label>
-              <input
-                type="range"
-                v-model.number="minStarsFilter"
-                min="0"
-                max="1000"
-                step="50"
-                class="w-full accent-primary"
-              />
-              <div class="flex justify-between text-xs text-[var(--text-tertiary)]">
-                <span>0</span>
-                <span>500</span>
-                <span>1000+</span>
-              </div>
-            </div>
-
-            <!-- Technologies -->
-            <div class="lg:col-span-2">
-              <label class="block text-xs font-medium text-[var(--text-secondary)] mb-2">Technologies</label>
-              <div class="flex flex-wrap gap-2">
-                <button
-                  v-for="tech in availableTechnologies"
-                  :key="tech"
-                  @click="toggleTechnology(tech)"
-                  :class="[
-                    'px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
-                    isTechSelected(tech)
-                      ? 'bg-primary text-white'
-                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:border-primary hover:text-primary border border-transparent'
-                  ]"
-                >
-                  {{ tech }}
-                </button>
-              </div>
-            </div>
-          </div>
+          <!-- Divider -->
+          <div class="h-5 w-px bg-[var(--border)]"></div>
 
           <!-- Sort Options -->
-          <div class="mt-5 pt-4 border-t border-[var(--border)]">
-            <label class="block text-xs font-medium text-[var(--text-secondary)] mb-2">Sort By</label>
-            <div class="flex flex-wrap gap-2">
-              <button
-                v-for="option in sortOptions"
-                :key="option.value"
-                @click="selectedSortOption = option.value as SortOption"
-                :class="[
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                  selectedSortOption === option.value
-                    ? 'bg-primary text-white'
-                    : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-primary'
-                ]"
-              >
-                {{ option.label }}
-              </button>
-            </div>
+          <div class="flex items-center gap-2">
+            <button
+              v-for="option in sortOptions"
+              :key="option.value"
+              @click="selectedSortOption = option.value as SortOption"
+              :class="[
+                'px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
+                selectedSortOption === option.value
+                  ? 'bg-primary text-white'
+                  : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-primary'
+              ]"
+            >
+              {{ option.label }}
+            </button>
+            <button
+              @click="selectedSortOrder = selectedSortOrder === 'desc' ? 'asc' : 'desc'"
+              class="p-1 rounded-md bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-primary transition-colors"
+              :title="selectedSortOrder === 'desc' ? 'Descending' : 'Ascending'"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path v-if="selectedSortOrder === 'desc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+              </svg>
+            </button>
           </div>
 
-          <!-- Apply Button -->
-          <div class="mt-5 flex justify-end">
+          <!-- Spacer for right alignment -->
+          <div class="flex-1"></div>
+
+          <!-- Apply & Reset (right-aligned) -->
+          <div class="flex items-center gap-2">
+            <button
+              @click="clearAllFilters"
+              class="text-xs text-[var(--text-tertiary)] hover:text-primary transition-colors"
+            >
+              Reset
+            </button>
             <button
               @click="executeSearch"
-              class="px-6 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+              class="px-3 py-1 bg-primary text-white rounded-md text-xs font-medium hover:bg-primary/90 transition-colors"
             >
-              Apply Filters
+              Apply
             </button>
           </div>
         </div>
