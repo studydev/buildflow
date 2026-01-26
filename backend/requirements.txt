@@ -8,6 +8,9 @@ httpx>=0.28.0
 # Database
 azure-cosmos>=4.9.0
 
+# Azure Storage (for thumbnail uploads)
+azure-storage-blob>=12.19.0
+
 # Security
 PyJWT>=2.10.0
 cryptography>=44.0.0
