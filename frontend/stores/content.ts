@@ -612,9 +612,13 @@ export const useContentStore = defineStore('content', () => {
         }
       )
       
+      if (!result || !result.thumbnail_url) {
+        throw new Error('No thumbnail URL in response')
+      }
+      
       // Update local item with new thumbnail
       const index = items.value.findIndex(item => item.id === id)
-      if (index !== -1) {
+      if (index !== -1 && items.value[index]) {
         items.value[index].thumbnail_url = result.thumbnail_url
       }
       
