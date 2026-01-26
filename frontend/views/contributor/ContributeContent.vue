@@ -532,16 +532,6 @@ onUnmounted(() => {
             실패
           </button>
         </div>
-        
-        <router-link
-          to="/contributor/create"
-          class="ml-auto px-4 py-2.5 rounded-lg text-sm font-header font-semibold bg-primary hover:bg-primary-hover text-white transition-colors flex items-center gap-2"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          새 분석 요청
-        </router-link>
       </div>
 
       <!-- Loading State -->
@@ -556,16 +546,7 @@ onUnmounted(() => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
         </svg>
         <h3 class="mt-4 text-lg font-header font-semibold text-[var(--text-primary)]">아직 분석 요청이 없습니다</h3>
-        <p class="mt-2 text-[var(--text-secondary)]">GitHub 리포지토리 URL을 제출하여 콘텐츠 분석을 시작하세요</p>
-        <router-link
-          to="/contributor/create"
-          class="mt-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-header font-semibold bg-primary hover:bg-primary-hover text-white transition-colors"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          첫 번째 분석 요청
-        </router-link>
+        <p class="mt-2 text-[var(--text-secondary)]">위의 GitHub 리포지토리 URL 입력란을 통해 콘텐츠 분석을 시작하세요</p>
       </div>
 
       <!-- Analysis Requests Table -->
@@ -1012,7 +993,7 @@ onUnmounted(() => {
         >
           <!-- Thumbnail or fallback -->
           <div 
-            class="h-32 flex items-center justify-center relative overflow-hidden"
+            class="aspect-[3/2] flex items-center justify-center relative overflow-hidden"
             :class="item.thumbnail_url ? '' : 'bg-primary'"
           >
             <!-- Status Badge -->

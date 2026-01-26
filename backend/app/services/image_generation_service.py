@@ -23,6 +23,81 @@ class ImageGenerationError(Exception):
     pass
 
 
+# Domain configurations for workshop thumbnails
+DOMAIN_CONFIGS = {
+    "ai_agents": {
+        "domain_name": "AI & Agents",
+        "primary_color": "Cyan (#00BCF2)",
+        "secondary_color": "Neon Blue (#2ED9FF)",
+        "business_problems": "Manual decision-making, scattered AI experiments, lack of orchestration between tools",
+        "core_workshop_focus": "Building agent-based AI workflows with Azure AI",
+        "key_technologies": "Azure AI Studio, Azure OpenAI, Agents, Functions",
+        "learning_outcomes": "Autonomous agents, connected AI workflows, faster and smarter decisions",
+        "keywords": ["ai", "openai", "gpt", "agent", "copilot", "llm", "ml", "machine learning", "cognitive", "bot"],
+    },
+    "data_fabric": {
+        "domain_name": "Data & Analytics (Fabric)",
+        "primary_color": "Indigo (#3B4FB3)",
+        "secondary_color": "Violet (#7B83EB)",
+        "business_problems": "Data silos, slow analytics, disconnected BI tools",
+        "core_workshop_focus": "Unified analytics with Microsoft Fabric",
+        "key_technologies": "Microsoft Fabric, OneLake, Synapse, Power BI",
+        "learning_outcomes": "Unified data platform, real-time insights, AI-ready analytics foundation",
+        "keywords": ["fabric", "synapse", "data", "analytics", "power bi", "warehouse", "lakehouse", "onelake"],
+    },
+    "security": {
+        "domain_name": "Security & Compliance",
+        "primary_color": "Red (#E81123)",
+        "secondary_color": "Orange (#FF8C00)",
+        "business_problems": "Security gaps, compliance risks, fragmented identity management, threat blind spots",
+        "core_workshop_focus": "End-to-end security with Microsoft Defender and Entra",
+        "key_technologies": "Microsoft Defender, Entra ID, Sentinel, Purview",
+        "learning_outcomes": "Zero Trust architecture, unified security operations, proactive threat protection",
+        "keywords": ["security", "defender", "sentinel", "entra", "identity", "zero trust", "compliance", "purview"],
+    },
+    "devops_github": {
+        "domain_name": "DevOps & GitHub",
+        "primary_color": "GitHub Green (#238636)",
+        "secondary_color": "Azure DevOps Blue (#0078D7)",
+        "business_problems": "Slow release cycles, manual deployments, inconsistent CI/CD, collaboration gaps",
+        "core_workshop_focus": "Modern DevOps with GitHub and Azure DevOps",
+        "key_technologies": "GitHub Actions, Azure DevOps, Copilot, Container Apps",
+        "learning_outcomes": "Automated pipelines, faster deployments, developer productivity, secure supply chain",
+        "keywords": ["github", "devops", "ci/cd", "actions", "pipeline", "container", "docker", "kubernetes", "aks"],
+    },
+    "cloud_infra": {
+        "domain_name": "Cloud Infrastructure",
+        "primary_color": "Azure Blue (#0078D4)",
+        "secondary_color": "Teal (#008575)",
+        "business_problems": "Legacy infrastructure, manual provisioning, scaling challenges, cost management",
+        "core_workshop_focus": "Cloud-native infrastructure with Azure",
+        "key_technologies": "Azure VMs, AKS, Bicep, Azure Arc, Terraform",
+        "learning_outcomes": "Automated infrastructure, scalable architecture, optimized cloud costs",
+        "keywords": ["infrastructure", "vm", "network", "bicep", "terraform", "arc", "hybrid", "migration"],
+    },
+    "low_code": {
+        "domain_name": "Low Code & Power Platform",
+        "primary_color": "Power Purple (#742774)",
+        "secondary_color": "Magenta (#E3008C)",
+        "business_problems": "IT bottlenecks, slow app development, manual business processes, citizen developer gaps",
+        "core_workshop_focus": "Rapid app development with Power Platform",
+        "key_technologies": "Power Apps, Power Automate, Power Pages, Copilot Studio",
+        "learning_outcomes": "Citizen developers empowered, automated workflows, rapid prototyping",
+        "keywords": ["power apps", "power automate", "power platform", "low code", "no code", "power pages", "copilot studio"],
+    },
+    "default": {
+        "domain_name": "Microsoft Azure Workshop",
+        "primary_color": "Azure Blue (#0078D4)",
+        "secondary_color": "Microsoft Purple (#5C2D91)",
+        "business_problems": "Digital transformation challenges, legacy systems, skill gaps",
+        "core_workshop_focus": "Hands-on learning with Microsoft Azure technologies",
+        "key_technologies": "Azure, Microsoft 365, GitHub",
+        "learning_outcomes": "Cloud expertise, modern development skills, business innovation",
+        "keywords": [],
+    },
+}
+
+
 class ImageGenerationService:
     """
     Service for generating AI-powered thumbnail images using Azure OpenAI DALL-E.
@@ -31,24 +106,44 @@ class ImageGenerationService:
     that visually represent the workshop content and technologies.
     """
 
-    # Microsoft branding prompt template
-    PROMPT_TEMPLATE = """Create a professional, modern hero image for a Microsoft Azure technical workshop.
+    # Master prompt template for domain-based thumbnail generation
+    PROMPT_TEMPLATE = """Create a professional workshop thumbnail image.
 
-Workshop Title: {title}
-Workshop Description: {description}
-Technologies: {technologies}
+Image Purpose:
+A representative visual that helps viewers instantly understand
+which Microsoft / Azure / GitHub workshop is most suitable
+for a specific business problem.
+
+Aspect Ratio: 3:2
+
+Domain / Learning Area: {domain_name}
+
+Primary Theme Color: {primary_color}
+Secondary Accent Color: {secondary_color}
+
+Business Problems to Visualize (Left Side):
+{business_problems}
+
+Workshop Learning Focus (Center):
+{core_workshop_focus}
+Key Technologies: {key_technologies}
+
+Transformed Outcome After Learning (Right Side):
+{learning_outcomes}
 
 Design Requirements:
-- Clean, minimalist style with a professional tech aesthetic
-- Use Microsoft's Fluent Design language with subtle gradients
-- Feature abstract representations of the core technologies (e.g., cloud shapes for Azure, connected nodes for AI/ML, containers for Kubernetes)
-- Color palette: Azure Blue (#0078D4), Microsoft Purple (#5C2D91), with complementary tech colors
-- No text, logos, or human faces - focus on abstract technology concepts
-- Modern 3D isometric or flat design elements
-- Light background with vibrant accent colors
-- Convey innovation, learning, and cloud-native technology
-
-The image should intuitively represent the workshop's goal and make viewers curious to learn more about Microsoft and Azure technologies."""
+- Clean, professional, Microsoft Fluent Design style
+- Strong visual consistency across all domains, differentiated mainly by color and core technology focus
+- One continuous scene showing a clear left-to-right problem-solving flow
+- Allow minimal, clean text labels for key technologies (e.g. Azure AI, Fabric, Copilot, Defender, GitHub)
+- Abstract but recognizable representations:
+  - Cloud infrastructure, AI brains, agents, data graphs, security shields, pipelines
+- No human faces, no logos, no marketing slogans
+- Modern 3D isometric or refined flat design
+- Light background with domain-specific color accents
+- The image should feel like:
+  "In this situation, learning this workshop is the right choice."
+"""
 
     def __init__(
         self,
@@ -83,23 +178,71 @@ The image should intuitively represent the workshop's goal and make viewers curi
             self._client = httpx.AsyncClient(timeout=120.0)  # Image generation can take time
         return self._client
 
+    def _detect_domain(
+        self,
+        title: str,
+        description: str,
+        technologies: list[str],
+        categories: list[str],
+    ) -> str:
+        """
+        Detect the workshop domain based on content.
+
+        Returns the domain key (e.g., 'ai_agents', 'data_fabric', etc.)
+        """
+        # Combine all text for keyword matching
+        all_text = " ".join([
+            title.lower(),
+            description.lower(),
+            " ".join(t.lower() for t in (technologies or [])),
+            " ".join(c.lower() for c in (categories or [])),
+        ])
+
+        # Score each domain based on keyword matches
+        scores = {}
+        for domain_key, config in DOMAIN_CONFIGS.items():
+            if domain_key == "default":
+                continue
+            score = sum(1 for kw in config["keywords"] if kw in all_text)
+            if score > 0:
+                scores[domain_key] = score
+
+        # Return highest scoring domain, or default
+        if scores:
+            best_domain = max(scores, key=scores.get)
+            logger.info(f"Detected domain: {best_domain} (score: {scores[best_domain]})")
+            return best_domain
+
+        logger.info("No specific domain detected, using default")
+        return "default"
+
     def _build_prompt(
         self,
         title: str,
         description: str,
         technologies: list[str],
+        categories: list[str] = None,
     ) -> str:
-        """Build the image generation prompt."""
-        tech_str = ", ".join(technologies[:10]) if technologies else "Azure, Cloud"
+        """Build the domain-based image generation prompt."""
+        # Detect domain
+        domain_key = self._detect_domain(title, description, technologies, categories or [])
+        config = DOMAIN_CONFIGS[domain_key]
 
-        # Truncate description if too long
-        desc = description[:500] + "..." if len(description) > 500 else description
+        # Override key_technologies if provided
+        tech_str = ", ".join(technologies[:6]) if technologies else config["key_technologies"]
 
-        return self.PROMPT_TEMPLATE.format(
-            title=title,
-            description=desc,
-            technologies=tech_str,
+        prompt = self.PROMPT_TEMPLATE.format(
+            domain_name=config["domain_name"],
+            primary_color=config["primary_color"],
+            secondary_color=config["secondary_color"],
+            business_problems=config["business_problems"],
+            core_workshop_focus=config["core_workshop_focus"],
+            key_technologies=tech_str,
+            learning_outcomes=config["learning_outcomes"],
         )
+
+        logger.debug(f"Generated prompt for domain '{domain_key}':\n{prompt[:500]}...")
+        return prompt
 
     async def generate_thumbnail(
         self,
@@ -115,7 +258,7 @@ The image should intuitively represent the workshop's goal and make viewers curi
             title: Workshop title
             description: Workshop description
             technologies: List of technologies used
-            categories: Optional list of categories
+            categories: Optional list of categories for domain detection
 
         Returns:
             Image bytes (PNG format)
@@ -131,7 +274,7 @@ The image should intuitively represent the workshop's goal and make viewers curi
                 f"api_key={'set' if self.api_key else 'MISSING'}"
             )
 
-        prompt = self._build_prompt(title, description, technologies)
+        prompt = self._build_prompt(title, description, technologies, categories)
 
         logger.info(f"Generating thumbnail for: {title[:50]}...")
         logger.debug(f"DALL-E request URL: {self.endpoint}/openai/deployments/{self.deployment}/images/generations")

@@ -53,6 +53,7 @@ def _to_response(request) -> AnalysisRequestResponse:
         progress=request.progress,
         error_message=request.error_message,
         result=result_response,
+        content_ids=request.content_ids or [],
         created_at=request.created_at,
         updated_at=request.updated_at,
         completed_at=request.completed_at,
@@ -212,14 +213,61 @@ async def get_analysis_request(
     "/{request_id}",
     response_model=APIResponse,
     summary="Delete analysis request",
-    description="Delete an analysis request. All contributors can delete (internal employees).",
+    description="Delete an analysis request and its linked content/thumbnail. All contributors can delete (internal employees).",
 )
 async def delete_analysis_request(
     request_id: str,
     current_user: User = Depends(require_contributor),
     service: AnalysisService = Depends(get_analysis_service),
 ):
-    """Delete an analysis request (any contributor can delete - internal employees)."""
+    """
+    Delete an analysis request (any contributor can delete - internal employees).
+
+    Also deletes:
+    - Linked content items from contents container
+    - Thumbnail images from blob storage
+    """
+    from app.repositories.content_repo import get_content_repo
+    from app.services.storage_service import REPO_IMAGES_CONTAINER, StorageService
+
+    # First, get the analysis request to find linked content_ids
+    request = await service.get_request_cross_partition(request_id)
+    if not request:
+        raise NotFoundError(f"Analysis request not found: {request_id}")
+
+    content_repo = get_content_repo()
+    deleted_contents = []
+    deleted_thumbnails = []
+
+    # Delete linked content and thumbnails
+    if request.content_ids:
+        storage_service = StorageService()
+
+        for content_id in request.content_ids:
+            # Get content to check for thumbnail
+            try:
+                content = await content_repo.get_by_id_cross_partition(content_id)
+                if content:
+                    # Delete thumbnail from blob storage if exists
+                    if content.thumbnail_url:
+                        try:
+                            # Extract blob path from URL (format: https://account.blob.../container/path?sas)
+                            # Blob path is typically: thumbnails/{content_id}.png
+                            blob_path = f"thumbnails/{content_id}.png"
+                            await storage_service.delete_blob(REPO_IMAGES_CONTAINER, blob_path)
+                            deleted_thumbnails.append(content_id)
+                            logger.info(f"Deleted thumbnail for content: {content_id}")
+                        except Exception as e:
+                            logger.warning(f"Failed to delete thumbnail for {content_id}: {e}")
+
+                    # Delete content
+                    await content_repo.delete_cross_partition(content_id)
+                    deleted_contents.append(content_id)
+                    logger.info(f"Deleted content: {content_id}")
+            except Exception as e:
+                logger.warning(f"Failed to delete content {content_id}: {e}")
+
+    # Delete the analysis request itself
     deleted = await service.delete_request_cross_partition(request_id)
 
     if not deleted:
@@ -227,8 +275,12 @@ async def delete_analysis_request(
 
     return APIResponse(
         success=True,
-        data={"deleted": True},
-        meta=Meta.create(message="Analysis request deleted"),
+        data={
+            "deleted": True,
+            "deleted_contents": deleted_contents,
+            "deleted_thumbnails": deleted_thumbnails,
+        },
+        meta=Meta.create(message=f"Analysis request deleted with {len(deleted_contents)} content(s)"),
     )
 
 

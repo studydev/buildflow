@@ -188,7 +188,7 @@ function handleActionClick(action: { label: string; icon: string; primary: boole
     >
       <!-- Thumbnail or fallback -->
       <div 
-        class="h-32 flex items-center justify-center relative overflow-hidden"
+        class="aspect-[3/2] flex items-center justify-center relative overflow-hidden"
         :class="item.thumbnailUrl ? '' : 'bg-primary'"
       >
         <!-- Thumbnail Image -->
