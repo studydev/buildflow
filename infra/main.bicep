@@ -51,14 +51,8 @@ param devBypassEmail string = ''
 @description('Container Registry login server')
 param containerRegistryLoginServer string = ''
 
-@description('Pipeline container image tag')
-param pipelineImageTag string = 'latest'
-
-@description('Enable monitoring resources (App Insights, alerts)')
+@description('Enable monitoring resources (App Insights, alerts')
 param enableMonitoring bool = true
-
-@description('Enable pipeline infrastructure (Service Bus, Container Apps Jobs) - Dev only')
-param enablePipelines bool = true
 
 @description('Enable frontend Static Web App deployment')
 param enableFrontend bool = true
@@ -150,11 +144,7 @@ resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023
 var containers = [
   { name: 'users', partitionKey: '/id' }
   { name: 'contents', partitionKey: '/id' }
-  { name: 'bookmarks', partitionKey: '/id' }
   { name: 'analysis_requests', partitionKey: '/id' }
-  { name: 'pipeline_runs', partitionKey: '/id' }
-  { name: 'raw_extractions', partitionKey: '/id' }
-  { name: 'generated_assets', partitionKey: '/id' }
   { name: 'login_history', partitionKey: '/email' }
 ]
 
@@ -460,38 +450,8 @@ output managedIdentityId string = managedIdentity.id
 output containerAppsEnvironmentId string = containerAppsEnv.id
 
 // ============================================================================
-// Pipeline Infrastructure Modules (T100-T103) - DEV ONLY
+// Azure AI Search Module (T103)
 // ============================================================================
-
-// T100: Service Bus Module (only in Dev with pipelines enabled)
-module serviceBus 'modules/servicebus.bicep' = if (enablePipelines) {
-  name: 'serviceBusDeployment'
-  params: {
-    projectName: projectName
-    environment: environment
-    location: location
-    tags: tags
-  }
-}
-
-// Store Service Bus connection strings in Key Vault (only if Service Bus exists)
-resource serviceBusConnectionKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = if (enablePipelines) {
-  parent: keyVault
-  name: 'servicebus-connection'
-  properties: {
-    #disable-next-line BCP318
-    value: serviceBus.outputs.pipelineWorkerConnectionString
-  }
-}
-
-resource serviceBusApiConnectionKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = if (enablePipelines) {
-  parent: keyVault
-  name: 'servicebus-api-connection'
-  properties: {
-    #disable-next-line BCP318
-    value: serviceBus.outputs.apiSendConnectionString
-  }
-}
 
 // T103: Azure AI Search Module
 module search 'modules/search.bicep' = {
@@ -511,25 +471,6 @@ resource searchAdminKeyKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
   name: 'search-admin-key'
   properties: {
     value: search.outputs.adminKey
-  }
-}
-
-// T101: Container Apps Jobs Module (depends on Service Bus, DEV ONLY)
-module containerAppsJobs 'modules/container-apps-jobs.bicep' = if (enablePipelines && !empty(containerRegistryLoginServer)) {
-  name: 'containerAppsJobsDeployment'
-  params: {
-    projectName: projectName
-    environment: environment
-    location: location
-    tags: tags
-    containerAppsEnvironmentId: containerAppsEnv.id
-    managedIdentityId: managedIdentity.id
-    containerRegistryLoginServer: containerRegistryLoginServer
-    imageTag: pipelineImageTag
-    #disable-next-line BCP318
-    serviceBusName: serviceBus.outputs.serviceBusName
-    #disable-next-line BCP318
-    serviceBusConnectionString: serviceBus.outputs.pipelineWorkerConnectionString
   }
 }
 
@@ -560,11 +501,9 @@ resource appInsightsConnectionKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' 
 }
 
 // ============================================================================
-// Pipeline Infrastructure Outputs
+// Storage & Search Outputs
 // ============================================================================
 
-output serviceBusName string = enablePipelines ? serviceBus!.outputs.serviceBusName : ''
-output serviceBusEndpoint string = enablePipelines ? serviceBus!.outputs.serviceBusEndpoint : ''
 output storageAccountName string = storage.outputs.storageAccountName
 output storageBlobEndpoint string = storage.outputs.blobEndpoint
 output searchServiceName string = search.outputs.searchServiceName
