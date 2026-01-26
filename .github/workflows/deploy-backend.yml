@@ -119,9 +119,7 @@ jobs:
             acsSenderAddress=${{ secrets.ACS_SENDER_ADDRESS }}
             devBypassEmail=${{ secrets.DEV_BYPASS_EMAIL }}
             corsOrigins=https://nexus.studydev.com,http://localhost:5173,http://localhost:3000
-            pipelineImageTag=${{ github.sha }}
             enableMonitoring=true
-            enablePipelines=true
             enableFrontend=true
           failOnStdErr: false
       

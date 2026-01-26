@@ -48,9 +48,6 @@ param corsOrigins string = 'http://localhost:5173,http://localhost:3000'
 @description('Dev bypass email for non-prod environments')
 param devBypassEmail string = ''
 
-@description('Container Registry login server')
-param containerRegistryLoginServer string = ''
-
 @description('Enable monitoring resources (App Insights, alerts')
 param enableMonitoring bool = true
 

@@ -12,10 +12,9 @@ infra/
 ├── parameters.dev.json     # Dev 환경 파라미터
 ├── parameters.prod.json    # Prod 환경 파라미터
 └── modules/                # Bicep 모듈
-    ├── container-apps-jobs.bicep  # Container Apps Jobs
+    ├── container-registry.bicep   # Container Registry
     ├── monitoring.bicep           # Application Insights
     ├── search.bicep               # Azure AI Search
-    ├── servicebus.bicep           # Service Bus
     ├── static-web-app.bicep       # Static Web Apps
     └── storage.bicep              # Blob Storage
 ```
@@ -39,10 +38,8 @@ infra/
 | 리소스 | 타입 | 상태 | 설명 |
 |--------|------|------|------|
 | Azure AI Search | `Microsoft.Search/searchServices` | ⏳ 예정 | 하이브리드 검색 |
-| Service Bus | `Microsoft.ServiceBus/namespaces` | ⏳ 예정 | 파이프라인 메시지 큐 |
-| Storage Account | `Microsoft.Storage/storageAccounts` | ⏳ 예정 | 자산 저장소 |
-| Key Vault | `Microsoft.KeyVault/vaults` | ⏳ 예정 | 시크릿 관리 |
-| Container Apps Jobs | `Microsoft.App/jobs` | ⏳ 예정 | 파이프라인 실행 |
+| Storage Account | `Microsoft.Storage/storageAccounts` | ✅ 배포됨 | 자산 저장소 |
+| Key Vault | `Microsoft.KeyVault/vaults` | ✅ 배포됨 | 시크릿 관리 |
 
 ## 🚀 배포 방법
 

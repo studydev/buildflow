@@ -38,11 +38,7 @@ BuildFlow GitHub Actions 워크플로우 문서
 │   │  │ Check CI │ → │ Deploy Infra│ → │ Build API │ → │  Deploy  │ │     │
 │   │  │  Status  │   │   (Bicep)   │   │ (Docker)  │   │   API    │ │     │
 │   │  └──────────┘   └─────────────┘   └───────────┘   └──────────┘ │     │
-│   │                                          │                      │     │
-│   │                                   ┌──────┴────────┐             │     │
-│   │                                   │Build Pipeline │             │     │
-│   │                                   │   (Docker)    │             │     │
-│   │                                   └───────────────┘             │     │
+
 │   └────────────────────────────────────────────────────────────────┘     │
 │                                                                          │
 ├─────────────────────────────────────────────────────────────────────────┤
@@ -117,9 +113,8 @@ Jobs:
   1. check-ci: CI 성공 여부 확인
   2. deploy-infrastructure: Bicep으로 Azure 인프라 배포
   3. build-api: API Docker 이미지 빌드 및 ACR 푸시
-  4. build-pipeline: Pipeline Docker 이미지 빌드 및 ACR 푸시
-  5. deploy-api: Container App 업데이트
-  6. validate: 헬스체크로 배포 검증
+  4. deploy-api: Container App 업데이트
+  5. validate: 헬스체크로 배포 검증
 ```
 
 **주요 특징:**
@@ -176,5 +171,4 @@ Jobs:
 ```
 deploy_infra: true/false  - 인프라 배포 여부
 deploy_api: true/false    - API 컨테이너 배포 여부
-deploy_pipeline: true/false - Pipeline 컨테이너 배포 여부
 ```

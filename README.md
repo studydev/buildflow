@@ -41,8 +41,8 @@ NexusSkill은 GitHub 저장소를 분석하여 Microsoft 및 Azure 클라우드 
 │  Backend API         │  FastAPI + Python 3.9                    │
 │  (Container Apps)    │  Cosmos DB, Azure OpenAI                 │
 ├──────────────────────┼──────────────────────────────────────────┤
-│  Data Pipelines      │  Container Apps Jobs                     │
-│  (Dev Only)          │  Analysis, Enrichment, Indexing          │
+│  Analysis Pipeline   │  BackgroundTasks (in-process)            │
+│                      │  GitHub 분석, AI 메타데이터 추출              │
 └──────────────────────┴──────────────────────────────────────────┘
 ```
 
@@ -86,11 +86,7 @@ buildflow/
 | 카테고리 | 항목 | 우선순위 | 예상 일정 |
 |----------|------|----------|-----------|
 | **인프라** | Azure AI Search 통합 | 높음 | - |
-| **인프라** | Azure Service Bus 설정 | 중간 | - |
 | **인프라** | Prod 환경 배포 | 낮음 | 추후 결정 |
-| **Backend** | Enrichment Pipeline (AI 강화) | 높음 | - |
-| **Backend** | Localization Pipeline (번역) | 중간 | - |
-| **Backend** | Asset Generation Pipeline | 중간 | - |
 | **Backend** | 하이브리드 검색 API | 높음 | - |
 | **Backend** | AI Assistant (RAG 채팅) | 중간 | - |
 | **Frontend** | AI 어시스턴트 UI | 중간 | - |

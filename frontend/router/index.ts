@@ -41,16 +41,6 @@ const routes: RouteRecordRaw[] = [
     path: '/contributor/edit',
     redirect: '/contributor/manage'
   },
-  {
-    path: '/content/:id/pipelines',
-    name: 'PipelineHistory',
-    component: () => import('@/views/contributor/PipelineHistory.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresContributor: true,
-      title: 'NexusSkill - 파이프라인 히스토리'
-    }
-  },
   // Catch-all 404 route
   {
     path: '/:pathMatch(.*)*',

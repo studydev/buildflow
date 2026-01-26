@@ -136,10 +136,7 @@ jobs:
             azureOpenAiDeployment=${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
             acsConnectionString=${{ secrets.ACS_CONNECTION_STRING }}
             acsSenderAddress=${{ secrets.ACS_SENDER_ADDRESS }}
-            containerRegistryLoginServer=${{ env.REGISTRY_NAME }}.azurecr.io
-            pipelineImageTag=latest
             enableMonitoring=true
-            enablePipelines=false
             alertEmail=${{ secrets.ALERT_EMAIL }}
           failOnStdErr: false
       

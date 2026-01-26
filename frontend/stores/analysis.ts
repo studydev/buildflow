@@ -7,20 +7,11 @@
  * - Poll status updates
  * - List user's analysis requests
  * - Handle errors and retries
- * 
- * Updated for Pipeline model per tasks.md T205.
  */
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiRequest, APIError } from '@/lib/api'
-import type {
-  PipelineRun,
-  EnqueuePipelineRequest,
-  EnqueuePipelineResponse,
-  PipelineHistoryResponse,
-} from '@/types/pipeline'
-import { isTerminalStatus, isActiveStatus } from '@/types/pipeline'
 
 /**
  * Status history entry
@@ -419,209 +410,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
     isLoading.value = false
     isSubmitting.value = false
     error.value = null
-    pipelineRuns.value = []
-  }
-  
-  // =========================================================================
-  // Pipeline API Methods (T205)
-  // =========================================================================
-  
-  // Pipeline state
-  const pipelineRuns = ref<PipelineRun[]>([])
-  const currentPipeline = ref<PipelineRun | null>(null)
-  const pipelinePollingIds = ref<Set<string>>(new Set())
-  
-  // Pipeline getters
-  const activePipelines = computed(() => 
-    pipelineRuns.value.filter(r => isActiveStatus(r.status as unknown as import('@/types/pipeline').PipelineStatus))
-  )
-  
-  const completedPipelines = computed(() =>
-    pipelineRuns.value.filter(r => r.status === 'completed')
-  )
-  
-  const failedPipelines = computed(() =>
-    pipelineRuns.value.filter(r => r.status === 'failed')
-  )
-  
-  /**
-   * Enqueue a new pipeline job
-   * Per tasks.md T205: enqueuePipeline()
-   */
-  async function enqueuePipeline(request: EnqueuePipelineRequest): Promise<PipelineRun | null> {
-    isSubmitting.value = true
-    error.value = null
-    
-    try {
-      const response = await apiRequest<EnqueuePipelineResponse>(
-        '/pipelines',
-        {
-          method: 'POST',
-          body: JSON.stringify(request),
-        }
-      )
-      
-      // Fetch the full pipeline run
-      const pipelineRun = await getPipelineStatus(response.run_id)
-      
-      if (pipelineRun) {
-        pipelineRuns.value = [pipelineRun, ...pipelineRuns.value]
-        startPipelinePolling(response.run_id)
-      }
-      
-      return pipelineRun
-      
-    } catch (e) {
-      if (e instanceof APIError) {
-        error.value = e.message
-      } else {
-        error.value = e instanceof Error ? e.message : 'Failed to enqueue pipeline'
-      }
-      console.error('Failed to enqueue pipeline:', e)
-      return null
-    } finally {
-      isSubmitting.value = false
-    }
-  }
-  
-  /**
-   * Get pipeline status by run_id
-   * Per tasks.md T205: getPipelineStatus()
-   */
-  async function getPipelineStatus(runId: string): Promise<PipelineRun | null> {
-    try {
-      const data = await apiRequest<PipelineRun>(`/pipelines/${runId}`)
-      
-      // Update in local state if exists
-      const index = pipelineRuns.value.findIndex(r => r.id === runId)
-      if (index !== -1) {
-        pipelineRuns.value[index] = data
-      }
-      
-      currentPipeline.value = data
-      return data
-      
-    } catch (e) {
-      console.error(`Failed to get pipeline status ${runId}:`, e)
-      return null
-    }
-  }
-  
-  /**
-   * Get pipeline history for a content
-   * Per tasks.md T205: getPipelineHistory()
-   */
-  async function getPipelineHistory(contentId: string): Promise<PipelineHistoryResponse | null> {
-    try {
-      const data = await apiRequest<PipelineHistoryResponse>(
-        `/content/${contentId}/pipeline-history`
-      )
-      return data
-      
-    } catch (e) {
-      console.error(`Failed to get pipeline history for content ${contentId}:`, e)
-      return null
-    }
-  }
-  
-  /**
-   * Retry a failed pipeline
-   */
-  async function retryPipeline(runId: string): Promise<PipelineRun | null> {
-    try {
-      await apiRequest<{ success: boolean }>(
-        `/pipelines/${runId}/retry`,
-        { method: 'POST' }
-      )
-      
-      // Fetch updated status
-      return await getPipelineStatus(runId)
-      
-    } catch (e) {
-      console.error(`Failed to retry pipeline ${runId}:`, e)
-      return null
-    }
-  }
-  
-  /**
-   * Cancel a running pipeline
-   */
-  async function cancelPipeline(runId: string): Promise<boolean> {
-    try {
-      await apiRequest<{ success: boolean }>(
-        `/pipelines/${runId}/cancel`,
-        { method: 'POST' }
-      )
-      
-      stopPipelinePolling(runId)
-      
-      // Update local state
-      const index = pipelineRuns.value.findIndex(r => r.id === runId)
-      if (index !== -1 && pipelineRuns.value[index]) {
-        pipelineRuns.value[index]!.status = 'cancelled' as unknown as import('@/types/pipeline').PipelineStatus
-      }
-      
-      return true
-      
-    } catch (e) {
-      console.error(`Failed to cancel pipeline ${runId}:`, e)
-      return false
-    }
-  }
-  
-  // Pipeline polling
-  const pipelinePollingTimers = ref<Map<string, number>>(new Map())
-  
-  function startPipelinePolling(runId: string) {
-    if (pipelinePollingIds.value.has(runId)) return
-    
-    pipelinePollingIds.value.add(runId)
-    const startTime = Date.now()
-    
-    const poll = async () => {
-      if (!pipelinePollingIds.value.has(runId)) return
-      
-      if (Date.now() - startTime > MAX_POLLING_DURATION) {
-        console.warn(`Pipeline polling timeout for ${runId}`)
-        stopPipelinePolling(runId)
-        return
-      }
-      
-      try {
-        const updated = await getPipelineStatus(runId)
-        
-        if (updated && isTerminalStatus(updated.status as unknown as import('@/types/pipeline').PipelineStatus)) {
-          stopPipelinePolling(runId)
-          return
-        }
-        
-        const timer = window.setTimeout(poll, POLLING_INTERVAL)
-        pipelinePollingTimers.value.set(runId, timer)
-        
-      } catch (e) {
-        console.error(`Pipeline polling error for ${runId}:`, e)
-        const timer = window.setTimeout(poll, POLLING_INTERVAL)
-        pipelinePollingTimers.value.set(runId, timer)
-      }
-    }
-    
-    poll()
-  }
-  
-  function stopPipelinePolling(runId: string) {
-    pipelinePollingIds.value.delete(runId)
-    
-    const timer = pipelinePollingTimers.value.get(runId)
-    if (timer) {
-      clearTimeout(timer)
-      pipelinePollingTimers.value.delete(runId)
-    }
-  }
-  
-  function stopAllPipelinePolling() {
-    for (const runId of pipelinePollingIds.value) {
-      stopPipelinePolling(runId)
-    }
   }
 
   return {
@@ -654,26 +442,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
     startPolling,
     stopPolling,
     stopAllPolling,
-    
-    // Pipeline state (T205)
-    pipelineRuns,
-    currentPipeline,
-    activePipelines,
-    completedPipelines,
-    failedPipelines,
-    
-    // Pipeline actions (T205)
-    enqueuePipeline,
-    getPipelineStatus,
-    getPipelineHistory,
-    retryPipeline,
-    cancelPipeline,
-    
-    // Pipeline polling (T205)
-    startPipelinePolling,
-    stopPipelinePolling,
-    stopAllPipelinePolling,
-    pipelinePollingCount: computed(() => pipelinePollingIds.value.size),
     
     // Reset
     $reset,
