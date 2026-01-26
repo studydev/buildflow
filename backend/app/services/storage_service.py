@@ -5,7 +5,7 @@ Per tasks.md T600: Implements upload/download/delete for generated assets.
 
 import logging
 from datetime import datetime, timedelta
-from typing import BinaryIO, Optional
+from typing import BinaryIO, Optional, Union
 from uuid import UUID
 
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
@@ -132,7 +132,7 @@ class StorageService:
         self,
         container_name: str,
         blob_path: str,
-        data: bytes | BinaryIO,
+        data: Union[bytes, BinaryIO],
         content_type: Optional[str] = None,
         metadata: Optional[dict[str, str]] = None,
         overwrite: bool = True,
@@ -351,7 +351,7 @@ class StorageService:
 
     def build_asset_path(
         self,
-        content_id: str | UUID,
+        content_id: Union[str, UUID],
         asset_type: str,
         format: str = "png",
     ) -> str:

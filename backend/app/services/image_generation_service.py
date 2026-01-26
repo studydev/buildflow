@@ -64,6 +64,19 @@ The image should intuitively represent the workshop's goal and make viewers curi
         self.image_size = getattr(settings, 'azure_dalle_image_size', '1536x1024')
         self._client: Optional[httpx.AsyncClient] = None
 
+        # Log configuration status (without sensitive data)
+        logger.info(
+            f"ImageGenerationService initialized: "
+            f"endpoint={'set' if self.endpoint else 'NOT SET'}, "
+            f"api_key={'set' if self.api_key else 'NOT SET'}, "
+            f"deployment={self.deployment}, "
+            f"image_size={self.image_size}"
+        )
+
+    def _is_configured(self) -> bool:
+        """Check if service is properly configured."""
+        return bool(self.endpoint and self.api_key)
+
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create HTTP client."""
         if self._client is None:
@@ -110,9 +123,18 @@ The image should intuitively represent the workshop's goal and make viewers curi
         Raises:
             ImageGenerationError: If generation fails
         """
+        # Check configuration
+        if not self._is_configured():
+            raise ImageGenerationError(
+                f"Image generation not configured: "
+                f"endpoint={'set' if self.endpoint else 'MISSING'}, "
+                f"api_key={'set' if self.api_key else 'MISSING'}"
+            )
+
         prompt = self._build_prompt(title, description, technologies)
 
         logger.info(f"Generating thumbnail for: {title[:50]}...")
+        logger.debug(f"DALL-E request URL: {self.endpoint}/openai/deployments/{self.deployment}/images/generations")
 
         try:
             client = await self._get_client()
@@ -204,7 +226,9 @@ The image should intuitively represent the workshop's goal and make viewers curi
         Raises:
             ImageGenerationError: If generation or upload fails
         """
-        from app.services.storage_service import StorageService
+        from app.services.storage_service import StorageError, StorageService
+
+        logger.info(f"Starting thumbnail generation for content_id={content_id}")
 
         # Generate image
         image_bytes = await self.generate_thumbnail(
@@ -214,23 +238,29 @@ The image should intuitively represent the workshop's goal and make viewers curi
             categories=categories,
         )
 
+        logger.info(f"Generated image: {len(image_bytes)} bytes, uploading to storage...")
+
         # Build blob path
         blob_path = f"{content_id}/thumbnail.png"
 
         try:
             # Upload to storage
             storage_service = StorageService()
+            logger.info(f"StorageService initialized, uploading to {REPO_IMAGES_CONTAINER}/{blob_path}")
+
             await storage_service.upload_blob(
                 container_name=REPO_IMAGES_CONTAINER,
                 blob_path=blob_path,
                 data=image_bytes,
                 content_type="image/png",
                 metadata={
-                    "content_id": content_id,
+                    "content_id": str(content_id),
                     "generated_by": "dalle",
                     "model": self.deployment,
                 },
             )
+
+            logger.info("Upload complete, generating SAS URL...")
 
             # Generate SAS URL (valid for 1 year = 8760 hours)
             sas_url = storage_service.get_sas_url(
@@ -240,10 +270,14 @@ The image should intuitively represent the workshop's goal and make viewers curi
                 permissions="r",
             )
 
-            logger.info("Uploaded thumbnail with SAS URL")
+            logger.info(f"Thumbnail uploaded successfully. SAS URL generated for content_id={content_id}")
             return sas_url
 
+        except StorageError as e:
+            logger.error(f"Storage error uploading thumbnail: {e}")
+            raise ImageGenerationError(f"Storage error: {e}")
         except Exception as e:
+            logger.error(f"Failed to upload image: {type(e).__name__}: {e}")
             raise ImageGenerationError(f"Failed to upload image: {e}")
 
     async def close(self):

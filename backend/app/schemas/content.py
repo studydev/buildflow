@@ -36,8 +36,8 @@ class ContentResponse(BaseModel):
     difficulty_level: Optional[str] = None
 
     # Resource links
-    youtube_url: Optional[str] = None
-    pdf_url: Optional[str] = None
+    video_url: Optional[str] = None
+    docs_url: Optional[str] = None
     pptx_url: Optional[str] = None
 
     # Link to original analysis request
@@ -82,8 +82,8 @@ class ContentUpdateRequest(BaseModel):
     title_kr: Optional[str] = Field(None, max_length=200)
     description_kr: Optional[str] = Field(None, max_length=2000)
     # Resource links
-    youtube_url: Optional[str] = None
-    pdf_url: Optional[str] = None
+    video_url: Optional[str] = None
+    docs_url: Optional[str] = None
     pptx_url: Optional[str] = None
 
 

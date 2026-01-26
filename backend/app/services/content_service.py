@@ -191,10 +191,10 @@ class ContentService:
         if data.description_kr is not None:
             existing.description_kr = data.description_kr
         # Resource links
-        if data.youtube_url is not None:
-            existing.youtube_url = data.youtube_url
-        if data.pdf_url is not None:
-            existing.pdf_url = data.pdf_url
+        if data.video_url is not None:
+            existing.video_url = data.video_url
+        if data.docs_url is not None:
+            existing.docs_url = data.docs_url
         if data.pptx_url is not None:
             existing.pptx_url = data.pptx_url
 
