@@ -34,6 +34,8 @@ export interface ContentItem {
   technologies?: string[]
   popularity_score?: number
   stars?: number
+  forks?: number
+  last_commit_date?: string
   is_maintained?: boolean
   // Localization fields (Milestone 5)
   title_kr?: string

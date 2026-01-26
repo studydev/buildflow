@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import Any, Optional
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
@@ -39,48 +39,25 @@ class Content(BaseModel):
 
     # Metadata
     thumbnail_url: Optional[str] = None
-    og_image_url: Optional[str] = None  # Open Graph image for social sharing
     icon: Optional[str] = None
     language: Optional[str] = None  # Primary programming language
 
     # Analysis results
     analysis_status: str = "pending"  # pending, processing, completed, failed
-    analysis_result: Optional[dict] = None
 
-    # Pipeline references (Milestone 2)
-    raw_extraction_id: Optional[UUID] = None  # Reference to immutable RawExtraction
-    enrichment_version: Optional[str] = None  # Semantic version e.g., "1.0.0"
-    last_enriched_at: Optional[datetime] = None
-    popularity_score: Optional[float] = None  # 0.0-1.0 normalized score
-
-    # Enrichment fields (Milestone 3 - design.md §5 Content Extended)
-    summary_short: Optional[str] = None  # max 200 chars
-    summary_long: Optional[str] = None  # max 2000 chars
-    difficulty_level: Optional[str] = None  # beginner/intermediate/advanced
-    estimated_time: Optional[str] = None  # e.g., "2-4 hours"
+    # Learning content fields
     learning_outcomes: list[str] = Field(default_factory=list)
     prerequisites: list[str] = Field(default_factory=list)
     technologies: list[str] = Field(default_factory=list)
 
-    # Repository signals (for popularity score)
+    # Repository signals
     stars: Optional[int] = None
     forks: Optional[int] = None
     last_commit_date: Optional[datetime] = None
-    is_maintained: Optional[bool] = None
 
-    # Quality signals
-    has_documentation: Optional[bool] = None
-    has_tests: Optional[bool] = None
-    has_ci: Optional[bool] = None
-
-    # Localization fields (Milestone 5 - design.md §3.3)
+    # Localization fields
     title_kr: Optional[str] = None
     description_kr: Optional[str] = None
-    summary_kr: Optional[str] = None
-    prerequisites_kr: list[str] = Field(default_factory=list)
-    learning_outcomes_kr: list[str] = Field(default_factory=list)
-    localized_at: Optional[datetime] = None
-    localization_model: Optional[str] = None
 
     # Resource links (for card display)
     video_url: Optional[str] = None
@@ -112,20 +89,10 @@ class Content(BaseModel):
             "level": self.level,
             "duration_minutes": self.duration_minutes,
             "thumbnail_url": self.thumbnail_url,
-            "og_image_url": self.og_image_url,
             "icon": self.icon,
             "language": self.language,
             "analysis_status": self.analysis_status,
-            "analysis_result": self.analysis_result,
-            "raw_extraction_id": str(self.raw_extraction_id) if self.raw_extraction_id else None,
-            "enrichment_version": self.enrichment_version,
-            "last_enriched_at": self.last_enriched_at.isoformat() if self.last_enriched_at else None,
-            "popularity_score": self.popularity_score,
-            # Enrichment fields (Milestone 3)
-            "summary_short": self.summary_short,
-            "summary_long": self.summary_long,
-            "difficulty_level": self.difficulty_level,
-            "estimated_time": self.estimated_time,
+            # Learning content fields
             "learning_outcomes": self.learning_outcomes,
             "prerequisites": self.prerequisites,
             "technologies": self.technologies,
@@ -133,19 +100,9 @@ class Content(BaseModel):
             "stars": self.stars,
             "forks": self.forks,
             "last_commit_date": self.last_commit_date.isoformat() if self.last_commit_date else None,
-            "is_maintained": self.is_maintained,
-            # Quality signals
-            "has_documentation": self.has_documentation,
-            "has_tests": self.has_tests,
-            "has_ci": self.has_ci,
-            # Localization fields (Milestone 5)
+            # Localization fields
             "title_kr": self.title_kr,
             "description_kr": self.description_kr,
-            "summary_kr": self.summary_kr,
-            "prerequisites_kr": self.prerequisites_kr,
-            "learning_outcomes_kr": self.learning_outcomes_kr,
-            "localized_at": self.localized_at.isoformat() if self.localized_at else None,
-            "localization_model": self.localization_model,
             # Resource links
             "video_url": self.video_url,
             "docs_url": self.docs_url,
@@ -161,15 +118,6 @@ class Content(BaseModel):
     @classmethod
     def from_cosmos_item(cls, item: dict[str, Any]) -> "Content":
         """Create Content from Cosmos DB document."""
-        from uuid import UUID
-
-        raw_extraction_id = None
-        if item.get("raw_extraction_id"):
-            try:
-                raw_extraction_id = UUID(item["raw_extraction_id"])
-            except (ValueError, TypeError):
-                pass
-
         return cls(
             id=item["id"],
             contributor_id=item.get("contributor_id"),
@@ -184,40 +132,20 @@ class Content(BaseModel):
             level=item.get("level", "beginner"),
             duration_minutes=item.get("duration_minutes", 60),
             thumbnail_url=item.get("thumbnail_url"),
-            og_image_url=item.get("og_image_url"),
             icon=item.get("icon"),
             language=item.get("language"),
             analysis_status=item.get("analysis_status", "pending"),
-            analysis_result=item.get("analysis_result"),
-            raw_extraction_id=raw_extraction_id,
-            enrichment_version=item.get("enrichment_version"),
-            last_enriched_at=datetime.fromisoformat(item["last_enriched_at"]) if item.get("last_enriched_at") else None,
-            popularity_score=item.get("popularity_score"),
-            # Enrichment fields (Milestone 3)
-            summary_short=item.get("summary_short"),
-            summary_long=item.get("summary_long"),
-            difficulty_level=item.get("difficulty_level"),
-            estimated_time=item.get("estimated_time"),
+            # Learning content fields
             learning_outcomes=item.get("learning_outcomes", []),
             prerequisites=item.get("prerequisites", []),
             technologies=item.get("technologies", []),
             # Repository signals
             stars=item.get("stars"),
             forks=item.get("forks"),
-            last_commit_date=datetime.fromisoformat(item["last_commit_date"]) if item.get("last_commit_date") else None,
-            is_maintained=item.get("is_maintained"),
-            # Quality signals
-            has_documentation=item.get("has_documentation"),
-            has_tests=item.get("has_tests"),
-            has_ci=item.get("has_ci"),
-            # Localization fields (Milestone 5)
+            last_commit_date=datetime.fromisoformat(item["last_commit_date"].replace("Z", "+00:00")) if item.get("last_commit_date") else None,
+            # Localization fields
             title_kr=item.get("title_kr"),
             description_kr=item.get("description_kr"),
-            summary_kr=item.get("summary_kr"),
-            prerequisites_kr=item.get("prerequisites_kr", []),
-            learning_outcomes_kr=item.get("learning_outcomes_kr", []),
-            localized_at=datetime.fromisoformat(item["localized_at"]) if item.get("localized_at") else None,
-            localization_model=item.get("localization_model"),
             # Resource links
             video_url=item.get("video_url"),
             docs_url=item.get("docs_url"),
@@ -253,30 +181,19 @@ class ContentPublic(BaseModel):
     level: str
     duration_minutes: int
     thumbnail_url: Optional[str]
-    og_image_url: Optional[str]
     icon: Optional[str]
     source_url: str
     view_count: int
     bookmark_count: int
     published_at: Optional[datetime]
-    # Enrichment fields (Milestone 3)
-    summary_short: Optional[str] = None
-    summary_long: Optional[str] = None
-    difficulty_level: Optional[str] = None
-    estimated_time: Optional[str] = None
+    # Learning content fields
     learning_outcomes: list[str] = Field(default_factory=list)
     prerequisites: list[str] = Field(default_factory=list)
     technologies: list[str] = Field(default_factory=list)
-    popularity_score: Optional[float] = None
     stars: Optional[int] = None
-    is_maintained: Optional[bool] = None
-
-    # Localization fields (Milestone 5)
+    # Localization fields
     title_kr: Optional[str] = None
     description_kr: Optional[str] = None
-    summary_kr: Optional[str] = None
-    prerequisites_kr: list[str] = Field(default_factory=list)
-    learning_outcomes_kr: list[str] = Field(default_factory=list)
 
     @classmethod
     def from_content(cls, content: Content) -> "ContentPublic":
@@ -290,27 +207,17 @@ class ContentPublic(BaseModel):
             level=content.level,
             duration_minutes=content.duration_minutes,
             thumbnail_url=content.thumbnail_url,
-            og_image_url=content.og_image_url,
             icon=content.icon,
             source_url=content.source_url,
             view_count=content.view_count,
             bookmark_count=content.bookmark_count,
             published_at=content.published_at,
-            # Enrichment fields
-            summary_short=content.summary_short,
-            summary_long=content.summary_long,
-            difficulty_level=content.difficulty_level,
-            estimated_time=content.estimated_time,
+            # Learning content fields
             learning_outcomes=content.learning_outcomes,
             prerequisites=content.prerequisites,
             technologies=content.technologies,
-            popularity_score=content.popularity_score,
             stars=content.stars,
-            is_maintained=content.is_maintained,
             # Localization fields
             title_kr=content.title_kr,
             description_kr=content.description_kr,
-            summary_kr=content.summary_kr,
-            prerequisites_kr=content.prerequisites_kr,
-            learning_outcomes_kr=content.learning_outcomes_kr,
         )

@@ -277,7 +277,6 @@ class TestContentServiceCreateFromAnalysis:
         assert content.level == "intermediate"
         assert content.duration_minutes == 120
         assert content.analysis_status == "completed"
-        assert content.analysis_result is not None
 
     @pytest.mark.asyncio
     async def test_create_from_analysis_with_defaults(self, content_service):

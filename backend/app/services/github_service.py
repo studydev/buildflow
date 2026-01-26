@@ -665,15 +665,26 @@ class GitHubService:
         ]
 
         docs_patterns = [
+            # PDF links in markdown (first match wins)
+            r'\[(?:[^\]]*)\]\((https?://[^\)]+\.pdf)\)',
+            # PDF URLs directly in text
+            r'(https?://[^\s\)]+\.pdf)',
+            # Existing patterns
             r'\[(?:documentation|docs|api docs|api reference|wiki)\]\((https?://[^\)]+)\)',
             r'(?:documentation|docs):\s*(https?://[^\s\)]+)',
             r'https?://(?:[\w-]+\.)?(?:readthedocs\.io|gitbook\.io|notion\.so|docs\.[\w-]+\.(?:com|io|dev))[^\s\)]*',
         ]
 
         video_patterns = [
-            r'\[(?:video|tutorial|demo video|youtube)\]\((https?://[^\)]+)\)',
+            # YouTube short links (youtu.be) - common in Korean READMEs
+            r'(https?://youtu\.be/[\w-]+)',
+            # YouTube watch links
+            r'(https?://(?:www\.)?youtube\.com/watch\?v=[\w-]+)',
+            # YouTube links in markdown
+            r'\[(?:video|tutorial|demo video|youtube|영상|동영상)\]\((https?://[^\)]+)\)',
             r'(?:video|tutorial|watch):\s*(https?://[^\s\)]+)',
-            r'https?://(?:www\.)?(?:youtube\.com/watch|youtu\.be|vimeo\.com)[^\s\)]*',
+            # Vimeo
+            r'(https?://(?:www\.)?vimeo\.com/[\w-]+)',
         ]
 
         readme_lower = readme_content.lower()

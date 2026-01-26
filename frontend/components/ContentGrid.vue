@@ -11,6 +11,35 @@ onMounted(async () => {
   }
 })
 
+// Format star count (e.g., 1500 -> "1.5k")
+function formatStars(stars: number | undefined): string {
+  if (!stars) return '0'
+  if (stars >= 1000) {
+    return (stars / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
+  }
+  return stars.toString()
+}
+
+// Format relative time for last commit
+function formatLastCommit(dateStr: string | undefined): string {
+  if (!dateStr) return ''
+  
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  
+  if (diffDays < 1) return '오늘'
+  if (diffDays === 1) return '어제'
+  if (diffDays < 30) return `${diffDays}일 전`
+  
+  const diffMonths = Math.floor(diffDays / 30)
+  if (diffMonths < 12) return `${diffMonths}개월 전`
+  
+  const diffYears = Math.floor(diffMonths / 12)
+  return `${diffYears}년 전`
+}
+
 // Map content items to display format with language support
 const displayItems = computed(() => {
   // Access displayLanguage directly to ensure reactivity tracking
@@ -43,7 +72,7 @@ const displayItems = computed(() => {
     })),
     actions: [
       { label: 'PDF', icon: 'pdf', primary: false },
-      { label: 'YouTube', icon: 'youtube', primary: false },
+      { label: 'YouTube', icon: 'youtube', primary: false, url: item.video_url, hasUrl: !!item.video_url },
       { label: 'GitHub', icon: 'github', primary: true, url: item.source_url }
     ],
     level: item.level || item.difficulty_level,
@@ -57,6 +86,9 @@ const displayItems = computed(() => {
     learningOutcomes: lang === 'ko' && item.learning_outcomes_kr?.length 
       ? item.learning_outcomes_kr 
       : item.learning_outcomes,
+    // Repository metadata
+    stars: item.stars,
+    lastCommitDate: item.last_commit_date,
   }))
 })
 
@@ -68,6 +100,8 @@ const fallbackContentItems = [
     title: 'LAB510: VS Code에서 GitHub Copilot의 강력한 기능',
     description: '이 실습형 랩에서는 Visual Studio Code에서 GitHub Copilot을 활용하여 일상적인 코딩 작업에서 가치를 극대화하는 방법을 심층적으로 다룹니다.',
     thumbnailUrl: undefined,
+    stars: undefined,
+    lastCommitDate: undefined,
     tags: [
       { label: 'AI', color: 'workshop' },
       { label: 'Copilot', color: 'workshop' },
@@ -85,6 +119,8 @@ const fallbackContentItems = [
     title: 'LAB511: Azure AI Search로 에이전틱 지식 베이스 구축',
     description: 'Azure AI Search의 차세대 검색 방식인 에이전틱 RAG를 사용하여 Knowledge Base를 구축합니다.',
     thumbnailUrl: undefined,
+    stars: undefined,
+    lastCommitDate: undefined,
     tags: [
       { label: 'AI', color: 'workshop' },
       { label: 'Azure', color: 'azure' },
@@ -102,6 +138,8 @@ const fallbackContentItems = [
     title: 'LAB512: Microsoft Foundry 및 AI Toolkit을 사용한 멀티모달 에이전트 프로토타이핑',
     description: '이 실습에서는 VS Code에서 AI Toolkit(AITK)과 Microsoft Foundry를 직접 사용하여 Model Catalog의 최신 멀티모달 및 추론 모델을 탐색합니다.',
     thumbnailUrl: undefined,
+    stars: undefined,
+    lastCommitDate: undefined,
     tags: [
       { label: 'AI', color: 'workshop' },
       { label: 'Azure', color: 'azure' },
@@ -119,6 +157,8 @@ const fallbackContentItems = [
     title: 'LAB514: MCP 및 Azure Functions로 AI 에이전트를 빌드하고 배포하기',
     description: 'Azure Functions를 사용하여 GitHub Copilot과 같은 AI 어시스턴트를 위한 MCP 도구를 만드는 방법을 학습합니다.',
     thumbnailUrl: undefined,
+    stars: undefined,
+    lastCommitDate: undefined,
     tags: [
       { label: 'AI', color: 'workshop' },
       { label: 'Azure', color: 'azure' },
@@ -141,7 +181,7 @@ const contentItems = computed(() => {
 })
 
 // Handle action click (e.g., open GitHub link)
-function handleActionClick(action: { label: string; icon: string; primary: boolean; url?: string }) {
+function handleActionClick(action: { label: string; icon: string; primary: boolean; url?: string; hasUrl?: boolean }) {
   if (action.url) {
     window.open(action.url, '_blank', 'noopener,noreferrer')
   }
@@ -212,6 +252,28 @@ function handleActionClick(action: { label: string; icon: string; primary: boole
         >
           <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
         </svg>
+        
+        <!-- Stars badge (top right) -->
+        <div 
+          v-if="item.stars" 
+          class="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-md text-white text-xs font-semibold"
+        >
+          <svg class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+          </svg>
+          {{ formatStars(item.stars) }}
+        </div>
+        
+        <!-- Last commit badge (bottom right) -->
+        <div 
+          v-if="item.lastCommitDate" 
+          class="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-md text-white text-xs"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          {{ formatLastCommit(item.lastCommitDate) }}
+        </div>
       </div>
       
       <div class="p-5 flex flex-col flex-1">
@@ -248,7 +310,9 @@ function handleActionClick(action: { label: string; icon: string; primary: boole
               'flex-1 px-4 py-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center gap-1.5',
               action.primary
                 ? 'bg-primary hover:bg-primary-hover text-white'
-                : 'bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--border-hover)]'
+                : action.icon === 'youtube' && action.hasUrl
+                  ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 hover:border-red-500/50'
+                  : 'bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--border-hover)]'
             ]"
           >
             <!-- GitHub SVG -->

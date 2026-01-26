@@ -24,16 +24,18 @@ class ContentResponse(BaseModel):
     bookmark_count: int
     published_at: Optional[datetime] = None
 
-    # Bilingual fields (T502)
+    # Localization fields
     title_kr: Optional[str] = None
     description_kr: Optional[str] = None
-    summary_short: Optional[str] = None
-    summary_kr: Optional[str] = None
+
+    # Learning content fields
     prerequisites: list[str] = Field(default_factory=list)
-    prerequisites_kr: list[str] = Field(default_factory=list)
     learning_outcomes: list[str] = Field(default_factory=list)
-    learning_outcomes_kr: list[str] = Field(default_factory=list)
-    difficulty_level: Optional[str] = None
+
+    # Repository metadata
+    stars: Optional[int] = None
+    forks: Optional[int] = None
+    last_commit_date: Optional[datetime] = None
 
     # Resource links
     video_url: Optional[str] = None

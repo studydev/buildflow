@@ -78,6 +78,35 @@ const isRegeneratingThumbnail = ref(false)
 
 // UI State
 const activeTab = ref<'analysis' | 'content'>('analysis')
+
+// Format star count (e.g., 1500 -> "1.5k")
+function formatStars(stars: number | undefined): string {
+  if (!stars) return '0'
+  if (stars >= 1000) {
+    return (stars / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
+  }
+  return stars.toString()
+}
+
+// Format relative time for last commit
+function formatLastCommit(dateStr: string | undefined): string {
+  if (!dateStr) return ''
+  
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  
+  if (diffDays < 1) return '오늘'
+  if (diffDays === 1) return '어제'
+  if (diffDays < 30) return `${diffDays}일 전`
+  
+  const diffMonths = Math.floor(diffDays / 30)
+  if (diffMonths < 12) return `${diffMonths}개월 전`
+  
+  const diffYears = Math.floor(diffMonths / 12)
+  return `${diffYears}년 전`
+}
 const searchQuery = ref('')
 const contentSearchQuery = ref('')
 const statusFilter = ref<string | null>(null)
@@ -271,10 +300,10 @@ const saveEdit = async () => {
       // Bilingual fields
       title_kr: editingItem.value.title_kr,
       description_kr: editingItem.value.description_kr,
-      // Resource links
-      video_url: editingItem.value.video_url,
-      docs_url: editingItem.value.docs_url,
-      pptx_url: editingItem.value.pptx_url,
+      // Resource links - use empty string as fallback to ensure field is sent in JSON
+      video_url: editingItem.value.video_url || '',
+      docs_url: editingItem.value.docs_url || '',
+      pptx_url: editingItem.value.pptx_url || '',
     })
     
     if (result) {
@@ -999,16 +1028,39 @@ onUnmounted(() => {
             <!-- Status Badge -->
             <span
               v-if="item.status === 'archived'"
-              class="absolute top-2 right-2 px-2 py-1 rounded-md text-xs font-header font-semibold uppercase tracking-wide bg-red-600/90 text-white border border-red-500/50 z-10"
+              class="absolute top-2 left-2 px-2 py-1 rounded-md text-xs font-header font-semibold uppercase tracking-wide bg-red-600/90 text-white border border-red-500/50 z-10"
             >
               Archived
             </span>
             <span
               v-else-if="item.status === 'draft'"
-              class="absolute top-2 right-2 px-2 py-1 rounded-md text-xs font-header font-semibold uppercase tracking-wide bg-yellow-600/80 text-yellow-100 border border-yellow-500/50 z-10"
+              class="absolute top-2 left-2 px-2 py-1 rounded-md text-xs font-header font-semibold uppercase tracking-wide bg-yellow-600/80 text-yellow-100 border border-yellow-500/50 z-10"
             >
               Draft
             </span>
+            
+            <!-- Stars badge (top right) -->
+            <div 
+              v-if="item.stars" 
+              class="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-md text-white text-xs font-semibold z-10"
+            >
+              <svg class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+              </svg>
+              {{ formatStars(item.stars) }}
+            </div>
+            
+            <!-- Last commit badge (bottom right) -->
+            <div 
+              v-if="item.last_commit_date" 
+              class="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-md text-white text-xs z-10"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              {{ formatLastCommit(item.last_commit_date) }}
+            </div>
+            
             <!-- Thumbnail Image -->
             <img 
               v-if="item.thumbnail_url" 

@@ -76,6 +76,14 @@ class ContentService:
         icon = icon_map.get(content_type, "📄")
 
         # Create content with PUBLISHED status so it shows immediately
+        # Parse last_commit_date from result.updated_at if available
+        last_commit_date = None
+        if result.updated_at:
+            try:
+                last_commit_date = datetime.fromisoformat(result.updated_at.replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
+                pass
+
         content = Content(
             contributor_id=contributor_id,
             analysis_request_id=analysis_request_id,
@@ -91,16 +99,20 @@ class ContentService:
             level=result.level or "beginner",
             duration_minutes=result.duration_minutes or 60,
             icon=icon,
+            language=result.language,  # Primary programming language
             analysis_status="completed",
-            analysis_result=result.to_dict(),
             published_at=datetime.utcnow(),
-            # Additional bilingual fields from analysis
+            # Learning content fields from analysis
             prerequisites=result.prerequisites or [],
             learning_outcomes=result.learning_objectives or [],
             technologies=result.technologies or [],
             # GitHub repository metadata
             stars=result.stars if result.stars else None,
             forks=result.forks if result.forks else None,
+            last_commit_date=last_commit_date,
+            # Resource links from analysis
+            video_url=result.video_url,
+            docs_url=result.docs_url,
         )
 
         # Persist to database
@@ -325,16 +337,20 @@ class ContentService:
                 view_count=c.view_count,
                 bookmark_count=c.bookmark_count,
                 published_at=c.published_at,
-                # Bilingual fields
+                # Localization fields
                 title_kr=getattr(c, 'title_kr', None),
                 description_kr=getattr(c, 'description_kr', None),
-                summary_short=getattr(c, 'summary_short', None),
-                summary_kr=getattr(c, 'summary_kr', None),
+                # Learning content fields
                 prerequisites=getattr(c, 'prerequisites', []) or [],
-                prerequisites_kr=getattr(c, 'prerequisites_kr', []) or [],
                 learning_outcomes=getattr(c, 'learning_outcomes', []) or [],
-                learning_outcomes_kr=getattr(c, 'learning_outcomes_kr', []) or [],
-                difficulty_level=getattr(c, 'difficulty_level', None),
+                # Repository metadata
+                stars=getattr(c, 'stars', None),
+                forks=getattr(c, 'forks', None),
+                last_commit_date=getattr(c, 'last_commit_date', None),
+                # Resource links
+                video_url=getattr(c, 'video_url', None),
+                docs_url=getattr(c, 'docs_url', None),
+                pptx_url=getattr(c, 'pptx_url', None),
                 analysis_request_id=getattr(c, 'analysis_request_id', None),
             )
             for c in contents
@@ -388,16 +404,20 @@ class ContentService:
                 view_count=c.view_count,
                 bookmark_count=c.bookmark_count,
                 published_at=c.published_at,
-                # Bilingual fields (T502)
+                # Localization fields
                 title_kr=getattr(c, 'title_kr', None),
                 description_kr=getattr(c, 'description_kr', None),
-                summary_short=getattr(c, 'summary_short', None),
-                summary_kr=getattr(c, 'summary_kr', None),
+                # Learning content fields
                 prerequisites=getattr(c, 'prerequisites', []) or [],
-                prerequisites_kr=getattr(c, 'prerequisites_kr', []) or [],
                 learning_outcomes=getattr(c, 'learning_outcomes', []) or [],
-                learning_outcomes_kr=getattr(c, 'learning_outcomes_kr', []) or [],
-                difficulty_level=getattr(c, 'difficulty_level', None),
+                # Repository metadata
+                stars=getattr(c, 'stars', None),
+                forks=getattr(c, 'forks', None),
+                last_commit_date=getattr(c, 'last_commit_date', None),
+                # Resource links
+                video_url=getattr(c, 'video_url', None),
+                docs_url=getattr(c, 'docs_url', None),
+                pptx_url=getattr(c, 'pptx_url', None),
                 analysis_request_id=getattr(c, 'analysis_request_id', None),
             )
             for c in contents
@@ -452,16 +472,20 @@ class ContentService:
                 view_count=c.view_count,
                 bookmark_count=c.bookmark_count,
                 published_at=c.published_at,
-                # Bilingual fields
+                # Localization fields
                 title_kr=getattr(c, 'title_kr', None),
                 description_kr=getattr(c, 'description_kr', None),
-                summary_short=getattr(c, 'summary_short', None),
-                summary_kr=getattr(c, 'summary_kr', None),
+                # Learning content fields
                 prerequisites=getattr(c, 'prerequisites', []) or [],
-                prerequisites_kr=getattr(c, 'prerequisites_kr', []) or [],
                 learning_outcomes=getattr(c, 'learning_outcomes', []) or [],
-                learning_outcomes_kr=getattr(c, 'learning_outcomes_kr', []) or [],
-                difficulty_level=getattr(c, 'difficulty_level', None),
+                # Repository metadata
+                stars=getattr(c, 'stars', None),
+                forks=getattr(c, 'forks', None),
+                last_commit_date=getattr(c, 'last_commit_date', None),
+                # Resource links
+                video_url=getattr(c, 'video_url', None),
+                docs_url=getattr(c, 'docs_url', None),
+                pptx_url=getattr(c, 'pptx_url', None),
                 analysis_request_id=getattr(c, 'analysis_request_id', None),
             )
             for c in contents
@@ -515,16 +539,20 @@ class ContentService:
                 view_count=c.view_count,
                 bookmark_count=c.bookmark_count,
                 published_at=c.published_at,
-                # Bilingual fields (T502)
+                # Localization fields
                 title_kr=getattr(c, 'title_kr', None),
                 description_kr=getattr(c, 'description_kr', None),
-                summary_short=getattr(c, 'summary_short', None),
-                summary_kr=getattr(c, 'summary_kr', None),
+                # Learning content fields
                 prerequisites=getattr(c, 'prerequisites', []) or [],
-                prerequisites_kr=getattr(c, 'prerequisites_kr', []) or [],
                 learning_outcomes=getattr(c, 'learning_outcomes', []) or [],
-                learning_outcomes_kr=getattr(c, 'learning_outcomes_kr', []) or [],
-                difficulty_level=getattr(c, 'difficulty_level', None),
+                # Repository metadata
+                stars=getattr(c, 'stars', None),
+                forks=getattr(c, 'forks', None),
+                last_commit_date=getattr(c, 'last_commit_date', None),
+                # Resource links
+                video_url=getattr(c, 'video_url', None),
+                docs_url=getattr(c, 'docs_url', None),
+                pptx_url=getattr(c, 'pptx_url', None),
                 analysis_request_id=getattr(c, 'analysis_request_id', None),
             )
             for c in contents
