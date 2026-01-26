@@ -74,6 +74,7 @@ const isEditModalOpen = ref(false)
 const editingItem = ref<StoreContentItem | null>(null)
 const isSaving = ref(false)
 const editLanguage = ref<'en' | 'ko'>('en')
+const isRegeneratingThumbnail = ref(false)
 
 // UI State
 const activeTab = ref<'analysis' | 'content'>('analysis')
@@ -116,6 +117,7 @@ const getStatusBadgeClass = (status: string) => {
     pending: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
     fetching: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
     parsing: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+    generating_thumbnail: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
     completed: 'bg-green-500/10 text-green-600 border-green-500/20',
     failed: 'bg-red-500/10 text-red-600 border-red-500/20',
   }
@@ -127,6 +129,7 @@ const getStatusLabel = (status: string) => {
     pending: '대기중',
     fetching: '가져오는 중...',
     parsing: '분석 중...',
+    generating_thumbnail: '썸네일 생성 중...',
     completed: '완료',
     failed: '실패',
   }
@@ -286,6 +289,31 @@ const saveEdit = async () => {
     alert('Failed to save changes')
   } finally {
     isSaving.value = false
+  }
+}
+
+// Regenerate AI thumbnail
+const handleRegenerateThumbnail = async () => {
+  if (!editingItem.value?.id) return
+  
+  if (!confirm('썸네일을 재생성하시겠습니까? AI가 새로운 이미지를 생성합니다.')) return
+  
+  isRegeneratingThumbnail.value = true
+  
+  try {
+    const result = await contentStore.regenerateThumbnail(editingItem.value.id)
+    
+    if (result) {
+      editingItem.value.thumbnail_url = result.thumbnail_url
+      alert('썸네일이 성공적으로 재생성되었습니다.')
+    } else {
+      alert('썸네일 재생성에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+    }
+  } catch (e) {
+    console.error('Failed to regenerate thumbnail:', e)
+    alert('썸네일 재생성에 실패했습니다.')
+  } finally {
+    isRegeneratingThumbnail.value = false
   }
 }
 
@@ -1220,15 +1248,46 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- 썸네일 URL -->
+          <!-- 썸네일 URL with AI Generation -->
           <div class="grid gap-2">
             <Label for="thumbnail">썸네일 URL</Label>
-            <Input 
-              id="thumbnail" 
-              v-model="editingItem.thumbnail_url" 
-              type="url" 
-              placeholder="https://example.com/image.jpg"
-            />
+            <div class="flex gap-2">
+              <Input 
+                id="thumbnail" 
+                v-model="editingItem.thumbnail_url" 
+                type="url" 
+                placeholder="https://example.com/image.jpg"
+                class="flex-1"
+              />
+              <button
+                @click="handleRegenerateThumbnail"
+                :disabled="isRegeneratingThumbnail || isSaving"
+                class="px-3 py-2 rounded-lg text-sm font-medium transition-all bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                title="AI로 새 썸네일 이미지 생성"
+              >
+                <span v-if="isRegeneratingThumbnail" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {{ isRegeneratingThumbnail ? '생성 중...' : 'AI 생성' }}
+              </button>
+            </div>
+            <p class="text-xs text-[var(--text-tertiary)]">
+              AI가 워크샵 내용을 기반으로 Microsoft 스타일의 전문적인 썸네일을 자동 생성합니다.
+            </p>
+          </div>
+
+          <!-- 썸네일 미리보기 -->
+          <div v-if="editingItem.thumbnail_url" class="grid gap-2">
+            <Label>썸네일 미리보기</Label>
+            <div class="relative aspect-[3/2] w-full max-w-md rounded-lg overflow-hidden border border-[var(--border)] bg-[var(--bg-secondary)]">
+              <img 
+                :src="editingItem.thumbnail_url" 
+                :alt="editingItem.title"
+                class="w-full h-full object-cover"
+                @error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
+              />
+            </div>
           </div>
 
           <!-- 아이콘 -->

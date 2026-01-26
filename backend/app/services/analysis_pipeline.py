@@ -57,6 +57,7 @@ class AnalysisPipeline:
     PROGRESS_FETCHING = 25
     PROGRESS_PARSING = 50
     PROGRESS_CREATING = 75
+    PROGRESS_GENERATING_THUMBNAIL = 85
     PROGRESS_COMPLETED = 100
 
     def __init__(
@@ -136,7 +137,11 @@ class AnalysisPipeline:
             if request.status == AnalysisStatus.FAILED:
                 return request
 
-            # Stage 4: Complete
+            # Stage 4: Generate AI Thumbnail Image
+            request = await self._stage_generate_thumbnail(request)
+            # Note: Thumbnail failure is non-fatal, continue to complete
+
+            # Stage 5: Complete
             request = await self._stage_complete(request)
 
             logger.info(f"Pipeline completed for request {request.id}")
@@ -392,9 +397,72 @@ class AnalysisPipeline:
             # but log the error
             return request
 
+    async def _stage_generate_thumbnail(self, request: AnalysisRequest) -> AnalysisRequest:
+        """
+        Stage 4: Generate AI thumbnail image for the content.
+
+        Uses DALL-E to create a professional workshop thumbnail and uploads to Azure Storage.
+        Failure is non-fatal - the pipeline will continue without a thumbnail.
+        """
+        from app.services.image_generation_service import (
+            ImageGenerationError,
+            get_image_generation_service,
+        )
+
+        logger.info(f"Generating thumbnail for request {request.id}")
+
+        # Update status to generating thumbnail
+        request = await self._update_status(
+            request,
+            AnalysisStatus.GENERATING_THUMBNAIL,
+            "Generating AI thumbnail image",
+            self.PROGRESS_GENERATING_THUMBNAIL,
+        )
+
+        # Check if we have content to generate thumbnail for
+        if not request.content_ids:
+            logger.warning(f"No content to generate thumbnail for request {request.id}")
+            return request
+
+        try:
+            result = getattr(request, '_analysis_result', None) or request.result
+            if not result:
+                logger.warning("No analysis result available for thumbnail generation")
+                return request
+
+            image_service = get_image_generation_service()
+            content_id = request.content_ids[0]  # Primary content
+
+            # Generate and upload thumbnail
+            thumbnail_url = await image_service.generate_and_upload_thumbnail(
+                content_id=content_id,
+                title=result.title or "Microsoft Azure Workshop",
+                description=result.description or "",
+                technologies=getattr(result, 'technologies', []) or [],
+                categories=getattr(result, 'categories', []) or [],
+            )
+
+            # Update content with thumbnail URL
+            from app.schemas.content import ContentUpdateRequest
+
+            update_data = ContentUpdateRequest(thumbnail_url=thumbnail_url)
+            await self.content_service.update(content_id, update_data)
+
+            logger.info(f"Successfully generated thumbnail for content {content_id}")
+            return request
+
+        except ImageGenerationError as e:
+            # Thumbnail generation failure is non-fatal
+            logger.warning(f"Thumbnail generation failed for request {request.id}: {e}")
+            # Continue without updating - content will have no thumbnail
+            return request
+        except Exception as e:
+            logger.error(f"Unexpected error generating thumbnail: {e}")
+            return request
+
     async def _stage_complete(self, request: AnalysisRequest) -> AnalysisRequest:
         """
-        Stage 4: Mark as completed and persist.
+        Stage 5: Mark as completed and persist.
         """
         logger.info(f"Completing request {request.id}")
 

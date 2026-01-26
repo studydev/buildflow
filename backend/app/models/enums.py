@@ -46,6 +46,7 @@ class AnalysisStatus(str, Enum):
     FETCHING = "fetching"
     PARSING = "parsing"
     ENRICHING = "enriching"
+    GENERATING_THUMBNAIL = "generating_thumbnail"  # AI thumbnail generation stage
     COMPLETED = "completed"
     FAILED = "failed"
 

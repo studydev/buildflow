@@ -34,6 +34,7 @@ var containerNames = [
   'generated-assets'    // For cards, slides, summaries
   'raw-extractions'     // For GitHub API raw responses
   'pipeline-artifacts'  // For intermediate pipeline outputs
+  'repo-images'         // For AI-generated thumbnail images
 ]
 
 // ============================================================================

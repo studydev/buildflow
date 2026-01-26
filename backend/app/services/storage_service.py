@@ -41,6 +41,7 @@ class StorageUploadError(StorageError):
 # Container names per design.md §3.4
 GENERATED_ASSETS_CONTAINER = "generated-assets"
 RAW_EXTRACTIONS_CONTAINER = "raw-extractions"
+REPO_IMAGES_CONTAINER = "repo-images"  # AI-generated thumbnail images
 
 # Content type mappings
 CONTENT_TYPE_MAP = {

@@ -599,6 +599,34 @@ export const useContentStore = defineStore('content', () => {
       isLoading.value = false
     }
   }
+
+  async function regenerateThumbnail(id: string): Promise<{ thumbnail_url: string } | null> {
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      const result = await apiRequest<{ content_id: string; thumbnail_url: string; message: string }>(
+        `/content/${id}/regenerate-thumbnail`,
+        {
+          method: 'POST',
+        }
+      )
+      
+      // Update local item with new thumbnail
+      const index = items.value.findIndex(item => item.id === id)
+      if (index !== -1) {
+        items.value[index].thumbnail_url = result.thumbnail_url
+      }
+      
+      return { thumbnail_url: result.thumbnail_url }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to regenerate thumbnail'
+      console.error('Failed to regenerate thumbnail:', e)
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
   
   function reset() {
     items.value = []
@@ -654,6 +682,7 @@ export const useContentStore = defineStore('content', () => {
     syncFromAnalysis,
     deleteContent,
     permanentDelete,
+    regenerateThumbnail,
     reset,
   }
 })

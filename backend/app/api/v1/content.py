@@ -611,3 +611,90 @@ async def delete_content(
     )
 
     return JSONResponse(content=response.model_dump(mode="json"))
+
+
+@router.post(
+    "/{content_id}/regenerate-thumbnail",
+    response_model=APIResponse,
+    summary="Regenerate thumbnail image",
+    description="Regenerate AI-generated thumbnail for content using DALL-E",
+)
+async def regenerate_thumbnail(
+    request: Request,
+    content_id: str,
+    current_user: UserPublic = Depends(require_contributor),
+) -> JSONResponse:
+    """
+    Regenerate thumbnail image for content.
+
+    - Requires contributor role
+    - Uses DALL-E to generate a new professional thumbnail
+    - Uploads to Azure Storage and updates content.thumbnail_url
+    """
+    from app.services.image_generation_service import (
+        ImageGenerationError,
+        get_image_generation_service,
+    )
+
+    service = get_content_service()
+    correlation_id = getattr(request.state, "correlation_id", "")
+
+    try:
+        # Get content
+        content = await service.get_by_id(content_id)
+        if content is None:
+            return JSONResponse(
+                status_code=404,
+                content=APIResponse(
+                    success=False,
+                    error={"code": "NOT_FOUND", "message": "Content not found"},
+                    meta=Meta.create(correlation_id),
+                ).model_dump(mode="json"),
+            )
+
+        # Generate thumbnail
+        image_service = get_image_generation_service()
+
+        thumbnail_url = await image_service.generate_and_upload_thumbnail(
+            content_id=content_id,
+            title=content.title,
+            description=content.description,
+            technologies=content.technologies or [],
+            categories=content.categories or [],
+        )
+
+        # Update content with new thumbnail URL
+        update_data = ContentUpdateRequest(thumbnail_url=thumbnail_url)
+        updated_content = await service.update(content_id, update_data)
+
+        response = APIResponse(
+            success=True,
+            data={
+                "content_id": content_id,
+                "thumbnail_url": thumbnail_url,
+                "message": "Thumbnail regenerated successfully",
+            },
+            meta=Meta.create(correlation_id),
+        )
+        return JSONResponse(content=response.model_dump(mode="json"))
+
+    except ImageGenerationError as e:
+        logger.error(f"Thumbnail regeneration failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content=APIResponse(
+                success=False,
+                error={"code": "IMAGE_GENERATION_ERROR", "message": str(e)},
+                meta=Meta.create(correlation_id),
+            ).model_dump(mode="json"),
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error regenerating thumbnail: {e}")
+        return JSONResponse(
+            status_code=500,
+            content=APIResponse(
+                success=False,
+                error={"code": "INTERNAL_ERROR", "message": "Failed to regenerate thumbnail"},
+                meta=Meta.create(correlation_id),
+            ).model_dump(mode="json"),
+        )

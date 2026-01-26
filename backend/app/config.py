@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     azure_openai_api_version: str = "2025-04-01-preview"
     azure_openai_embedding_deployment: str = "text-embedding-3-small"
 
+    # Azure DALL-E Image Generation Settings
+    azure_dalle_deployment: str = "gpt-image-1.5"
+    azure_dalle_image_size: str = "1536x1024"  # 3:2 ratio for card backgrounds
+
     # Azure AI Search Settings (Milestone 4)
     azure_search_endpoint: Optional[str] = None
     azure_search_api_key: Optional[str] = None
