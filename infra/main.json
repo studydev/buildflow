@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "7945079500825945536"
+      "templateHash": "12481685830952856457"
     }
   },
   "parameters": {
@@ -96,6 +96,13 @@
       "defaultValue": "http://localhost:5173,http://localhost:3000",
       "metadata": {
         "description": "CORS allowed origins (comma-separated)"
+      }
+    },
+    "devBypassEmail": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Dev bypass email for non-prod environments"
       }
     },
     "containerRegistryLoginServer": {
@@ -415,7 +422,7 @@
               "allowCredentials": true
             }
           },
-          "secrets": "[concat(createArray(createObject('name', 'jwt-secret', 'keyVaultUrl', reference('jwtSecretKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'cosmos-connection-string', 'keyVaultUrl', reference('cosmosConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), if(not(empty(parameters('acsConnectionString'))), createArray(createObject('name', 'acs-connection-string', 'keyVaultUrl', reference('acsConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'github-token', 'keyVaultUrl', reference('githubTokenKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()))]"
+          "secrets": "[concat(createArray(createObject('name', 'jwt-secret', 'keyVaultUrl', reference('jwtSecretKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'cosmos-connection-string', 'keyVaultUrl', reference('cosmosConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), if(not(empty(parameters('acsConnectionString'))), createArray(createObject('name', 'acs-connection-string', 'keyVaultUrl', reference('acsConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'github-token', 'keyVaultUrl', reference('githubTokenKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('azureOpenAiKey'))), createArray(createObject('name', 'azure-openai-key', 'keyVaultUrl', reference('openAiKeyKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()))]"
         },
         "template": {
           "containers": [
@@ -426,7 +433,7 @@
                 "cpu": "[json('0.5')]",
                 "memory": "1Gi"
               },
-              "env": "[concat(createArray(createObject('name', 'ENV', 'value', parameters('environment')), createObject('name', 'JWT_SECRET', 'secretRef', 'jwt-secret'), createObject('name', 'JWT_ALGORITHM', 'value', 'HS256'), createObject('name', 'COSMOS_CONNECTION_STRING', 'secretRef', 'cosmos-connection-string'), createObject('name', 'COSMOS_DATABASE_NAME', 'value', 'buildflow'), createObject('name', 'AZURE_OPENAI_ENDPOINT', 'value', parameters('azureOpenAiEndpoint')), createObject('name', 'AZURE_OPENAI_DEPLOYMENT', 'value', parameters('azureOpenAiDeployment')), createObject('name', 'ACS_CONNECTION_STRING', 'secretRef', 'acs-connection-string'), createObject('name', 'ACS_SENDER_ADDRESS', 'value', parameters('acsSenderAddress')), createObject('name', 'CORS_ORIGINS', 'value', parameters('corsOrigins'))), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'GITHUB_TOKEN', 'secretRef', 'github-token')), createArray()))]",
+              "env": "[concat(createArray(createObject('name', 'ENV', 'value', parameters('environment')), createObject('name', 'JWT_SECRET', 'secretRef', 'jwt-secret'), createObject('name', 'JWT_ALGORITHM', 'value', 'HS256'), createObject('name', 'COSMOS_CONNECTION_STRING', 'secretRef', 'cosmos-connection-string'), createObject('name', 'COSMOS_DATABASE_NAME', 'value', 'buildflow'), createObject('name', 'AZURE_OPENAI_ENDPOINT', 'value', parameters('azureOpenAiEndpoint')), createObject('name', 'AZURE_OPENAI_DEPLOYMENT', 'value', parameters('azureOpenAiDeployment')), createObject('name', 'ACS_CONNECTION_STRING', 'secretRef', 'acs-connection-string'), createObject('name', 'ACS_SENDER_ADDRESS', 'value', parameters('acsSenderAddress')), createObject('name', 'CORS_ORIGINS', 'value', parameters('corsOrigins'))), if(and(not(equals(parameters('environment'), 'prod')), not(empty(parameters('devBypassEmail')))), createArray(createObject('name', 'DEV_BYPASS_EMAIL', 'value', parameters('devBypassEmail'))), createArray()), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'GITHUB_TOKEN', 'secretRef', 'github-token')), createArray()), if(not(empty(parameters('azureOpenAiKey'))), createArray(createObject('name', 'AZURE_OPENAI_API_KEY', 'secretRef', 'azure-openai-key')), createArray()))]",
               "probes": [
                 {
                   "type": "Liveness",
@@ -450,7 +457,7 @@
             }
           ],
           "scale": {
-            "minReplicas": "[if(equals(parameters('environment'), 'prod'), 1, 0)]",
+            "minReplicas": "[if(equals(parameters('environment'), 'prod'), 1, 1)]",
             "maxReplicas": "[if(equals(parameters('environment'), 'prod'), 10, 3)]",
             "rules": [
               {
@@ -471,7 +478,8 @@
         "cosmosConnectionStringKv",
         "githubTokenKv",
         "jwtSecretKv",
-        "managedIdentity"
+        "managedIdentity",
+        "openAiKeyKv"
       ]
     },
     "serviceBusConnectionKv": {
@@ -1088,7 +1096,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.38.33.27573",
-              "templateHash": "12370342607941663045"
+              "templateHash": "17400802434855593491"
             }
           },
           "parameters": {
@@ -1130,9 +1138,7 @@
             "storageAccountName": "[toLower(take(format('st{0}{1}{2}', parameters('projectName'), parameters('environment'), variables('uniqueSuffix')), 24))]",
             "skuName": "[if(equals(parameters('environment'), 'prod'), 'Standard_ZRS', 'Standard_LRS')]",
             "containerNames": [
-              "generated-assets",
-              "raw-extractions",
-              "pipeline-artifacts"
+              "repo-images"
             ],
             "storageBlobDataContributorRoleId": "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
           },
@@ -1151,7 +1157,7 @@
                 "accessTier": "Hot",
                 "supportsHttpsTrafficOnly": true,
                 "minimumTlsVersion": "TLS1_2",
-                "allowBlobPublicAccess": false,
+                "allowBlobPublicAccess": true,
                 "allowSharedKeyAccess": true,
                 "networkAcls": {
                   "bypass": "AzureServices",
@@ -1186,42 +1192,14 @@
                 "storageAccount"
               ]
             },
-            "generatedAssetsContainer": {
+            "repoImagesContainer": {
               "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
               "apiVersion": "2024-01-01",
-              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'generated-assets')]",
+              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'repo-images')]",
               "properties": {
-                "publicAccess": "None",
+                "publicAccess": "Blob",
                 "metadata": {
-                  "purpose": "Generated learning content assets (cards, slides, summaries)"
-                }
-              },
-              "dependsOn": [
-                "blobService"
-              ]
-            },
-            "rawExtractionsContainer": {
-              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-              "apiVersion": "2024-01-01",
-              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'raw-extractions')]",
-              "properties": {
-                "publicAccess": "None",
-                "metadata": {
-                  "purpose": "Raw GitHub API extraction responses (immutable)"
-                }
-              },
-              "dependsOn": [
-                "blobService"
-              ]
-            },
-            "pipelineArtifactsContainer": {
-              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-              "apiVersion": "2024-01-01",
-              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'pipeline-artifacts')]",
-              "properties": {
-                "publicAccess": "None",
-                "metadata": {
-                  "purpose": "Intermediate pipeline processing artifacts"
+                  "purpose": "AI-generated thumbnail images for content cards"
                 }
               },
               "dependsOn": [

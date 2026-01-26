@@ -31,9 +31,6 @@ var skuName = environment == 'prod' ? 'Standard_ZRS' : 'Standard_LRS'
 
 // Container names
 var containerNames = [
-  'generated-assets'    // For cards, slides, summaries
-  'raw-extractions'     // For GitHub API raw responses
-  'pipeline-artifacts'  // For intermediate pipeline outputs
   'repo-images'         // For AI-generated thumbnail images
 ]
 
@@ -53,7 +50,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2024-01-01' = {
     accessTier: 'Hot'
     supportsHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
-    allowBlobPublicAccess: false
+    allowBlobPublicAccess: true  // Required for public thumbnail images in repo-images container
     allowSharedKeyAccess: true // Required for SDK access, consider disabling in prod
     networkAcls: {
       bypass: 'AzureServices'
@@ -94,35 +91,13 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2024-01-01'
 // Containers
 // ============================================================================
 
-resource generatedAssetsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2024-01-01' = {
+resource repoImagesContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2024-01-01' = {
   parent: blobService
-  name: 'generated-assets'
+  name: 'repo-images'
   properties: {
-    publicAccess: 'None'
+    publicAccess: 'Blob'  // Allow public read access for thumbnail images
     metadata: {
-      purpose: 'Generated learning content assets (cards, slides, summaries)'
-    }
-  }
-}
-
-resource rawExtractionsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2024-01-01' = {
-  parent: blobService
-  name: 'raw-extractions'
-  properties: {
-    publicAccess: 'None'
-    metadata: {
-      purpose: 'Raw GitHub API extraction responses (immutable)'
-    }
-  }
-}
-
-resource pipelineArtifactsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2024-01-01' = {
-  parent: blobService
-  name: 'pipeline-artifacts'
-  properties: {
-    publicAccess: 'None'
-    metadata: {
-      purpose: 'Intermediate pipeline processing artifacts'
+      purpose: 'AI-generated thumbnail images for content cards'
     }
   }
 }
