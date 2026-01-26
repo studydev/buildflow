@@ -236,10 +236,33 @@ class TestContentServiceCreateFromAnalysis:
         return repo
 
     @pytest.fixture
-    def content_service(self, mock_repo):
-        """Create content service with mock repository."""
+    def mock_search_service(self):
+        """Create mock search service to prevent real index writes."""
+        from unittest.mock import AsyncMock, MagicMock
+        search_service = MagicMock()
+        search_service.is_configured = False  # Disable search sync in tests
+        search_service.upsert_document = AsyncMock()
+        search_service.delete_document = AsyncMock()
+        return search_service
+
+    @pytest.fixture
+    def mock_llm_service(self):
+        """Create mock LLM service to prevent real API calls."""
+        from unittest.mock import AsyncMock, MagicMock
+        llm_service = MagicMock()
+        llm_service.is_configured = False  # Disable embedding generation in tests
+        llm_service.generate_embedding = AsyncMock(return_value=[0.0] * 1536)
+        return llm_service
+
+    @pytest.fixture
+    def content_service(self, mock_repo, mock_search_service, mock_llm_service):
+        """Create content service with all mocked dependencies."""
         from app.services.content_service import ContentService
-        service = ContentService(repo=mock_repo)
+        service = ContentService(
+            repo=mock_repo,
+            search_service=mock_search_service,
+            llm_service=mock_llm_service,
+        )
         return service
 
     @pytest.fixture

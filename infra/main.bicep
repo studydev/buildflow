@@ -365,7 +365,13 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
           keyVaultUrl: openAiKeyKv.properties.secretUri
           identity: managedIdentity.id
         }
-      ] : [])
+      ] : [], [
+        {
+          name: 'search-admin-key'
+          keyVaultUrl: searchAdminKeyKv.properties.secretUri
+          identity: managedIdentity.id
+        }
+      ])
     }
     template: {
       containers: [
@@ -398,7 +404,11 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'GITHUB_TOKEN', secretRef: 'github-token' }
           ] : [], !empty(azureOpenAiKey) ? [
             { name: 'AZURE_OPENAI_API_KEY', secretRef: 'azure-openai-key' }
-          ] : [])
+          ] : [], [
+            { name: 'AZURE_SEARCH_ENDPOINT', value: search.outputs.searchEndpoint }
+            { name: 'AZURE_SEARCH_API_KEY', secretRef: 'search-admin-key' }
+            { name: 'AZURE_SEARCH_INDEX_NAME', value: 'buildflow-content' }
+          ])
           probes: [
             {
               type: 'Liveness'

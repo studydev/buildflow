@@ -23,11 +23,16 @@ logger = logging.getLogger(__name__)
 class ContentService:
     """Service for content-related business logic."""
 
-    def __init__(self, repo: Optional[ContentRepository] = None):
-        """Initialize with content repository."""
+    def __init__(
+        self,
+        repo: Optional[ContentRepository] = None,
+        search_service=None,
+        llm_service=None,
+    ):
+        """Initialize with optional dependencies for testing."""
         self._repo = repo
-        self._search_service = None
-        self._llm_service = None
+        self._search_service = search_service
+        self._llm_service = llm_service
 
     @property
     def repo(self) -> ContentRepository:
