@@ -41,6 +41,10 @@ export interface ContentItem {
   summary_kr?: string
   prerequisites_kr?: string[]
   learning_outcomes_kr?: string[]
+  // Resource links
+  youtube_url?: string
+  pdf_url?: string
+  pptx_url?: string
   // Link to original analysis request
   analysis_request_id?: string
 }

@@ -82,6 +82,11 @@ class Content(BaseModel):
     localized_at: Optional[datetime] = None
     localization_model: Optional[str] = None
 
+    # Resource links (for card display)
+    youtube_url: Optional[str] = None
+    pdf_url: Optional[str] = None
+    pptx_url: Optional[str] = None
+
     # Stats
     view_count: int = 0
     bookmark_count: int = 0
@@ -141,6 +146,10 @@ class Content(BaseModel):
             "learning_outcomes_kr": self.learning_outcomes_kr,
             "localized_at": self.localized_at.isoformat() if self.localized_at else None,
             "localization_model": self.localization_model,
+            # Resource links
+            "youtube_url": self.youtube_url,
+            "pdf_url": self.pdf_url,
+            "pptx_url": self.pptx_url,
             # Stats
             "view_count": self.view_count,
             "bookmark_count": self.bookmark_count,
@@ -209,6 +218,10 @@ class Content(BaseModel):
             learning_outcomes_kr=item.get("learning_outcomes_kr", []),
             localized_at=datetime.fromisoformat(item["localized_at"]) if item.get("localized_at") else None,
             localization_model=item.get("localization_model"),
+            # Resource links
+            youtube_url=item.get("youtube_url"),
+            pdf_url=item.get("pdf_url"),
+            pptx_url=item.get("pptx_url"),
             # Stats
             view_count=item.get("view_count", 0),
             bookmark_count=item.get("bookmark_count", 0),

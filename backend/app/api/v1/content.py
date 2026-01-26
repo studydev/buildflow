@@ -50,6 +50,12 @@ def _content_to_response(c: Content) -> ContentResponse:
         learning_outcomes=getattr(c, 'learning_outcomes', []) or [],
         learning_outcomes_kr=getattr(c, 'learning_outcomes_kr', []) or [],
         difficulty_level=getattr(c, 'difficulty_level', None),
+        # Resource links
+        youtube_url=getattr(c, 'youtube_url', None),
+        pdf_url=getattr(c, 'pdf_url', None),
+        pptx_url=getattr(c, 'pptx_url', None),
+        # Analysis request reference
+        analysis_request_id=getattr(c, 'analysis_request_id', None),
     )
 
 

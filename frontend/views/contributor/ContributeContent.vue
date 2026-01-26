@@ -73,6 +73,7 @@ const handleUrlSubmit = async () => {
 const isEditModalOpen = ref(false)
 const editingItem = ref<StoreContentItem | null>(null)
 const isSaving = ref(false)
+const editLanguage = ref<'en' | 'ko'>('en')
 
 // UI State
 const activeTab = ref<'analysis' | 'content'>('analysis')
@@ -264,6 +265,13 @@ const saveEdit = async () => {
       duration_minutes: editingItem.value.duration_minutes,
       thumbnail_url: editingItem.value.thumbnail_url,
       icon: editingItem.value.icon,
+      // Bilingual fields
+      title_kr: editingItem.value.title_kr,
+      description_kr: editingItem.value.description_kr,
+      // Resource links
+      youtube_url: editingItem.value.youtube_url,
+      pdf_url: editingItem.value.pdf_url,
+      pptx_url: editingItem.value.pptx_url,
     })
     
     if (result) {
@@ -1109,18 +1117,64 @@ onUnmounted(() => {
         </DialogHeader>
         
         <div v-if="editingItem" class="grid gap-6 py-4">
-          <!-- 제목 -->
-          <div class="grid gap-2">
-            <Label for="title">제목</Label>
-            <Input id="title" v-model="editingItem.title" placeholder="콘텐츠 제목" />
+          <!-- EN/KR 언어 토글 -->
+          <div class="flex items-center justify-between p-3 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border)]">
+            <span class="text-sm font-medium text-[var(--text-secondary)]">편집 언어</span>
+            <div class="flex items-center gap-2">
+              <button
+                @click="editLanguage = 'en'"
+                :class="[
+                  'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
+                  editLanguage === 'en' 
+                    ? 'bg-primary text-white' 
+                    : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                ]"
+              >
+                EN
+              </button>
+              <button
+                @click="editLanguage = 'ko'"
+                :class="[
+                  'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
+                  editLanguage === 'ko' 
+                    ? 'bg-primary text-white' 
+                    : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                ]"
+              >
+                KO
+              </button>
+            </div>
           </div>
 
-          <!-- 설명 -->
-          <div class="grid gap-2">
-            <Label for="description">설명</Label>
+          <!-- 제목 (EN) -->
+          <div v-show="editLanguage === 'en'" class="grid gap-2">
+            <Label for="title">제목 (English)</Label>
+            <Input id="title" v-model="editingItem.title" placeholder="Content Title" />
+          </div>
+
+          <!-- 제목 (KR) -->
+          <div v-show="editLanguage === 'ko'" class="grid gap-2">
+            <Label for="title_kr">제목 (한국어)</Label>
+            <Input id="title_kr" v-model="editingItem.title_kr" placeholder="콘텐츠 제목" />
+          </div>
+
+          <!-- 설명 (EN) -->
+          <div v-show="editLanguage === 'en'" class="grid gap-2">
+            <Label for="description">설명 (English)</Label>
             <textarea 
               id="description"
               v-model="editingItem.description"
+              class="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
+              placeholder="Enter content description"
+            />
+          </div>
+
+          <!-- 설명 (KR) -->
+          <div v-show="editLanguage === 'ko'" class="grid gap-2">
+            <Label for="description_kr">설명 (한국어)</Label>
+            <textarea 
+              id="description_kr"
+              v-model="editingItem.description_kr"
               class="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
               placeholder="콘텐츠에 대한 설명을 입력하세요"
             />
@@ -1185,6 +1239,59 @@ onUnmounted(() => {
               v-model="editingItem.icon" 
               placeholder="📚"
             />
+          </div>
+
+          <!-- Resource Links Section -->
+          <div class="border-t border-[var(--border)] pt-4">
+            <h3 class="text-sm font-semibold text-[var(--text-primary)] mb-4">관련 리소스 링크</h3>
+            
+            <!-- YouTube URL -->
+            <div class="grid gap-2 mb-4">
+              <Label for="youtube_url" class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                YouTube 링크
+              </Label>
+              <Input 
+                id="youtube_url" 
+                v-model="editingItem.youtube_url" 
+                type="url" 
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+            </div>
+
+            <!-- PDF URL -->
+            <div class="grid gap-2 mb-4">
+              <Label for="pdf_url" class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-red-600" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/>
+                </svg>
+                PDF 문서 링크
+              </Label>
+              <Input 
+                id="pdf_url" 
+                v-model="editingItem.pdf_url" 
+                type="url" 
+                placeholder="https://example.com/document.pdf"
+              />
+            </div>
+
+            <!-- PPTX URL -->
+            <div class="grid gap-2">
+              <Label for="pptx_url" class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z"/>
+                </svg>
+                PPTX 문서 링크
+              </Label>
+              <Input 
+                id="pptx_url" 
+                v-model="editingItem.pptx_url" 
+                type="url" 
+                placeholder="https://example.com/presentation.pptx"
+              />
+            </div>
           </div>
         </div>
 

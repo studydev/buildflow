@@ -35,6 +35,11 @@ class ContentResponse(BaseModel):
     learning_outcomes_kr: list[str] = Field(default_factory=list)
     difficulty_level: Optional[str] = None
 
+    # Resource links
+    youtube_url: Optional[str] = None
+    pdf_url: Optional[str] = None
+    pptx_url: Optional[str] = None
+
     # Link to original analysis request
     analysis_request_id: Optional[str] = None
 
@@ -73,6 +78,13 @@ class ContentUpdateRequest(BaseModel):
     duration_minutes: Optional[int] = Field(None, ge=1, le=480)
     thumbnail_url: Optional[str] = None
     icon: Optional[str] = None
+    # Bilingual fields
+    title_kr: Optional[str] = Field(None, max_length=200)
+    description_kr: Optional[str] = Field(None, max_length=2000)
+    # Resource links
+    youtube_url: Optional[str] = None
+    pdf_url: Optional[str] = None
+    pptx_url: Optional[str] = None
 
 
 class ContentSearchParams(BaseModel):

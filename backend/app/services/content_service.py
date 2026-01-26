@@ -185,6 +185,18 @@ class ContentService:
             existing.thumbnail_url = data.thumbnail_url
         if data.icon is not None:
             existing.icon = data.icon
+        # Bilingual fields
+        if data.title_kr is not None:
+            existing.title_kr = data.title_kr
+        if data.description_kr is not None:
+            existing.description_kr = data.description_kr
+        # Resource links
+        if data.youtube_url is not None:
+            existing.youtube_url = data.youtube_url
+        if data.pdf_url is not None:
+            existing.pdf_url = data.pdf_url
+        if data.pptx_url is not None:
+            existing.pptx_url = data.pptx_url
 
         try:
             updated = await self.repo.update(existing)
