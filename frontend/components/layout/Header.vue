@@ -65,7 +65,7 @@ watch(() => route.query.login, (newVal) => {
 
 <template>
   <header class="bg-[var(--header-bg)] border-b border-[var(--border)] px-8 py-4 flex items-center justify-between backdrop-blur-sm">
-    <!-- 좌측: 사이드바 토글 + Workshop Platform 제목 -->
+    <!-- 좌측: 사이드바 토글 + NexusSkill Platform 제목 -->
     <div class="flex items-center gap-3">
       <button 
         @click="$emit('toggleSidebar')"
@@ -78,7 +78,7 @@ watch(() => route.query.login, (newVal) => {
         <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-header font-bold text-sm">
           WP
         </div>
-        <span class="font-header font-bold text-lg" :class="isDarkMode ? 'text-white' : 'text-primary'">Workshop Platform</span>
+        <span class="font-header font-bold text-lg" :class="isDarkMode ? 'text-white' : 'text-primary'">NexusSkill Platform</span>
       </div>
     </div>
     

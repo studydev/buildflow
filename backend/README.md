@@ -76,6 +76,13 @@ backend/
 │   ├── repositories/        # 데이터 저장소
 │   ├── schemas/             # API 스키마
 │   └── services/            # 비즈니스 로직
+│       ├── assistant_service.py    # AI 어시스턴트 (RAG)
+│       ├── content_service.py      # 콘텐츠 관리
+│       ├── github_service.py       # GitHub API 연동
+│       ├── image_generation_service.py  # DALL-E 썸네일
+│       ├── llm_service.py          # Azure OpenAI 분석
+│       ├── search_service.py       # Azure AI Search
+│       └── storage_service.py      # Azure Blob Storage
 ├── tests/                   # 테스트
 ├── Dockerfile               # API 컨테이너
 ├── requirements.txt         # 의존성
@@ -100,6 +107,21 @@ backend/
 |--------|------|------|
 | POST | `/api/v1/analysis/analyze` | GitHub 저장소 분석 |
 | GET | `/api/v1/analysis/{id}` | 분석 결과 조회 |
+
+### 검색 API (Azure AI Search)
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/api/v1/search` | 하이브리드 검색 (BM25 + 벡터) |
+| GET | `/api/v1/search/facets` | 패싯 조회 (카테고리, 기술 등) |
+
+### AI 어시스턴트 API
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/api/v1/assistant/chat` | RAG 기반 채팅 (콘텐츠 추천) |
+| POST | `/api/v1/assistant/explain/{id}` | 콘텐츠 상세 설명 |
+| POST | `/api/v1/assistant/recommend` | 관련 콘텐츠 추천 |
 
 ### 인증 API (OTP 기반)
 
@@ -127,6 +149,17 @@ COSMOS_DATABASE_NAME=buildflow
 AZURE_OPENAI_ENDPOINT=
 AZURE_OPENAI_API_KEY=
 AZURE_OPENAI_DEPLOYMENT=gpt-5.2
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT=text-embedding-3-small
+AZURE_DALLE_DEPLOYMENT=gpt-image-1.5
+
+# Azure AI Search
+AZURE_SEARCH_ENDPOINT=
+AZURE_SEARCH_API_KEY=
+AZURE_SEARCH_INDEX_NAME=buildflow-content
+
+# Azure Blob Storage
+AZURE_STORAGE_CONNECTION_STRING=
+AZURE_STORAGE_CDN_HOST=
 
 # JWT
 JWT_SECRET=

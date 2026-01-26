@@ -37,7 +37,7 @@ infra/
 
 | 리소스 | 타입 | 상태 | 설명 |
 |--------|------|------|------|
-| Azure AI Search | `Microsoft.Search/searchServices` | ⏳ 예정 | 하이브리드 검색 |
+| Azure AI Search | `Microsoft.Search/searchServices` | ✅ 배포됨 | 하이브리드 검색 |
 | Storage Account | `Microsoft.Storage/storageAccounts` | ✅ 배포됨 | 자산 저장소 |
 | Key Vault | `Microsoft.KeyVault/vaults` | ✅ 배포됨 | 시크릿 관리 |
 
@@ -94,8 +94,8 @@ az deployment group create \
 | `enablePipelines` | `true` | Container Apps Jobs 활성화 |
 | `enableFrontend` | `true` | Static Web App 활성화 |
 | `acsConnectionString` | - | Azure Communication Services 연결 문자열 (OTP 이메일) |
-| `acsSenderAddress` | - | OTP 이메일 발신자 주소 |
-| `corsOrigins` | `http://localhost:5173,...` | CORS 허용 도메인 (쉼표 구분) |
+| `acsSenderAddress` | - | OTP 이메일 발신자 주소 || `azureSearchEndpoint` | - | Azure AI Search 엔드포인트 |
+| `azureSearchApiKey` | - | Azure AI Search API 키 || `corsOrigins` | `http://localhost:5173,...` | CORS 허용 도메인 (쉼표 구분) |
 
 ## 🌍 환경별 설정
 

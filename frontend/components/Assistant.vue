@@ -219,14 +219,6 @@ function scrollToBottom() {
   }
 }
 
-function handleCitationClick(citation: Citation) {
-  emit('select-content', citation.content_id)
-}
-
-function handleSuggestionClick(suggestion: SuggestedContent) {
-  emit('select-content', suggestion.content_id)
-}
-
 function clearChat() {
   messages.value = []
   conversationId.value = null

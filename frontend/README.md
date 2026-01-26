@@ -93,12 +93,16 @@ frontend/
 - 다국어 콘텐츠 표시 제어
 
 ### Assistant.vue
-AI 기반 채팅 어시스턴트 인터페이스
+AI 기반 채팅 어시스턴트 인터페이스 (플로팅 버튼)
 
 **기능:**
-- 채팅 UI
-- RAG 기반 콘텐츠 추천 (예정)
-- 학습 가이드 제공 (예정)
+- 플로팅 채팅 버튼 UI
+- RAG 기반 콘텐츠 검색 및 추천 (0-5개)
+- 추천 이유 설명 (LLM 생성)
+- 마크다운 렌더링 (marked.js)
+- 다국어 지원 (EN/KR 토글 연동)
+- 인용 및 관련 콘텐츠 카드
+- 대화 기록 (최대 10개, 세션 내)
 
 ## 📦 상태 관리 (Pinia)
 
@@ -148,8 +152,19 @@ analyzeRepository(url)       // 저장소 분석
 
 | 경로 | 컴포넌트 | 설명 |
 |------|----------|------|
-| `/` | Home.vue | 메인 홈 페이지 |
-| `/contribute` | ContributeContent.vue | 콘텐츠 기여 페이지 |
+| `/` | Home.vue | 메인 홈 페이지 (검색, 필터, 콘텐츠 그리드) |
+| `/contribute` | ContributeContent.vue | 콘텐츠 기여 페이지 (Contributor 전용) |
+
+## 🔍 검색 및 필터링
+
+### 카테고리 필터
+- Cloud, AI, Agent, Azure, Copilot, Security
+- Analytics, Machine Learning, Data, Databases, DevOps
+
+### 고급 검색 필터
+- 난이도 (Beginner, Intermediate, Advanced)
+- 기술 스택 (Azure Functions, Cosmos DB 등)
+- 콘텐츠 타입 (Workshop, Tutorial, Sample)
 
 ## 🧪 테스트
 
