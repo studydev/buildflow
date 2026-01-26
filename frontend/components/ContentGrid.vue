@@ -71,9 +71,9 @@ const displayItems = computed(() => {
       color: i === 0 ? 'azure' : i === 1 ? 'workshop' : 'tutorial'
     })),
     actions: [
-      { label: 'PDF', icon: 'pdf', primary: false },
+      { label: 'PDF', icon: 'pdf', primary: false, url: undefined, hasUrl: false },
       { label: 'YouTube', icon: 'youtube', primary: false, url: item.video_url, hasUrl: !!item.video_url },
-      { label: 'GitHub', icon: 'github', primary: true, url: item.source_url }
+      { label: 'GitHub', icon: 'github', primary: true, url: item.source_url, hasUrl: !!item.source_url }
     ],
     level: item.level || item.difficulty_level,
     duration: item.duration_minutes,
@@ -108,9 +108,9 @@ const fallbackContentItems = [
       { label: 'DevOps', color: 'tutorial' }
     ],
     actions: [
-      { label: 'PDF', icon: 'pdf', primary: false },
-      { label: 'YouTube', icon: 'youtube', primary: false },
-      { label: 'GitHub', icon: 'github', primary: true }
+      { label: 'PDF', icon: 'pdf', primary: false, url: undefined, hasUrl: false },
+      { label: 'YouTube', icon: 'youtube', primary: false, url: undefined, hasUrl: false },
+      { label: 'GitHub', icon: 'github', primary: true, url: undefined, hasUrl: false }
     ]
   },
   {
@@ -127,9 +127,9 @@ const fallbackContentItems = [
       { label: 'Data', color: 'tutorial' }
     ],
     actions: [
-      { label: 'PDF', icon: 'pdf', primary: false },
-      { label: 'YouTube', icon: 'youtube', primary: false },
-      { label: 'GitHub', icon: 'github', primary: true }
+      { label: 'PDF', icon: 'pdf', primary: false, url: undefined, hasUrl: false },
+      { label: 'YouTube', icon: 'youtube', primary: false, url: undefined, hasUrl: false },
+      { label: 'GitHub', icon: 'github', primary: true, url: undefined, hasUrl: false }
     ]
   },
   {
@@ -146,9 +146,9 @@ const fallbackContentItems = [
       { label: 'Agent', color: 'workshop' }
     ],
     actions: [
-      { label: 'PDF', icon: 'pdf', primary: false },
-      { label: 'YouTube', icon: 'youtube', primary: false },
-      { label: 'GitHub', icon: 'github', primary: true }
+      { label: 'PDF', icon: 'pdf', primary: false, url: undefined, hasUrl: false },
+      { label: 'YouTube', icon: 'youtube', primary: false, url: undefined, hasUrl: false },
+      { label: 'GitHub', icon: 'github', primary: true, url: undefined, hasUrl: false }
     ]
   },
   {
@@ -165,9 +165,9 @@ const fallbackContentItems = [
       { label: 'DevOps', color: 'tutorial' }
     ],
     actions: [
-      { label: 'PDF', icon: 'pdf', primary: false },
-      { label: 'YouTube', icon: 'youtube', primary: false },
-      { label: 'GitHub', icon: 'github', primary: true }
+      { label: 'PDF', icon: 'pdf', primary: false, url: undefined, hasUrl: false },
+      { label: 'YouTube', icon: 'youtube', primary: false, url: undefined, hasUrl: false },
+      { label: 'GitHub', icon: 'github', primary: true, url: undefined, hasUrl: false }
     ]
   }
 ]

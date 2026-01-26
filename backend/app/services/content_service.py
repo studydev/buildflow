@@ -76,11 +76,12 @@ class ContentService:
         icon = icon_map.get(content_type, "📄")
 
         # Create content with PUBLISHED status so it shows immediately
-        # Parse last_commit_date from result.updated_at if available
+        # Parse last_commit_date from result.last_commit_date (or fallback to updated_at)
         last_commit_date = None
-        if result.updated_at:
+        date_str = result.last_commit_date or result.updated_at
+        if date_str:
             try:
-                last_commit_date = datetime.fromisoformat(result.updated_at.replace("Z", "+00:00"))
+                last_commit_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
             except (ValueError, AttributeError):
                 pass
 
@@ -209,6 +210,13 @@ class ContentService:
             existing.docs_url = data.docs_url
         if data.pptx_url is not None:
             existing.pptx_url = data.pptx_url
+        # Repository metadata
+        if data.stars is not None:
+            existing.stars = data.stars
+        if data.forks is not None:
+            existing.forks = data.forks
+        if data.last_commit_date is not None:
+            existing.last_commit_date = data.last_commit_date
 
         try:
             updated = await self.repo.update(existing)

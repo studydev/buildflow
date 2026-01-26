@@ -398,6 +398,32 @@ const handlePermanentDelete = async (item: StoreContentItem) => {
   }
 }
 
+// Refresh repository metadata (stars, forks, last_commit_date)
+const refreshingRepoId = ref<string | null>(null)
+const handleRefreshRepo = async (item: StoreContentItem) => {
+  if (!item.source_url) {
+    alert('소스 URL이 없습니다.')
+    return
+  }
+  
+  refreshingRepoId.value = item.id
+  
+  try {
+    const result = await contentStore.refreshRepoMetadata(item.id)
+    if (result) {
+      // Update the item in the list with new data
+      await contentStore.fetchAllContent()
+    } else {
+      alert('저장소 정보 새로고침에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+    }
+  } catch (e) {
+    console.error('Failed to refresh repo metadata:', e)
+    alert('저장소 정보 새로고침에 실패했습니다.')
+  } finally {
+    refreshingRepoId.value = null
+  }
+}
+
 // Lifecycle
 onMounted(() => {
   analysisStore.fetchRequests()
@@ -1112,6 +1138,26 @@ onUnmounted(() => {
             </p>
 
             <div class="flex gap-2 pt-4 mt-auto border-t border-[var(--border)]">
+              <!-- Refresh Repo Button -->
+              <button
+                v-if="item.source_url"
+                @click.stop="handleRefreshRepo(item)"
+                :disabled="refreshingRepoId === item.id"
+                class="p-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--border-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                title="저장소 정보 새로고침 (stars, forks, 마지막 커밋)"
+              >
+                <svg 
+                  class="w-4 h-4"
+                  :class="{ 'animate-spin': refreshingRepoId === item.id }"
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  stroke-width="2"
+                >
+                  <path d="M21 12a9 9 0 11-9-9c2.52 0 4.83 1.04 6.49 2.72" stroke-linecap="round"/>
+                  <path d="M21 3v6h-6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
               <button
                 v-if="item.source_url"
                 @click.stop="openUrl(item.source_url!)"

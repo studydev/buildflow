@@ -10,7 +10,7 @@ const route = useRoute()
 
 const navItems = [
   { icon: '🎓', label: 'GitHub Repo', path: '/' },
-  { icon: '📚', label: 'Workshops', path: '/workshops' },
+  { icon: '📚', label: 'Workshops (예정)', path: '/workshops' },
 ]
 
 const categories = [

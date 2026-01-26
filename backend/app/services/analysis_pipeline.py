@@ -277,6 +277,7 @@ class AnalysisPipeline:
             result.contributors_count = repo_info.contributors_count
             result.created_at = repo_info.created_at
             result.updated_at = repo_info.updated_at
+            result.last_commit_date = repo_info.pushed_at  # GitHub pushed_at = last commit date
             result.source_url = request.source_url
             result.homepage_url = repo_info.homepage_url
 

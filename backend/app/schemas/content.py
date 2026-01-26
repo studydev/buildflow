@@ -87,6 +87,10 @@ class ContentUpdateRequest(BaseModel):
     video_url: Optional[str] = None
     docs_url: Optional[str] = None
     pptx_url: Optional[str] = None
+    # Repository metadata
+    stars: Optional[int] = Field(None, ge=0)
+    forks: Optional[int] = Field(None, ge=0)
+    last_commit_date: Optional[datetime] = None
 
 
 class ContentSearchParams(BaseModel):

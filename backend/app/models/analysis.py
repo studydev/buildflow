@@ -73,6 +73,7 @@ class AnalysisResult:
     contributors_count: int = 0
     created_at: Optional[str] = None
     updated_at: Optional[str] = None  # Last update date
+    last_commit_date: Optional[str] = None  # Last commit/push date (pushed_at)
 
     # 외부 링크
     demo_url: Optional[str] = None
@@ -113,6 +114,7 @@ class AnalysisResult:
             "contributors_count": self.contributors_count,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
+            "last_commit_date": self.last_commit_date,
             # External links
             "demo_url": self.demo_url,
             "docs_url": self.docs_url,
@@ -152,6 +154,7 @@ class AnalysisResult:
             contributors_count=data.get("contributors_count", 0),
             created_at=data.get("created_at"),
             updated_at=data.get("updated_at"),
+            last_commit_date=data.get("last_commit_date"),
             # External links
             demo_url=data.get("demo_url"),
             docs_url=data.get("docs_url"),

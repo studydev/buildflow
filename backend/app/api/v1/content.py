@@ -698,3 +698,107 @@ async def regenerate_thumbnail(
                 meta=Meta.create(correlation_id),
             ).model_dump(mode="json"),
         )
+
+
+@router.post(
+    "/{content_id}/refresh-repo",
+    response_model=APIResponse,
+    summary="Refresh repository metadata",
+    description="Refresh stars, forks, and last_commit_date from GitHub",
+)
+async def refresh_repo_metadata(
+    request: Request,
+    content_id: str,
+    current_user: UserPublic = Depends(require_contributor),
+) -> JSONResponse:
+    """
+    Refresh repository metadata from GitHub.
+
+    - Requires contributor role
+    - Fetches latest stars, forks, last_commit_date from GitHub
+    - Updates content document with fresh data
+    """
+    from datetime import datetime
+
+    from app.services.github_service import GitHubError, get_github_service
+
+    service = get_content_service()
+    correlation_id = getattr(request.state, "correlation_id", "")
+
+    try:
+        # Get content
+        content = await service.get_by_id(content_id)
+        if content is None:
+            return JSONResponse(
+                status_code=404,
+                content=APIResponse(
+                    success=False,
+                    error={"code": "NOT_FOUND", "message": "Content not found"},
+                    meta=Meta.create(correlation_id),
+                ).model_dump(mode="json"),
+            )
+
+        # Check if source_url exists
+        if not content.source_url:
+            return JSONResponse(
+                status_code=400,
+                content=APIResponse(
+                    success=False,
+                    error={"code": "NO_SOURCE_URL", "message": "Content has no source URL"},
+                    meta=Meta.create(correlation_id),
+                ).model_dump(mode="json"),
+            )
+
+        # Fetch latest repo info from GitHub
+        github_service = get_github_service()
+        owner, repo = github_service.parse_github_url(content.source_url)
+        repo_info = await github_service.fetch_repo_info(owner, repo)
+
+        # Parse last_commit_date from pushed_at
+        last_commit_date = None
+        if repo_info.pushed_at:
+            last_commit_date = datetime.fromisoformat(
+                repo_info.pushed_at.replace("Z", "+00:00")
+            )
+
+        # Update content with new metadata
+        update_data = ContentUpdateRequest(
+            stars=repo_info.stars,
+            forks=repo_info.forks,
+            last_commit_date=last_commit_date,
+        )
+        updated_content = await service.update(content_id, update_data)
+
+        response = APIResponse(
+            success=True,
+            data={
+                "content_id": content_id,
+                "stars": repo_info.stars,
+                "forks": repo_info.forks,
+                "last_commit_date": last_commit_date.isoformat() if last_commit_date else None,
+                "message": "Repository metadata refreshed successfully",
+            },
+            meta=Meta.create(correlation_id),
+        )
+        return JSONResponse(content=response.model_dump(mode="json"))
+
+    except GitHubError as e:
+        logger.error(f"GitHub API error refreshing repo metadata: {e}")
+        return JSONResponse(
+            status_code=502,
+            content=APIResponse(
+                success=False,
+                error={"code": "GITHUB_ERROR", "message": str(e)},
+                meta=Meta.create(correlation_id),
+            ).model_dump(mode="json"),
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error refreshing repo metadata: {e}")
+        return JSONResponse(
+            status_code=500,
+            content=APIResponse(
+                success=False,
+                error={"code": "INTERNAL_ERROR", "message": "Failed to refresh repository metadata"},
+                meta=Meta.create(correlation_id),
+            ).model_dump(mode="json"),
+        )

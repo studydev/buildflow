@@ -633,6 +633,50 @@ export const useContentStore = defineStore('content', () => {
       isLoading.value = false
     }
   }
+
+  /**
+   * Refresh repository metadata (stars, forks, last_commit_date) from GitHub
+   */
+  async function refreshRepoMetadata(id: string): Promise<{ stars: number; forks: number; last_commit_date: string | null } | null> {
+    error.value = null
+    
+    try {
+      const result = await apiRequest<{
+        content_id: string
+        stars: number
+        forks: number
+        last_commit_date: string | null
+        message: string
+      }>(
+        `/content/${id}/refresh-repo`,
+        {
+          method: 'POST',
+        }
+      )
+      
+      if (!result) {
+        throw new Error('No response from server')
+      }
+      
+      // Update local item with new metadata
+      const index = items.value.findIndex(item => item.id === id)
+      if (index !== -1 && items.value[index]) {
+        items.value[index].stars = result.stars
+        items.value[index].forks = result.forks
+        items.value[index].last_commit_date = result.last_commit_date || undefined
+      }
+      
+      return {
+        stars: result.stars,
+        forks: result.forks,
+        last_commit_date: result.last_commit_date,
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to refresh repository metadata'
+      console.error('Failed to refresh repository metadata:', e)
+      return null
+    }
+  }
   
   function reset() {
     items.value = []
@@ -689,6 +733,7 @@ export const useContentStore = defineStore('content', () => {
     deleteContent,
     permanentDelete,
     regenerateThumbnail,
+    refreshRepoMetadata,
     reset,
   }
 })
