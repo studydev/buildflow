@@ -335,7 +335,7 @@ class GitHubService:
         return repo_info
 
     async def _fetch_contributors(
-        self, owner: str, repo: str, limit: int = 10
+        self, owner: str, repo: str, limit: int = 5
     ) -> list:
         """
         Fetch top contributors for the repository.
@@ -343,18 +343,30 @@ class GitHubService:
         Args:
             owner: Repository owner
             repo: Repository name
-            limit: Max number of contributors to fetch
+            limit: Max number of contributors to fetch (default 5)
 
         Returns:
-            List of contributor logins
+            List of contributor logins (excludes bots like Copilot, dependabot)
         """
+        # Exclude bot accounts
+        excluded_logins = {
+            "copilot",
+            "github-actions[bot]",
+            "dependabot[bot]",
+            "dependabot",
+            "renovate[bot]",
+            "renovate",
+            "semantic-release-bot",
+        }
+
         client = await self.get_client()
         url = f"{self.API_BASE_URL}/repos/{owner}/{repo}/contributors"
 
         try:
+            # Fetch more to account for excluded bots
             response = await client.get(
                 url,
-                params={"per_page": limit, "anon": "false"}
+                params={"per_page": limit + 10, "anon": "false"}
             )
 
             if response.status_code in (404, 403):
@@ -363,7 +375,16 @@ class GitHubService:
             response.raise_for_status()
             contributors = response.json()
 
-            return [c.get("login") for c in contributors if c.get("login")]
+            # Filter out bots and take top N
+            result = []
+            for c in contributors:
+                login = c.get("login", "")
+                if login and login.lower() not in excluded_logins and "[bot]" not in login.lower():
+                    result.append(login)
+                    if len(result) >= limit:
+                        break
+
+            return result
 
         except Exception as e:
             logger.warning(f"Failed to fetch contributors for {owner}/{repo}: {e}")

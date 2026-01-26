@@ -174,6 +174,7 @@ class AnalysisRequest:
 
     id: str = field(default_factory=lambda: str(uuid4()))
     user_id: str = ""  # Partition key
+    user_email: Optional[str] = None  # Email of the user who created this request
     source_url: str = ""
     status: AnalysisStatus = AnalysisStatus.PENDING
     status_history: list[StatusHistoryEntry] = field(default_factory=list)
@@ -251,6 +252,7 @@ class AnalysisRequest:
         return {
             "id": self.id,
             "user_id": self.user_id,
+            "user_email": self.user_email,
             "source_url": self.source_url,
             "status": self.status.value,
             "status_history": [entry.to_dict() for entry in self.status_history],
@@ -281,6 +283,7 @@ class AnalysisRequest:
         return cls(
             id=item["id"],
             user_id=item["user_id"],
+            user_email=item.get("user_email"),
             source_url=item["source_url"],
             status=AnalysisStatus(item["status"]),
             status_history=status_history,

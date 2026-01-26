@@ -91,6 +91,9 @@ class ContentUpdateRequest(BaseModel):
     stars: Optional[int] = Field(None, ge=0)
     forks: Optional[int] = Field(None, ge=0)
     last_commit_date: Optional[datetime] = None
+    contributors: Optional[list[str]] = None  # GitHub contributor IDs (top 5)
+    # Contributor tracking
+    contributor_update_email: Optional[str] = None  # Email of user updating this content
 
 
 class ContentSearchParams(BaseModel):

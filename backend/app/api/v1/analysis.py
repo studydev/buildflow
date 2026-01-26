@@ -54,6 +54,7 @@ def _to_response(request) -> AnalysisRequestResponse:
         error_message=request.error_message,
         result=result_response,
         content_ids=request.content_ids or [],
+        user_email=request.user_email,
         created_at=request.created_at,
         updated_at=request.updated_at,
         completed_at=request.completed_at,
@@ -114,6 +115,7 @@ async def create_analysis_request(
         user_id=current_user.id,
         data=data,
         check_duplicate=True,
+        user_email=current_user.email,
     )
 
     # Start background processing if this is a new request

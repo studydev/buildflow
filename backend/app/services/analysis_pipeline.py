@@ -384,6 +384,7 @@ class AnalysisPipeline:
                 source_url=request.source_url,
                 result=result,
                 analysis_request_id=request.id,
+                contributor_email=request.user_email,
             )
 
             # Link content to request

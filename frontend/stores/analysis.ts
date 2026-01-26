@@ -72,6 +72,7 @@ export interface AnalysisRequest {
   error_message?: string
   result?: AnalysisResult
   content_ids: string[]
+  user_email?: string  // Email of the user who created this request
   created_at: string
   updated_at: string
   completed_at?: string

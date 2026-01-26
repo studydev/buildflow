@@ -38,6 +38,7 @@ class ContentService:
         source_url: str,
         result: AnalysisResult,
         analysis_request_id: Optional[str] = None,
+        contributor_email: Optional[str] = None,
     ) -> Content:
         """
         Create Content from analysis result.
@@ -47,6 +48,7 @@ class ContentService:
             source_url: GitHub repository URL
             result: Extracted metadata from analysis
             analysis_request_id: ID of the analysis request that created this content
+            contributor_email: Email of the user who created this content
 
         Returns:
             Created Content
@@ -85,6 +87,11 @@ class ContentService:
             except (ValueError, AttributeError):
                 pass
 
+        # Parse contributors from comma-separated string to list
+        contributors_list = []
+        if result.contributors:
+            contributors_list = [c.strip() for c in result.contributors.split(",") if c.strip()][:5]
+
         content = Content(
             contributor_id=contributor_id,
             analysis_request_id=analysis_request_id,
@@ -111,6 +118,10 @@ class ContentService:
             stars=result.stars if result.stars else None,
             forks=result.forks if result.forks else None,
             last_commit_date=last_commit_date,
+            contributors=contributors_list,
+            # Contributor tracking
+            contributor_create_email=contributor_email,
+            contributor_update_email=contributor_email,  # Same as create on initial creation
             # Resource links from analysis
             video_url=result.video_url,
             docs_url=result.docs_url,
@@ -217,6 +228,11 @@ class ContentService:
             existing.forks = data.forks
         if data.last_commit_date is not None:
             existing.last_commit_date = data.last_commit_date
+        if data.contributors is not None:
+            existing.contributors = data.contributors
+        # Contributor tracking
+        if data.contributor_update_email is not None:
+            existing.contributor_update_email = data.contributor_update_email
 
         try:
             updated = await self.repo.update(existing)

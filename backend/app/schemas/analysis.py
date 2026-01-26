@@ -83,6 +83,7 @@ class AnalysisRequestResponse(BaseModel):
     error_message: Optional[str] = None
     result: Optional[AnalysisResultResponse] = None
     content_ids: List[str] = Field(default_factory=list)
+    user_email: Optional[str] = None  # Email of the requester
     created_at: datetime
     updated_at: datetime
     completed_at: Optional[datetime] = None

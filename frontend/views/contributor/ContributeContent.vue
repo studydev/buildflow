@@ -612,6 +612,7 @@ onUnmounted(() => {
               <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">리포지토리</th>
               <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">상태</th>
               <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">진행률</th>
+              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">요청자</th>
               <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">제출일</th>
               <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">결과</th>
               <th class="px-4 py-3 text-right text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">작업</th>
@@ -653,6 +654,11 @@ onUnmounted(() => {
                   </div>
                   <span class="text-xs text-[var(--text-secondary)] tabular-nums">{{ request.progress }}%</span>
                 </div>
+              </td>
+              
+              <!-- Requester -->
+              <td class="px-4 py-4 text-sm text-[var(--text-secondary)]">
+                {{ request.user_email || '-' }}
               </td>
               
               <!-- Created Date -->

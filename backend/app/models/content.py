@@ -54,6 +54,11 @@ class Content(BaseModel):
     stars: Optional[int] = None
     forks: Optional[int] = None
     last_commit_date: Optional[datetime] = None
+    contributors: list[str] = Field(default_factory=list)  # GitHub contributor IDs (top 5)
+
+    # Contributor tracking (who collected/updated this content)
+    contributor_create_email: Optional[str] = None  # Email of user who created this content
+    contributor_update_email: Optional[str] = None  # Email of user who last updated this content
 
     # Localization fields
     title_kr: Optional[str] = None
@@ -100,6 +105,10 @@ class Content(BaseModel):
             "stars": self.stars,
             "forks": self.forks,
             "last_commit_date": self.last_commit_date.isoformat() if self.last_commit_date else None,
+            "contributors": self.contributors,
+            # Contributor tracking
+            "contributor_create_email": self.contributor_create_email,
+            "contributor_update_email": self.contributor_update_email,
             # Localization fields
             "title_kr": self.title_kr,
             "description_kr": self.description_kr,
@@ -143,6 +152,10 @@ class Content(BaseModel):
             stars=item.get("stars"),
             forks=item.get("forks"),
             last_commit_date=datetime.fromisoformat(item["last_commit_date"].replace("Z", "+00:00")) if item.get("last_commit_date") else None,
+            contributors=item.get("contributors", []),
+            # Contributor tracking
+            contributor_create_email=item.get("contributor_create_email"),
+            contributor_update_email=item.get("contributor_update_email"),
             # Localization fields
             title_kr=item.get("title_kr"),
             description_kr=item.get("description_kr"),

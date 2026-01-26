@@ -159,6 +159,7 @@ class AnalysisService:
         user_id: str,
         data: AnalysisRequestCreate,
         check_duplicate: bool = True,
+        user_email: Optional[str] = None,
     ) -> Tuple[AnalysisRequest, bool]:
         """
         Create a new analysis request.
@@ -167,6 +168,7 @@ class AnalysisService:
             user_id: The user ID making the request
             data: The request data with source URL
             check_duplicate: Whether to check for existing requests
+            user_email: Email of the user making the request
 
         Returns:
             Tuple of (request, is_duplicate)
@@ -194,6 +196,7 @@ class AnalysisService:
         # Create new request
         request = AnalysisRequest(
             user_id=user_id,
+            user_email=user_email,
             source_url=source_url,
         )
 
