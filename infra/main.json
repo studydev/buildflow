@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "1211809683442000836"
+      "templateHash": "7223687538686195157"
     }
   },
   "parameters": {
@@ -372,6 +372,42 @@
       "location": "[parameters('location')]",
       "tags": "[variables('tags')]"
     },
+    "storageConnectionKv": {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-02-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'storage-connection')]",
+      "properties": {
+        "value": "[listOutputsWithSecureValues('storage', '2025-04-01').connectionString]"
+      },
+      "dependsOn": [
+        "keyVault",
+        "storage"
+      ]
+    },
+    "storageAccountNameKv": {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-02-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'storage-account-name')]",
+      "properties": {
+        "value": "[reference('storage').outputs.storageAccountName.value]"
+      },
+      "dependsOn": [
+        "keyVault",
+        "storage"
+      ]
+    },
+    "storageAccountKeyKv": {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-02-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'storage-account-key')]",
+      "properties": {
+        "value": "[listOutputsWithSecureValues('storage', '2025-04-01').primaryAccessKey]"
+      },
+      "dependsOn": [
+        "keyVault",
+        "storage"
+      ]
+    },
     "keyVaultRoleAssignment": {
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
@@ -422,7 +458,7 @@
               "allowCredentials": true
             }
           },
-          "secrets": "[concat(createArray(createObject('name', 'jwt-secret', 'keyVaultUrl', reference('jwtSecretKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'cosmos-connection-string', 'keyVaultUrl', reference('cosmosConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), if(not(empty(parameters('acsConnectionString'))), createArray(createObject('name', 'acs-connection-string', 'keyVaultUrl', reference('acsConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'github-token', 'keyVaultUrl', reference('githubTokenKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('azureOpenAiKey'))), createArray(createObject('name', 'azure-openai-key', 'keyVaultUrl', reference('openAiKeyKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()))]"
+          "secrets": "[concat(createArray(createObject('name', 'jwt-secret', 'keyVaultUrl', reference('jwtSecretKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'cosmos-connection-string', 'keyVaultUrl', reference('cosmosConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'storage-connection', 'keyVaultUrl', reference('storageConnectionKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'storage-account-name', 'keyVaultUrl', reference('storageAccountNameKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'storage-account-key', 'keyVaultUrl', reference('storageAccountKeyKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), if(not(empty(parameters('acsConnectionString'))), createArray(createObject('name', 'acs-connection-string', 'keyVaultUrl', reference('acsConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'github-token', 'keyVaultUrl', reference('githubTokenKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('azureOpenAiKey'))), createArray(createObject('name', 'azure-openai-key', 'keyVaultUrl', reference('openAiKeyKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()))]"
         },
         "template": {
           "containers": [
@@ -433,7 +469,7 @@
                 "cpu": "[json('0.5')]",
                 "memory": "1Gi"
               },
-              "env": "[concat(createArray(createObject('name', 'ENV', 'value', parameters('environment')), createObject('name', 'JWT_SECRET', 'secretRef', 'jwt-secret'), createObject('name', 'JWT_ALGORITHM', 'value', 'HS256'), createObject('name', 'COSMOS_CONNECTION_STRING', 'secretRef', 'cosmos-connection-string'), createObject('name', 'COSMOS_DATABASE_NAME', 'value', 'buildflow'), createObject('name', 'AZURE_OPENAI_ENDPOINT', 'value', parameters('azureOpenAiEndpoint')), createObject('name', 'AZURE_OPENAI_DEPLOYMENT', 'value', parameters('azureOpenAiDeployment')), createObject('name', 'ACS_CONNECTION_STRING', 'secretRef', 'acs-connection-string'), createObject('name', 'ACS_SENDER_ADDRESS', 'value', parameters('acsSenderAddress')), createObject('name', 'CORS_ORIGINS', 'value', parameters('corsOrigins'))), if(and(not(equals(parameters('environment'), 'prod')), not(empty(parameters('devBypassEmail')))), createArray(createObject('name', 'DEV_BYPASS_EMAIL', 'value', parameters('devBypassEmail'))), createArray()), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'GITHUB_TOKEN', 'secretRef', 'github-token')), createArray()), if(not(empty(parameters('azureOpenAiKey'))), createArray(createObject('name', 'AZURE_OPENAI_API_KEY', 'secretRef', 'azure-openai-key')), createArray()))]",
+              "env": "[concat(createArray(createObject('name', 'ENV', 'value', parameters('environment')), createObject('name', 'JWT_SECRET', 'secretRef', 'jwt-secret'), createObject('name', 'JWT_ALGORITHM', 'value', 'HS256'), createObject('name', 'COSMOS_CONNECTION_STRING', 'secretRef', 'cosmos-connection-string'), createObject('name', 'COSMOS_DATABASE_NAME', 'value', 'buildflow'), createObject('name', 'AZURE_OPENAI_ENDPOINT', 'value', parameters('azureOpenAiEndpoint')), createObject('name', 'AZURE_OPENAI_DEPLOYMENT', 'value', parameters('azureOpenAiDeployment')), createObject('name', 'AZURE_DALLE_DEPLOYMENT', 'value', 'gpt-image-1.5'), createObject('name', 'AZURE_DALLE_IMAGE_SIZE', 'value', '1536x1024'), createObject('name', 'AZURE_STORAGE_CONNECTION_STRING', 'secretRef', 'storage-connection'), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'secretRef', 'storage-account-name'), createObject('name', 'AZURE_STORAGE_ACCOUNT_KEY', 'secretRef', 'storage-account-key'), createObject('name', 'ACS_CONNECTION_STRING', 'secretRef', 'acs-connection-string'), createObject('name', 'ACS_SENDER_ADDRESS', 'value', parameters('acsSenderAddress')), createObject('name', 'CORS_ORIGINS', 'value', parameters('corsOrigins'))), if(and(not(equals(parameters('environment'), 'prod')), not(empty(parameters('devBypassEmail')))), createArray(createObject('name', 'DEV_BYPASS_EMAIL', 'value', parameters('devBypassEmail'))), createArray()), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'GITHUB_TOKEN', 'secretRef', 'github-token')), createArray()), if(not(empty(parameters('azureOpenAiKey'))), createArray(createObject('name', 'AZURE_OPENAI_API_KEY', 'secretRef', 'azure-openai-key')), createArray()))]",
               "probes": [
                 {
                   "type": "Liveness",
@@ -479,7 +515,10 @@
         "githubTokenKv",
         "jwtSecretKv",
         "managedIdentity",
-        "openAiKeyKv"
+        "openAiKeyKv",
+        "storageAccountKeyKv",
+        "storageAccountNameKv",
+        "storageConnectionKv"
       ]
     },
     "serviceBusConnectionKv": {
@@ -506,18 +545,6 @@
       "dependsOn": [
         "keyVault",
         "serviceBus"
-      ]
-    },
-    "storageConnectionKv": {
-      "type": "Microsoft.KeyVault/vaults/secrets",
-      "apiVersion": "2023-02-01",
-      "name": "[format('{0}/{1}', variables('keyVaultName'), 'storage-connection')]",
-      "properties": {
-        "value": "[listOutputsWithSecureValues('storage', '2025-04-01').connectionString]"
-      },
-      "dependsOn": [
-        "keyVault",
-        "storage"
       ]
     },
     "searchAdminKeyKv": {
@@ -671,6 +698,279 @@
             "registryId": {
               "type": "string",
               "value": "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "managedIdentity"
+      ]
+    },
+    "storage": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "storageDeployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "managedIdentityPrincipalId": {
+            "value": "[reference('managedIdentity').principalId]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "languageVersion": "2.0",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.38.33.27573",
+              "templateHash": "4022299227697773018"
+            }
+          },
+          "parameters": {
+            "projectName": {
+              "type": "string",
+              "metadata": {
+                "description": "Project name for resource naming"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name (dev, stg, prod)"
+              }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Azure region for resources"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "managedIdentityPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "User Assigned Managed Identity principal ID for RBAC"
+              }
+            }
+          },
+          "variables": {
+            "uniqueSuffix": "[uniqueString(resourceGroup().id, parameters('projectName'))]",
+            "storageAccountName": "[toLower(take(format('st{0}{1}{2}', parameters('projectName'), parameters('environment'), variables('uniqueSuffix')), 24))]",
+            "skuName": "[if(equals(parameters('environment'), 'prod'), 'Standard_ZRS', 'Standard_LRS')]",
+            "containerNames": [
+              "repo-images"
+            ],
+            "storageBlobDataContributorRoleId": "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
+          },
+          "resources": {
+            "storageAccount": {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2024-01-01",
+              "name": "[variables('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "[variables('skuName')]"
+              },
+              "properties": {
+                "accessTier": "Hot",
+                "supportsHttpsTrafficOnly": true,
+                "minimumTlsVersion": "TLS1_2",
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": true,
+                "networkAcls": {
+                  "bypass": "AzureServices",
+                  "defaultAction": "Allow"
+                },
+                "encryption": {
+                  "keySource": "Microsoft.Storage",
+                  "services": {
+                    "blob": {
+                      "enabled": true,
+                      "keyType": "Account"
+                    }
+                  }
+                }
+              }
+            },
+            "blobService": {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
+              "properties": {
+                "containerDeleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                },
+                "deleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                }
+              },
+              "dependsOn": [
+                "storageAccount"
+              ]
+            },
+            "repoImagesContainer": {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'repo-images')]",
+              "properties": {
+                "publicAccess": "None",
+                "metadata": {
+                  "purpose": "AI-generated thumbnail images for content cards"
+                }
+              },
+              "dependsOn": [
+                "blobService"
+              ]
+            },
+            "storageBlobDataContributorAssignment": {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', variables('storageAccountName'))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), parameters('managedIdentityPrincipalId'), variables('storageBlobDataContributorRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('managedIdentityPrincipalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataContributorRoleId'))]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "storageAccount"
+              ]
+            },
+            "lifecyclePolicy": {
+              "type": "Microsoft.Storage/storageAccounts/managementPolicies",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
+              "properties": {
+                "policy": {
+                  "rules": [
+                    {
+                      "name": "MoveToCoolAfter30Days",
+                      "enabled": true,
+                      "type": "Lifecycle",
+                      "definition": {
+                        "filters": {
+                          "blobTypes": [
+                            "blockBlob"
+                          ],
+                          "prefixMatch": [
+                            "pipeline-artifacts/"
+                          ]
+                        },
+                        "actions": {
+                          "baseBlob": {
+                            "tierToCool": {
+                              "daysAfterModificationGreaterThan": 30
+                            },
+                            "delete": {
+                              "daysAfterModificationGreaterThan": 90
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "name": "ArchiveRawExtractions",
+                      "enabled": true,
+                      "type": "Lifecycle",
+                      "definition": {
+                        "filters": {
+                          "blobTypes": [
+                            "blockBlob"
+                          ],
+                          "prefixMatch": [
+                            "raw-extractions/"
+                          ]
+                        },
+                        "actions": {
+                          "baseBlob": {
+                            "tierToCool": {
+                              "daysAfterModificationGreaterThan": 30
+                            },
+                            "tierToArchive": {
+                              "daysAfterModificationGreaterThan": 90
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "storageAccount"
+              ]
+            }
+          },
+          "outputs": {
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account name"
+              },
+              "value": "[variables('storageAccountName')]"
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account ID"
+              },
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+            },
+            "blobEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Primary blob endpoint"
+              },
+              "value": "[reference('storageAccount').primaryEndpoints.blob]"
+            },
+            "primaryAccessKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Storage account primary access key"
+              },
+              "value": "[listKeys('storageAccount', '2024-01-01').keys[0].value]"
+            },
+            "connectionString": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Connection string"
+              },
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys('storageAccount', '2024-01-01').keys[0].value)]"
+            },
+            "containerNames": {
+              "type": "array",
+              "metadata": {
+                "description": "Container names"
+              },
+              "value": "[variables('containerNames')]"
             }
           }
         }
@@ -1061,279 +1361,6 @@
           }
         }
       }
-    },
-    "storage": {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "storageDeployment",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "projectName": {
-            "value": "[parameters('projectName')]"
-          },
-          "environment": {
-            "value": "[parameters('environment')]"
-          },
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "tags": {
-            "value": "[variables('tags')]"
-          },
-          "managedIdentityPrincipalId": {
-            "value": "[reference('managedIdentity').principalId]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "languageVersion": "2.0",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.38.33.27573",
-              "templateHash": "4022299227697773018"
-            }
-          },
-          "parameters": {
-            "projectName": {
-              "type": "string",
-              "metadata": {
-                "description": "Project name for resource naming"
-              }
-            },
-            "environment": {
-              "type": "string",
-              "metadata": {
-                "description": "Environment name (dev, stg, prod)"
-              }
-            },
-            "location": {
-              "type": "string",
-              "defaultValue": "[resourceGroup().location]",
-              "metadata": {
-                "description": "Azure region for resources"
-              }
-            },
-            "tags": {
-              "type": "object",
-              "defaultValue": {},
-              "metadata": {
-                "description": "Resource tags"
-              }
-            },
-            "managedIdentityPrincipalId": {
-              "type": "string",
-              "metadata": {
-                "description": "User Assigned Managed Identity principal ID for RBAC"
-              }
-            }
-          },
-          "variables": {
-            "uniqueSuffix": "[uniqueString(resourceGroup().id, parameters('projectName'))]",
-            "storageAccountName": "[toLower(take(format('st{0}{1}{2}', parameters('projectName'), parameters('environment'), variables('uniqueSuffix')), 24))]",
-            "skuName": "[if(equals(parameters('environment'), 'prod'), 'Standard_ZRS', 'Standard_LRS')]",
-            "containerNames": [
-              "repo-images"
-            ],
-            "storageBlobDataContributorRoleId": "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
-          },
-          "resources": {
-            "storageAccount": {
-              "type": "Microsoft.Storage/storageAccounts",
-              "apiVersion": "2024-01-01",
-              "name": "[variables('storageAccountName')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]",
-              "kind": "StorageV2",
-              "sku": {
-                "name": "[variables('skuName')]"
-              },
-              "properties": {
-                "accessTier": "Hot",
-                "supportsHttpsTrafficOnly": true,
-                "minimumTlsVersion": "TLS1_2",
-                "allowBlobPublicAccess": false,
-                "allowSharedKeyAccess": true,
-                "networkAcls": {
-                  "bypass": "AzureServices",
-                  "defaultAction": "Allow"
-                },
-                "encryption": {
-                  "keySource": "Microsoft.Storage",
-                  "services": {
-                    "blob": {
-                      "enabled": true,
-                      "keyType": "Account"
-                    }
-                  }
-                }
-              }
-            },
-            "blobService": {
-              "type": "Microsoft.Storage/storageAccounts/blobServices",
-              "apiVersion": "2024-01-01",
-              "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
-              "properties": {
-                "containerDeleteRetentionPolicy": {
-                  "enabled": true,
-                  "days": 7
-                },
-                "deleteRetentionPolicy": {
-                  "enabled": true,
-                  "days": 7
-                }
-              },
-              "dependsOn": [
-                "storageAccount"
-              ]
-            },
-            "repoImagesContainer": {
-              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-              "apiVersion": "2024-01-01",
-              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'repo-images')]",
-              "properties": {
-                "publicAccess": "None",
-                "metadata": {
-                  "purpose": "AI-generated thumbnail images for content cards"
-                }
-              },
-              "dependsOn": [
-                "blobService"
-              ]
-            },
-            "storageBlobDataContributorAssignment": {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', variables('storageAccountName'))]",
-              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), parameters('managedIdentityPrincipalId'), variables('storageBlobDataContributorRoleId'))]",
-              "properties": {
-                "principalId": "[parameters('managedIdentityPrincipalId')]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataContributorRoleId'))]",
-                "principalType": "ServicePrincipal"
-              },
-              "dependsOn": [
-                "storageAccount"
-              ]
-            },
-            "lifecyclePolicy": {
-              "type": "Microsoft.Storage/storageAccounts/managementPolicies",
-              "apiVersion": "2024-01-01",
-              "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
-              "properties": {
-                "policy": {
-                  "rules": [
-                    {
-                      "name": "MoveToCoolAfter30Days",
-                      "enabled": true,
-                      "type": "Lifecycle",
-                      "definition": {
-                        "filters": {
-                          "blobTypes": [
-                            "blockBlob"
-                          ],
-                          "prefixMatch": [
-                            "pipeline-artifacts/"
-                          ]
-                        },
-                        "actions": {
-                          "baseBlob": {
-                            "tierToCool": {
-                              "daysAfterModificationGreaterThan": 30
-                            },
-                            "delete": {
-                              "daysAfterModificationGreaterThan": 90
-                            }
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "name": "ArchiveRawExtractions",
-                      "enabled": true,
-                      "type": "Lifecycle",
-                      "definition": {
-                        "filters": {
-                          "blobTypes": [
-                            "blockBlob"
-                          ],
-                          "prefixMatch": [
-                            "raw-extractions/"
-                          ]
-                        },
-                        "actions": {
-                          "baseBlob": {
-                            "tierToCool": {
-                              "daysAfterModificationGreaterThan": 30
-                            },
-                            "tierToArchive": {
-                              "daysAfterModificationGreaterThan": 90
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "dependsOn": [
-                "storageAccount"
-              ]
-            }
-          },
-          "outputs": {
-            "storageAccountName": {
-              "type": "string",
-              "metadata": {
-                "description": "Storage account name"
-              },
-              "value": "[variables('storageAccountName')]"
-            },
-            "storageAccountId": {
-              "type": "string",
-              "metadata": {
-                "description": "Storage account ID"
-              },
-              "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
-            },
-            "blobEndpoint": {
-              "type": "string",
-              "metadata": {
-                "description": "Primary blob endpoint"
-              },
-              "value": "[reference('storageAccount').primaryEndpoints.blob]"
-            },
-            "primaryAccessKey": {
-              "type": "securestring",
-              "metadata": {
-                "description": "Storage account primary access key"
-              },
-              "value": "[listKeys('storageAccount', '2024-01-01').keys[0].value]"
-            },
-            "connectionString": {
-              "type": "securestring",
-              "metadata": {
-                "description": "Connection string"
-              },
-              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys('storageAccount', '2024-01-01').keys[0].value)]"
-            },
-            "containerNames": {
-              "type": "array",
-              "metadata": {
-                "description": "Container names"
-              },
-              "value": "[variables('containerNames')]"
-            }
-          }
-        }
-      },
-      "dependsOn": [
-        "managedIdentity"
-      ]
     },
     "search": {
       "type": "Microsoft.Resources/deployments",

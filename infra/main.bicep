@@ -252,6 +252,48 @@ module containerRegistry 'modules/container-registry.bicep' = {
   }
 }
 
+// ============================================================================
+// Storage Module (moved before Container App for dependency)
+// ============================================================================
+
+module storage 'modules/storage.bicep' = {
+  name: 'storageDeployment'
+  params: {
+    projectName: projectName
+    environment: environment
+    location: location
+    tags: tags
+    managedIdentityPrincipalId: managedIdentity.properties.principalId
+  }
+}
+
+// Store Storage connection string in Key Vault
+resource storageConnectionKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  parent: keyVault
+  name: 'storage-connection'
+  properties: {
+    value: storage.outputs.connectionString
+  }
+}
+
+// Store Storage account name in Key Vault
+resource storageAccountNameKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  parent: keyVault
+  name: 'storage-account-name'
+  properties: {
+    value: storage.outputs.storageAccountName
+  }
+}
+
+// Store Storage account key in Key Vault
+resource storageAccountKeyKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  parent: keyVault
+  name: 'storage-account-key'
+  properties: {
+    value: storage.outputs.primaryAccessKey
+  }
+}
+
 // Key Vault Access for Managed Identity
 resource keyVaultRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(keyVault.id, managedIdentity.id, 'KeyVaultSecretsUser')
@@ -299,6 +341,21 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
           keyVaultUrl: cosmosConnectionStringKv.properties.secretUri
           identity: managedIdentity.id
         }
+        {
+          name: 'storage-connection'
+          keyVaultUrl: storageConnectionKv.properties.secretUri
+          identity: managedIdentity.id
+        }
+        {
+          name: 'storage-account-name'
+          keyVaultUrl: storageAccountNameKv.properties.secretUri
+          identity: managedIdentity.id
+        }
+        {
+          name: 'storage-account-key'
+          keyVaultUrl: storageAccountKeyKv.properties.secretUri
+          identity: managedIdentity.id
+        }
       // Conditionally add ACS secret only when connection string is provided
       ], !empty(acsConnectionString) ? [
         {
@@ -340,6 +397,11 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'COSMOS_DATABASE_NAME', value: 'buildflow' }
             { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
             { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
+            { name: 'AZURE_DALLE_DEPLOYMENT', value: 'gpt-image-1.5' }
+            { name: 'AZURE_DALLE_IMAGE_SIZE', value: '1536x1024' }
+            { name: 'AZURE_STORAGE_CONNECTION_STRING', secretRef: 'storage-connection' }
+            { name: 'AZURE_STORAGE_ACCOUNT_NAME', secretRef: 'storage-account-name' }
+            { name: 'AZURE_STORAGE_ACCOUNT_KEY', secretRef: 'storage-account-key' }
             { name: 'ACS_CONNECTION_STRING', secretRef: 'acs-connection-string' }
             { name: 'ACS_SENDER_ADDRESS', value: acsSenderAddress }
             { name: 'CORS_ORIGINS', value: corsOrigins }
@@ -428,27 +490,6 @@ resource serviceBusApiConnectionKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01
   properties: {
     #disable-next-line BCP318
     value: serviceBus.outputs.apiSendConnectionString
-  }
-}
-
-// T102: Storage Module
-module storage 'modules/storage.bicep' = {
-  name: 'storageDeployment'
-  params: {
-    projectName: projectName
-    environment: environment
-    location: location
-    tags: tags
-    managedIdentityPrincipalId: managedIdentity.properties.principalId
-  }
-}
-
-// Store Storage connection string in Key Vault
-resource storageConnectionKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
-  parent: keyVault
-  name: 'storage-connection'
-  properties: {
-    value: storage.outputs.connectionString
   }
 }
 
