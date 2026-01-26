@@ -126,11 +126,17 @@ function initFromUrl() {
 // Category filters
 const categories = [
   { label: 'All Content', value: null },
-  { label: 'Azure', value: 'Azure' },
+  { label: 'Cloud', value: 'Cloud' },
   { label: 'AI', value: 'AI' },
+  { label: 'Agent', value: 'Agent' },
+  { label: 'Azure', value: 'Azure' },
   { label: 'Copilot', value: 'Copilot' },
-  { label: 'DevOps', value: 'DevOps' },
+  { label: 'Security', value: 'Security' },
+  { label: 'Analytics', value: 'Analytics' },
+  { label: 'Machine Learning', value: 'Machine Learning' },
+  { label: 'Data', value: 'Data' },
   { label: 'Databases', value: 'Databases' },
+  { label: 'DevOps', value: 'DevOps' },
 ]
 
 function selectCategory(category: string | null) {

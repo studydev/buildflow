@@ -43,16 +43,20 @@ class Citation:
     content_id: str
     title: str
     relevance: float
-    snippet: Optional[str] = None
+    description: Optional[str] = None
+    description_kr: Optional[str] = None
     url: Optional[str] = None
+    title_kr: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to API response format."""
         return {
             "content_id": self.content_id,
             "title": self.title,
+            "title_kr": self.title_kr,
             "relevance": self.relevance,
-            "snippet": self.snippet,
+            "description": self.description,
+            "description_kr": self.description_kr,
             "url": self.url,
         }
 
@@ -66,15 +70,21 @@ class SuggestedContent:
     description: Optional[str]
     relevance: float
     reason: Optional[str] = None  # Why it was suggested
+    url: Optional[str] = None  # GitHub repo URL
+    title_kr: Optional[str] = None
+    description_kr: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to API response format."""
         return {
             "content_id": self.content_id,
             "title": self.title,
+            "title_kr": self.title_kr,
             "description": self.description,
+            "description_kr": self.description_kr,
             "relevance": self.relevance,
             "reason": self.reason,
+            "url": self.url,
         }
 
 
@@ -178,7 +188,7 @@ class AssistantRateLimitError(AssistantError):
 # =============================================================================
 
 
-SYSTEM_PROMPT = """You are BuildFlow Assistant, an AI helper for discovering and understanding Azure learning content.
+SYSTEM_PROMPT = """You are NexusSkill Assistant, an AI helper for discovering and understanding Azure learning content.
 
 Your capabilities:
 1. Answer questions about Azure, cloud development, and DevOps using the knowledge base
@@ -212,7 +222,19 @@ Remember to:
 1. Use ONLY information from the context above
 2. Cite sources using [Source: content_id] format
 3. If context is insufficient, acknowledge limitations
-4. Recommend related content if appropriate
+4. At the end, provide recommendations in this JSON format:
+
+[RECOMMENDATIONS]
+```json
+{{
+  "recommendations": [
+    {{"content_id": "id", "reason": "2-3 sentence explanation of why this is relevant"}}
+  ]
+}}
+```
+
+Only include content items that are truly relevant to the user's question (0-5 items).
+Explain WHY each recommendation helps the user.
 """
 
 
@@ -372,16 +394,16 @@ class AssistantService:
                     )
                     used_external = bool(external_results)
 
-            # Step 3: Generate response using LLM
-            response_text, citations = await self._generate_response(
+            # Step 3: Generate response using LLM (includes recommendation reasons)
+            response_text, citations, reasons = await self._generate_response(
                 message=message,
                 search_results=search_results,
                 conversation=conversation,
                 context=context,
             )
 
-            # Step 4: Extract suggested content
-            suggested = self._extract_suggestions(search_results)
+            # Step 4: Extract suggested content with reasons (0-5 items with dynamic threshold)
+            suggested = self._extract_suggestions(search_results, reasons=reasons)
 
             # Step 5: Build response
             response = AssistantResponse(
@@ -398,9 +420,9 @@ class AssistantService:
                 ConversationMessage(role="assistant", content=response_text)
             )
 
-            # Limit conversation history
-            if len(conversation) > 20:
-                conversation[:] = conversation[-20:]
+            # Limit conversation history to 10 messages (5 exchanges)
+            if len(conversation) > 10:
+                conversation[:] = conversation[-10:]
 
             return response
 
@@ -489,7 +511,7 @@ Relevance Score: {result.score:.2f}
         search_results: List[SearchResult],
         conversation: List[ConversationMessage],
         context: ChatContext,
-    ) -> tuple[str, List[Citation]]:
+    ) -> tuple[str, List[Citation], Dict[str, str]]:
         """
         Generate response using Azure OpenAI.
 
@@ -500,7 +522,7 @@ Relevance Score: {result.score:.2f}
             context: Chat context
 
         Returns:
-            Tuple of (response text, citations)
+            Tuple of (response text, citations, recommendation reasons)
         """
         # Prepare current content description
         current_content_desc = "None"
@@ -548,7 +570,13 @@ Relevance Score: {result.score:.2f}
         # Extract citations from response
         citations = self._extract_citations(response_text, search_results)
 
-        return response_text, citations
+        # Extract recommendation reasons from response
+        reasons = self._extract_recommendation_reasons(response_text)
+
+        # Clean response text (remove the JSON block)
+        clean_response = self._clean_response_text(response_text)
+
+        return clean_response, citations, reasons
 
     async def _call_openai(
         self,
@@ -563,7 +591,7 @@ Relevance Score: {result.score:.2f}
         payload = {
             "messages": messages,
             "temperature": 0.7,
-            "max_tokens": 1500,
+            "max_completion_tokens": 1500,
             "top_p": 0.95,
         }
 
@@ -613,8 +641,11 @@ Relevance Score: {result.score:.2f}
                     citations.append(Citation(
                         content_id=result.id,
                         title=result.title,
+                        title_kr=result.title_kr,
                         relevance=result.score,
-                        snippet=result.summary[:200] if result.summary else None,
+                        description=result.description,
+                        description_kr=result.description_kr,
+                        url=result.source_url,
                     ))
                     break
 
@@ -626,27 +657,148 @@ Relevance Score: {result.score:.2f}
                     citations.append(Citation(
                         content_id=result.id,
                         title=result.title,
+                        title_kr=result.title_kr,
                         relevance=result.score,
-                        snippet=result.summary[:200] if result.summary else None,
+                        description=result.description,
+                        description_kr=result.description_kr,
+                        url=result.source_url,
                     ))
 
         return citations
+
+    def _extract_recommendation_reasons(
+        self,
+        response_text: str,
+    ) -> Dict[str, str]:
+        """
+        Extract recommendation reasons from LLM response.
+
+        Parses the JSON block in [RECOMMENDATIONS] section.
+
+        Returns:
+            Dict mapping content_id to reason text
+        """
+        import json
+        import re
+
+        reasons: Dict[str, str] = {}
+
+        # Look for [RECOMMENDATIONS] section with JSON
+        pattern = r'\[RECOMMENDATIONS\]\s*```json\s*(.*?)\s*```'
+        match = re.search(pattern, response_text, re.DOTALL)
+
+        if not match:
+            # Try alternative pattern without code block
+            pattern = r'\[RECOMMENDATIONS\]\s*(\{.*?\})'
+            match = re.search(pattern, response_text, re.DOTALL)
+
+        if match:
+            try:
+                json_str = match.group(1).strip()
+                data = json.loads(json_str)
+                recommendations = data.get("recommendations", [])
+                for rec in recommendations:
+                    content_id = rec.get("content_id")
+                    reason = rec.get("reason")
+                    if content_id and reason:
+                        reasons[content_id] = reason
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse recommendation JSON: {e}")
+            except Exception as e:
+                logger.warning(f"Error extracting recommendations: {e}")
+
+        return reasons
+
+    def _clean_response_text(
+        self,
+        response_text: str,
+    ) -> str:
+        """
+        Remove the [RECOMMENDATIONS] JSON block from response text.
+
+        Returns clean text for display to user.
+        """
+        import re
+
+        # Remove [RECOMMENDATIONS] section with JSON code block
+        pattern = r'\n*\[RECOMMENDATIONS\]\s*```json\s*.*?```\s*'
+        cleaned = re.sub(pattern, '', response_text, flags=re.DOTALL)
+
+        # Remove alternative pattern
+        pattern = r'\n*\[RECOMMENDATIONS\]\s*\{.*?\}\s*'
+        cleaned = re.sub(pattern, '', cleaned, flags=re.DOTALL)
+
+        return cleaned.strip()
+
+    def _calculate_dynamic_threshold(
+        self,
+        search_results: List[SearchResult],
+    ) -> float:
+        """
+        Calculate dynamic relevance threshold based on score distribution.
+
+        Strategy:
+        - If top score is high (>=0.8), use stricter threshold
+        - If scores are spread out, use adaptive threshold based on gap analysis
+        - If all scores are low, use lower threshold to still provide some results
+        """
+        if not search_results:
+            return 0.5
+
+        scores = [r.score for r in search_results]
+        max_score = max(scores)
+        avg_score = sum(scores) / len(scores)
+
+        # High confidence results - use stricter threshold
+        if max_score >= 0.8:
+            return max(0.6, avg_score + 0.1)
+
+        # Medium confidence - adaptive threshold
+        if max_score >= 0.5:
+            # Use 60% of max score as threshold
+            return max(0.35, max_score * 0.6)
+
+        # Low confidence - be more lenient to provide some results
+        return max(0.2, max_score * 0.5)
 
     def _extract_suggestions(
         self,
         search_results: List[SearchResult],
         max_suggestions: int = 5,
+        reasons: Optional[Dict[str, str]] = None,
     ) -> List[SuggestedContent]:
-        """Extract content suggestions from search results."""
+        """
+        Extract content suggestions with dynamic threshold.
+
+        Args:
+            search_results: Search results to filter
+            max_suggestions: Maximum number of suggestions (0-5)
+            reasons: Optional dict mapping content_id to reason text
+
+        Returns:
+            List of suggested content (0-5 items)
+        """
+        if not search_results:
+            return []
+
+        # Calculate dynamic threshold
+        threshold = self._calculate_dynamic_threshold(search_results)
+        logger.debug(f"Dynamic threshold calculated: {threshold:.2f}")
+
         suggestions = []
+        reasons = reasons or {}
 
         for result in search_results[:max_suggestions]:
-            if result.score >= 0.3:
+            if result.score >= threshold:
                 suggestions.append(SuggestedContent(
                     content_id=result.id,
                     title=result.title,
+                    title_kr=result.title_kr,
                     description=result.description,
+                    description_kr=result.description_kr,
                     relevance=result.score,
+                    reason=reasons.get(result.id),
+                    url=result.source_url,
                 ))
 
         return suggestions

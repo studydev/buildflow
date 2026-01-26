@@ -10,11 +10,20 @@
  * - Citations displayed with clickable links
  * - Suggested content recommendations
  * - Loading and error states
+ * - Multi-language support (EN/KR toggle)
  */
 
 import { ref, computed, watch, nextTick } from 'vue'
+import { marked } from 'marked'
 import { apiRequest } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
+import { useContentStore } from '@/stores/content'
+
+// Configure marked for safe rendering
+marked.setOptions({
+  breaks: true,  // Convert \n to <br>
+  gfm: true,     // GitHub Flavored Markdown
+})
 
 // =============================================================================
 // Types
@@ -23,17 +32,22 @@ import { useAuthStore } from '@/stores/auth'
 interface Citation {
   content_id: string
   title: string
+  title_kr?: string
   relevance: number
-  snippet?: string
+  description?: string
+  description_kr?: string
   url?: string
 }
 
 interface SuggestedContent {
   content_id: string
   title: string
+  title_kr?: string
   description?: string
+  description_kr?: string
   relevance: number
   reason?: string
+  url?: string  // GitHub repo URL
 }
 
 interface ExternalResult {
@@ -80,6 +94,7 @@ const emit = defineEmits<{
 // =============================================================================
 
 const authStore = useAuthStore()
+const contentStore = useContentStore()
 
 const isOpen = ref(false)
 const isLoading = ref(false)
@@ -92,6 +107,24 @@ const chatContainer = ref<HTMLElement | null>(null)
 // Check if user is authenticated
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 
+// Language preference (kr as default when ambiguous)
+const isKorean = computed(() => contentStore.displayLanguage === 'ko')
+
+// Helper functions for localized content
+function getLocalizedTitle(item: { title: string; title_kr?: string }): string {
+  if (isKorean.value) {
+    return item.title_kr || item.title
+  }
+  return item.title || item.title_kr || ''
+}
+
+function getLocalizedDescription(item: { description?: string; description_kr?: string }): string {
+  if (isKorean.value) {
+    return item.description_kr || item.description || ''
+  }
+  return item.description || item.description_kr || ''
+}
+
 // =============================================================================
 // Methods
 // =============================================================================
@@ -102,7 +135,12 @@ function generateId(): string {
 
 function toggleChat() {
   isOpen.value = !isOpen.value
-  if (isOpen.value && messages.value.length === 0) {
+  if (isOpen.value) {
+    // 채팅창을 열 때마다 대화 초기화
+    messages.value = []
+    conversationId.value = null
+    error.value = null
+    
     // Add welcome message
     messages.value.push({
       id: generateId(),
@@ -140,7 +178,7 @@ async function sendMessage() {
   isLoading.value = true
 
   try {
-    const response = await apiRequest<{ success: boolean; data: ChatResponse }>('/assistant/chat', {
+    const response = await apiRequest<ChatResponse>('/assistant/chat', {
       method: 'POST',
       body: JSON.stringify({
         message: userMessage,
@@ -151,18 +189,18 @@ async function sendMessage() {
       }),
     })
 
-    if (response.success && response.data) {
-      conversationId.value = response.data.conversation_id
+    if (response) {
+      conversationId.value = response.conversation_id
 
       // Add assistant response
       messages.value.push({
         id: generateId(),
         role: 'assistant',
-        content: response.data.response,
+        content: response.response,
         timestamp: new Date(),
-        citations: response.data.citations,
-        suggestedContent: response.data.suggested_content,
-        externalResults: response.data.external_results,
+        citations: response.citations,
+        suggestedContent: response.suggested_content,
+        externalResults: response.external_results,
       })
     }
   } catch (err: any) {
@@ -210,13 +248,21 @@ function handleKeyPress(e: KeyboardEvent) {
   }
 }
 
-// Format citation references in text
+// Format citation references in text and convert markdown to HTML
 function formatMessageWithCitations(content: string): string {
-  // Replace [Source: xxx] with styled citations
-  return content.replace(
+  // First replace [Source: xxx] with styled citations
+  const withCitations = content.replace(
     /\[Source:\s*([^\]]+)\]/g,
     '<span class="citation-ref" data-id="$1">[📚]</span>'
   )
+  
+  // Convert markdown to HTML
+  let html = marked.parse(withCitations) as string
+  
+  // Convert H2 to H3 for better visual hierarchy
+  html = html.replace(/<h2/g, '<h3').replace(/<\/h2>/g, '</h3>')
+  
+  return html
 }
 
 // Watch for prop changes
@@ -254,7 +300,7 @@ watch(() => props.contentId, (newId) => {
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
-          <span class="font-semibold">BuildFlow Assistant</span>
+          <span class="font-semibold">NexusSkill Assistant</span>
         </div>
         <button
           @click="clearChat"
@@ -282,15 +328,18 @@ watch(() => props.contentId, (newId) => {
           v-for="message in messages"
           :key="message.id"
           :class="[
-            'max-w-[85%] rounded-lg p-3',
+            'max-w-[90%] rounded-xl p-4 shadow-sm',
             message.role === 'user'
-              ? 'ml-auto bg-blue-600 text-white'
-              : 'mr-auto bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+              ? 'ml-auto bg-gradient-to-r from-blue-500 to-blue-600 text-white'
+              : 'mr-auto bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
           ]"
         >
           <!-- Message Content -->
           <div
-            class="text-sm whitespace-pre-wrap"
+            :class="[
+              'text-sm',
+              message.role === 'assistant' ? 'markdown-content' : 'whitespace-pre-wrap'
+            ]"
             v-html="message.role === 'assistant' ? formatMessageWithCitations(message.content) : message.content"
           />
 
@@ -300,37 +349,71 @@ watch(() => props.contentId, (newId) => {
             class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600"
           >
             <p class="text-xs font-semibold mb-2 text-gray-600 dark:text-gray-300">📚 참고 자료:</p>
-            <div class="space-y-1">
-              <button
+            <div class="space-y-2">
+              <div
                 v-for="citation in message.citations"
                 :key="citation.content_id"
-                @click="handleCitationClick(citation)"
-                class="block w-full text-left text-xs p-2 rounded bg-white/50 dark:bg-gray-600/50 hover:bg-white dark:hover:bg-gray-600 transition"
+                class="w-full text-left p-2 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 border border-amber-200 dark:border-amber-800"
               >
-                <span class="font-medium text-blue-600 dark:text-blue-400">{{ citation.title }}</span>
-                <span class="text-gray-500 dark:text-gray-400 ml-1">({{ Math.round(citation.relevance * 100) }}%)</span>
-                <p v-if="citation.snippet" class="text-gray-600 dark:text-gray-300 truncate mt-1">
-                  {{ citation.snippet }}
+                <div class="flex items-start justify-between gap-2 mb-1">
+                  <span class="text-xs font-medium text-amber-700 dark:text-amber-300">{{ getLocalizedTitle(citation) }}</span>
+                  <span class="text-[10px] text-amber-500 dark:text-amber-400 shrink-0">({{ Math.round(citation.relevance) }}점)</span>
+                </div>
+                <p v-if="getLocalizedDescription(citation)" class="text-[11px] text-gray-600 dark:text-gray-400 line-clamp-3 mb-2">
+                  {{ getLocalizedDescription(citation) }}
                 </p>
-              </button>
+                <a
+                  v-if="citation.url"
+                  :href="citation.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 hover:underline"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  GitHub에서 보기
+                </a>
+              </div>
             </div>
           </div>
 
-          <!-- Suggested Content -->
+          <!-- Suggested Content (max 5 items with reasons) -->
           <div
             v-if="message.suggestedContent && message.suggestedContent.length > 0"
             class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600"
           >
-            <p class="text-xs font-semibold mb-2 text-gray-600 dark:text-gray-300">💡 추천 콘텐츠:</p>
-            <div class="flex flex-wrap gap-1">
-              <button
-                v-for="suggestion in message.suggestedContent.slice(0, 3)"
+            <p class="text-xs font-semibold mb-2 text-gray-600 dark:text-gray-300">💡 추천 콘텐츠 ({{ message.suggestedContent.length }}개):</p>
+            <div class="space-y-2">
+              <div
+                v-for="suggestion in message.suggestedContent.slice(0, 5)"
                 :key="suggestion.content_id"
-                @click="handleSuggestionClick(suggestion)"
-                class="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900 transition"
+                class="w-full text-left p-2 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200 dark:border-blue-800"
               >
-                {{ suggestion.title }}
-              </button>
+                <div class="flex items-start justify-between gap-2 mb-1">
+                  <span class="text-xs font-medium text-blue-700 dark:text-blue-300">{{ getLocalizedTitle(suggestion) }}</span>
+                  <span class="text-[10px] text-blue-500 dark:text-blue-400 shrink-0">{{ Math.round(suggestion.relevance) }}점</span>
+                </div>
+                <p v-if="suggestion.reason" class="text-[11px] text-gray-600 dark:text-gray-400 line-clamp-3 mb-2">
+                  {{ suggestion.reason }}
+                </p>
+                <p v-else-if="getLocalizedDescription(suggestion)" class="text-[11px] text-gray-600 dark:text-gray-400 line-clamp-3 mb-2">
+                  {{ getLocalizedDescription(suggestion) }}
+                </p>
+                <a
+                  v-if="suggestion.url"
+                  :href="suggestion.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
+                  @click.stop
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  GitHub에서 보기
+                </a>
+              </div>
             </div>
           </div>
 
@@ -431,5 +514,126 @@ watch(() => props.contentId, (newId) => {
 
 .citation-ref:hover {
   text-decoration: underline;
+}
+
+/* Markdown content styling */
+:deep(.markdown-content) {
+  line-height: 1.6;
+}
+
+:deep(.markdown-content h1) {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+:deep(.markdown-content h2) {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 0.875rem;
+  margin-bottom: 0.375rem;
+  color: #2563eb;
+}
+
+:deep(.markdown-content h3) {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  color: #2563eb;
+}
+
+:deep(.markdown-content p) {
+  margin-bottom: 0.5rem;
+}
+
+:deep(.markdown-content ul),
+:deep(.markdown-content ol) {
+  margin-left: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+:deep(.markdown-content li) {
+  margin-bottom: 0.25rem;
+}
+
+:deep(.markdown-content strong) {
+  font-weight: 600;
+  color: #1e40af;
+}
+
+:deep(.markdown-content code) {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  font-family: ui-monospace, monospace;
+}
+
+:deep(.markdown-content pre) {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+  margin-bottom: 0.5rem;
+}
+
+:deep(.markdown-content pre code) {
+  background: none;
+  padding: 0;
+}
+
+:deep(.markdown-content blockquote) {
+  border-left: 3px solid #3b82f6;
+  padding-left: 0.75rem;
+  margin-left: 0;
+  margin-bottom: 0.5rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+:deep(.markdown-content hr) {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 0.75rem 0;
+}
+
+:deep(.markdown-content a) {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+:deep(.markdown-content a:hover) {
+  color: #1d4ed8;
+}
+
+/* Dark mode adjustments */
+.dark :deep(.markdown-content h2) {
+  color: #60a5fa;
+}
+
+.dark :deep(.markdown-content strong) {
+  color: #93c5fd;
+}
+
+.dark :deep(.markdown-content code) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark :deep(.markdown-content pre) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark :deep(.markdown-content blockquote) {
+  color: #9ca3af;
+}
+
+.dark :deep(.markdown-content hr) {
+  border-top-color: #4b5563;
+}
+
+.dark :deep(.markdown-content a) {
+  color: #60a5fa;
 }
 </style>

@@ -77,8 +77,10 @@ class CitationResponse(BaseModel):
 
     content_id: str
     title: str
+    title_kr: Optional[str] = None
     relevance: float
-    snippet: Optional[str] = None
+    description: Optional[str] = None
+    description_kr: Optional[str] = None
     url: Optional[str] = None
 
 
@@ -87,9 +89,12 @@ class SuggestedContentResponse(BaseModel):
 
     content_id: str
     title: str
+    title_kr: Optional[str] = None
     description: Optional[str] = None
+    description_kr: Optional[str] = None
     relevance: float
     reason: Optional[str] = None
+    url: Optional[str] = None  # GitHub repo URL
 
 
 class ExternalResultResponse(BaseModel):
@@ -248,8 +253,10 @@ async def chat(
                 CitationResponse(
                     content_id=c.content_id,
                     title=c.title,
+                    title_kr=c.title_kr,
                     relevance=c.relevance,
-                    snippet=c.snippet,
+                    description=c.description,
+                    description_kr=c.description_kr,
                     url=c.url,
                 )
                 for c in response.citations
@@ -258,9 +265,12 @@ async def chat(
                 SuggestedContentResponse(
                     content_id=s.content_id,
                     title=s.title,
+                    title_kr=s.title_kr,
                     description=s.description,
+                    description_kr=s.description_kr,
                     relevance=s.relevance,
                     reason=s.reason,
+                    url=s.url,
                 )
                 for s in response.suggested_content
             ],
@@ -280,9 +290,7 @@ async def chat(
         return APIResponse(
             success=True,
             data=response_data,
-            meta=Meta(
-                request_id="",  # Would be set by middleware
-            ),
+            meta=Meta.create(),
         )
 
     except AssistantConfigError as e:
@@ -342,8 +350,10 @@ async def explain_content(
                 CitationResponse(
                     content_id=c.content_id,
                     title=c.title,
+                    title_kr=c.title_kr,
                     relevance=c.relevance,
-                    snippet=c.snippet,
+                    description=c.description,
+                    description_kr=c.description_kr,
                     url=c.url,
                 )
                 for c in response.citations
@@ -352,9 +362,12 @@ async def explain_content(
                 SuggestedContentResponse(
                     content_id=s.content_id,
                     title=s.title,
+                    title_kr=s.title_kr,
                     description=s.description,
+                    description_kr=s.description_kr,
                     relevance=s.relevance,
                     reason=s.reason,
+                    url=s.url,
                 )
                 for s in response.suggested_content
             ],
@@ -366,7 +379,7 @@ async def explain_content(
         return APIResponse(
             success=True,
             data=response_data,
-            meta=Meta(request_id=""),
+            meta=Meta.create(),
         )
 
     except AssistantConfigError:
@@ -422,8 +435,10 @@ async def recommend_content(
                 CitationResponse(
                     content_id=c.content_id,
                     title=c.title,
+                    title_kr=c.title_kr,
                     relevance=c.relevance,
-                    snippet=c.snippet,
+                    description=c.description,
+                    description_kr=c.description_kr,
                     url=c.url,
                 )
                 for c in response.citations
@@ -432,9 +447,12 @@ async def recommend_content(
                 SuggestedContentResponse(
                     content_id=s.content_id,
                     title=s.title,
+                    title_kr=s.title_kr,
                     description=s.description,
+                    description_kr=s.description_kr,
                     relevance=s.relevance,
                     reason=s.reason,
+                    url=s.url,
                 )
                 for s in response.suggested_content
             ],
@@ -446,7 +464,7 @@ async def recommend_content(
         return APIResponse(
             success=True,
             data=response_data,
-            meta=Meta(request_id=""),
+            meta=Meta.create(),
         )
 
     except AssistantConfigError:

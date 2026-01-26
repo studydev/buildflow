@@ -224,6 +224,7 @@ def register_routes(app: FastAPI) -> None:
 
     # Import and include API routers
     from app.api.v1.analysis import router as analysis_router
+    from app.api.v1.assistant import router as assistant_router
     from app.api.v1.auth import router as auth_router
     from app.api.v1.content import router as content_router
     from app.api.v1.search import router as search_router
@@ -234,6 +235,7 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(content_router, prefix=settings.api_v1_prefix)
     app.include_router(analysis_router, prefix=settings.api_v1_prefix)
     app.include_router(search_router, prefix=f"{settings.api_v1_prefix}/search")
+    app.include_router(assistant_router, prefix=f"{settings.api_v1_prefix}/assistant")
 
     @app.get(
         f"{settings.api_v1_prefix}/health",
