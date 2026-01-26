@@ -32,11 +32,6 @@ on:
         required: false
         default: 'true'
         type: boolean
-      deploy_pipeline:
-        description: 'Deploy Pipeline container'
-        required: false
-        default: 'true'
-        type: boolean
 
 env:
   AZURE_RESOURCE_GROUP: rg-buildflow-dev
@@ -44,7 +39,6 @@ env:
   PROJECT_NAME: buildflow
   ENVIRONMENT: dev
   API_IMAGE_NAME: buildflow-api
-  PIPELINE_IMAGE_NAME: buildflow-pipeline
 
 jobs:
   # ==========================================================================
@@ -172,46 +166,6 @@ jobs:
             ${{ needs.deploy-infrastructure.outputs.acr_login_server }}/${{ env.API_IMAGE_NAME }}:latest
           no-cache: true
   
-  # ==========================================================================
-  # Build Pipeline Image (after infrastructure)
-  # ==========================================================================
-  
-  build-pipeline:
-    name: Build Pipeline Image
-    runs-on: ubuntu-latest
-    needs: deploy-infrastructure
-    if: github.event.inputs.deploy_pipeline != 'false' && needs.deploy-infrastructure.result == 'success'
-    outputs:
-      image_tag: ${{ github.sha }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-      
-      - name: Login to ACR
-        run: |
-          az acr login --name ${{ needs.deploy-infrastructure.outputs.acr_name }}
-      
-      - name: Build and push Pipeline image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile.pipeline
-          push: true
-          tags: |
-            ${{ needs.deploy-infrastructure.outputs.acr_login_server }}/${{ env.PIPELINE_IMAGE_NAME }}:${{ github.sha }}
-            ${{ needs.deploy-infrastructure.outputs.acr_login_server }}/${{ env.PIPELINE_IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   # ==========================================================================
   # Deploy Container App
   # ==========================================================================
