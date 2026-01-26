@@ -62,6 +62,7 @@ export interface ContentListResponse {
 // New search types for T406
 export type SearchMode = 'hybrid' | 'keyword' | 'vector'
 export type SortOption = 'relevance' | 'popularity' | 'recent' | 'stars'
+export type SortOrder = 'desc' | 'asc'
 
 export interface SearchParams {
   q: string
@@ -71,6 +72,7 @@ export interface SearchParams {
   difficulty?: string
   minStars?: number
   sort?: SortOption
+  sortOrder?: SortOrder
   limit?: number
   offset?: number
 }
@@ -78,14 +80,31 @@ export interface SearchParams {
 export interface SearchResultItem {
   id: string
   title: string
+  title_kr?: string
   description?: string
+  description_kr?: string
   summary?: string
+  summary_kr?: string
+  summary_short?: string
   categories: string[]
   technologies: string[]
   difficulty_level?: string
+  level?: string
   popularity_score: number
   stars: number
   score: number
+  // UI display fields
+  source_url?: string
+  video_url?: string
+  thumbnail_url?: string
+  icon?: string
+  duration_minutes?: number
+  view_count?: number
+  last_commit_date?: string
+  learning_outcomes?: string[]
+  learning_outcomes_kr?: string[]
+  prerequisites?: string[]
+  prerequisites_kr?: string[]
 }
 
 export interface FacetValue {
@@ -122,6 +141,7 @@ export const useContentStore = defineStore('content', () => {
   // New search state for T406
   const searchMode = ref<SearchMode>('hybrid')
   const sortOption = ref<SortOption>('relevance')
+  const sortOrder = ref<SortOrder>('desc')
   const selectedTechnologies = ref<string[]>([])
   const selectedDifficulty = ref<string | null>(null)
   const minStars = ref<number>(0)
@@ -140,6 +160,11 @@ export const useContentStore = defineStore('content', () => {
   })
   
   // Actions
+  
+  /**
+   * Fetch content from AI Search (default: all content with * query)
+   * This replaces the old CosmosDB-based fetchContent for consistency.
+   */
   async function fetchContent(options: {
     page?: number
     limit?: number
@@ -156,26 +181,66 @@ export const useContentStore = defineStore('content', () => {
     
     try {
       const params = new URLSearchParams()
-      params.set('page', String(pageNum))
+      // Use * to get all content from AI Search
+      params.set('q', '*')
+      params.set('mode', 'keyword')  // keyword mode for * query is efficient
+      params.set('sort', sortOption.value)
+      params.set('sort_order', sortOrder.value)
       params.set('limit', String(limitNum))
+      params.set('offset', String((pageNum - 1) * limitNum))
+      
       if (category) {
-        params.set('category', category)
+        params.append('categories', category)
       }
       
-      const data = await apiRequest<ContentListResponse>(
-        `/content?${params.toString()}`
+      // Use search API instead of content API
+      const response = await apiRequest<{ data: SearchResponse }>(
+        `/search?${params.toString()}`
       )
       
+      const data = response.data || response as unknown as SearchResponse
+      
+      // Convert to ContentItem format with all UI fields
+      const newItems = data.items.map(item => ({
+        id: item.id,
+        title: item.title,
+        title_kr: item.title_kr,
+        description: item.description || '',
+        description_kr: item.description_kr,
+        summary_short: item.summary_short || item.summary,
+        summary_kr: item.summary_kr,
+        content_type: 'content',
+        categories: item.categories,
+        technologies: item.technologies,
+        level: item.level || item.difficulty_level,
+        difficulty_level: item.difficulty_level,
+        duration_minutes: item.duration_minutes,
+        thumbnail_url: item.thumbnail_url,
+        icon: item.icon,
+        source_url: item.source_url,
+        video_url: item.video_url,
+        stars: item.stars,
+        popularity_score: item.popularity_score,
+        last_commit_date: item.last_commit_date,
+        view_count: item.view_count || 0,
+        bookmark_count: 0,
+        learning_outcomes: item.learning_outcomes,
+        learning_outcomes_kr: item.learning_outcomes_kr,
+        prerequisites: item.prerequisites,
+        prerequisites_kr: item.prerequisites_kr,
+      }))
+      
       if (append) {
-        items.value = [...items.value, ...data.items]
+        items.value = [...items.value, ...newItems]
       } else {
-        items.value = data.items
+        items.value = newItems
       }
       
       total.value = data.total
-      page.value = data.page
-      limit.value = data.limit
-      hasMore.value = data.has_more
+      page.value = pageNum
+      limit.value = limitNum
+      hasMore.value = newItems.length === limitNum && data.total > pageNum * limitNum
+      facets.value = data.facets
       
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch content'
@@ -299,6 +364,7 @@ export const useContentStore = defineStore('content', () => {
       params.set('q', query)
       params.set('mode', searchMode.value)
       params.set('sort', sortOption.value)
+      params.set('sort_order', sortOrder.value)
       params.set('limit', String(limit.value))
       params.set('offset', '0')
       
@@ -324,16 +390,34 @@ export const useContentStore = defineStore('content', () => {
       const data = response.data || response as unknown as SearchResponse
       
       searchResults.value = data.items
-      // Convert to ContentItem format for compatibility
+      // Convert to ContentItem format for compatibility - include all UI fields
       items.value = data.items.map(item => ({
         id: item.id,
         title: item.title,
+        title_kr: item.title_kr,
         description: item.description || '',
+        description_kr: item.description_kr,
+        summary_short: item.summary_short || item.summary,
+        summary_kr: item.summary_kr,
         content_type: 'content',
         categories: item.categories,
-        level: item.difficulty_level,
-        view_count: 0,
+        technologies: item.technologies,
+        level: item.level || item.difficulty_level,
+        difficulty_level: item.difficulty_level,
+        duration_minutes: item.duration_minutes,
+        thumbnail_url: item.thumbnail_url,
+        icon: item.icon,
+        source_url: item.source_url,
+        video_url: item.video_url,
+        stars: item.stars,
+        popularity_score: item.popularity_score,
+        last_commit_date: item.last_commit_date,
+        view_count: item.view_count || 0,
         bookmark_count: 0,
+        learning_outcomes: item.learning_outcomes,
+        learning_outcomes_kr: item.learning_outcomes_kr,
+        prerequisites: item.prerequisites,
+        prerequisites_kr: item.prerequisites_kr,
       }))
       total.value = data.total
       facets.value = data.facets
@@ -359,6 +443,7 @@ export const useContentStore = defineStore('content', () => {
       urlParams.set('q', params.q)
       urlParams.set('mode', params.mode || searchMode.value)
       urlParams.set('sort', params.sort || sortOption.value)
+      urlParams.set('sort_order', params.sortOrder || sortOrder.value)
       urlParams.set('limit', String(params.limit || limit.value))
       urlParams.set('offset', String(params.offset || 0))
       
@@ -375,15 +460,34 @@ export const useContentStore = defineStore('content', () => {
       const data = response.data || response as unknown as SearchResponse
       
       searchResults.value = data.items
+      // Convert to ContentItem format for compatibility - include all UI fields
       items.value = data.items.map(item => ({
         id: item.id,
         title: item.title,
+        title_kr: item.title_kr,
         description: item.description || '',
+        description_kr: item.description_kr,
+        summary_short: item.summary_short || item.summary,
+        summary_kr: item.summary_kr,
         content_type: 'content',
         categories: item.categories,
-        level: item.difficulty_level,
-        view_count: 0,
+        technologies: item.technologies,
+        level: item.level || item.difficulty_level,
+        difficulty_level: item.difficulty_level,
+        duration_minutes: item.duration_minutes,
+        thumbnail_url: item.thumbnail_url,
+        icon: item.icon,
+        source_url: item.source_url,
+        video_url: item.video_url,
+        stars: item.stars,
+        popularity_score: item.popularity_score,
+        last_commit_date: item.last_commit_date,
+        view_count: item.view_count || 0,
         bookmark_count: 0,
+        learning_outcomes: item.learning_outcomes,
+        learning_outcomes_kr: item.learning_outcomes_kr,
+        prerequisites: item.prerequisites,
+        prerequisites_kr: item.prerequisites_kr,
       }))
       total.value = data.total
       facets.value = data.facets
@@ -704,6 +808,7 @@ export const useContentStore = defineStore('content', () => {
     // Search State
     searchMode,
     sortOption,
+    sortOrder,
     selectedTechnologies,
     selectedDifficulty,
     minStars,

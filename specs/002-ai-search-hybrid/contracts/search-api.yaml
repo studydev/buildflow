@@ -1,0 +1,320 @@
+openapi: 3.0.3
+info:
+  title: BuildFlow Search API
+  description: Azure AI Search 기반 하이브리드 검색 API
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+paths:
+  /search:
+    get:
+      operationId: searchContent
+      summary: Search content
+      description: |
+        키워드, 벡터, 또는 하이브리드 모드로 콘텐츠를 검색합니다.
+        인증 없이도 접근 가능하며, 미인증 사용자는 public 콘텐츠만 조회됩니다.
+      tags:
+        - Search
+      security:
+        - bearerAuth: []
+        - {}  # Optional authentication
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: 검색어 (1-500자)
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 500
+          example: "Azure OpenAI 프롬프트 엔지니어링"
+        
+        - name: mode
+          in: query
+          required: false
+          description: 검색 모드
+          schema:
+            type: string
+            enum: [hybrid, keyword, vector]
+            default: hybrid
+        
+        - name: categories
+          in: query
+          required: false
+          description: 카테고리 필터 (복수 선택 가능)
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+          example: ["AI", "Azure"]
+        
+        - name: technologies
+          in: query
+          required: false
+          description: 기술 스택 필터 (복수 선택 가능)
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+          example: ["Python", "Azure OpenAI"]
+        
+        - name: difficulty
+          in: query
+          required: false
+          description: 난이도 필터
+          schema:
+            type: string
+            enum: [beginner, intermediate, advanced]
+        
+        - name: min_stars
+          in: query
+          required: false
+          description: 최소 GitHub 별점
+          schema:
+            type: integer
+            minimum: 0
+          example: 50
+        
+        - name: sort
+          in: query
+          required: false
+          description: 정렬 기준
+          schema:
+            type: string
+            enum: [relevance, popularity, recent, stars]
+            default: relevance
+        
+        - name: limit
+          in: query
+          required: false
+          description: 페이지당 결과 수
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        
+        - name: offset
+          in: query
+          required: false
+          description: 페이지네이션 오프셋
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      
+      responses:
+        '200':
+          description: 검색 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchApiResponse'
+        
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        
+        '500':
+          description: 서버 오류
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SearchApiResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/SearchResponse'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    SearchResponse:
+      type: object
+      required:
+        - items
+        - total
+        - query
+        - mode
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResultItem'
+        total:
+          type: integer
+          description: 전체 결과 수
+          example: 42
+        facets:
+          $ref: '#/components/schemas/Facets'
+        query:
+          type: string
+          description: 검색어
+          example: "Azure OpenAI"
+        mode:
+          type: string
+          enum: [hybrid, keyword, vector]
+          example: hybrid
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+
+    SearchResultItem:
+      type: object
+      required:
+        - id
+        - title
+        - categories
+        - technologies
+        - popularity_score
+        - stars
+        - score
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a0ad946b-3524-419f-b7f8-4b719b8cedf6"
+        title:
+          type: string
+          example: "Azure OpenAI Prompt Engineering Workshop"
+        description:
+          type: string
+          nullable: true
+          example: "Learn prompt engineering with Azure OpenAI"
+        summary:
+          type: string
+          nullable: true
+        categories:
+          type: array
+          items:
+            type: string
+          example: ["AI", "Azure"]
+        technologies:
+          type: array
+          items:
+            type: string
+          example: ["Azure OpenAI", "Python", "Jupyter Notebook"]
+        difficulty_level:
+          type: string
+          nullable: true
+          enum: [beginner, intermediate, advanced]
+          example: beginner
+        popularity_score:
+          type: number
+          format: double
+          example: 0.85
+        stars:
+          type: integer
+          example: 182
+        score:
+          type: number
+          format: double
+          description: 검색 관련성 점수
+          example: 12.5
+
+    Facets:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetValue'
+        technologies:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetValue'
+        difficulty_level:
+          type: array
+          items:
+            $ref: '#/components/schemas/FacetValue'
+
+    FacetValue:
+      type: object
+      required:
+        - value
+        - count
+      properties:
+        value:
+          type: string
+          example: "AI"
+        count:
+          type: integer
+          example: 15
+
+    Meta:
+      type: object
+      required:
+        - timestamp
+        - correlationId
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+          format: uuid
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              example: "Search query is required"
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  issue:
+                    type: string
+        meta:
+          $ref: '#/components/schemas/Meta'

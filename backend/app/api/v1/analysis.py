@@ -19,6 +19,7 @@ from app.schemas.analysis import (
     StatusHistoryResponse,
 )
 from app.services.analysis_service import AnalysisService, get_analysis_service
+from app.services.search_service import get_search_service
 
 logger = logging.getLogger(__name__)
 
@@ -268,7 +269,16 @@ async def delete_analysis_request(
                         except Exception as e:
                             logger.warning(f"Failed to delete thumbnail for {content_id}: {e}")
 
-                    # Delete content
+                    # Delete from AI Search index
+                    try:
+                        search_service = get_search_service()
+                        if search_service.is_configured:
+                            await search_service.delete_document(content_id)
+                            logger.info(f"Deleted content {content_id} from search index")
+                    except Exception as e:
+                        logger.warning(f"Failed to delete {content_id} from search index: {e}")
+
+                    # Delete content from CosmosDB
                     await content_repo.delete_cross_partition(content_id)
                     deleted_contents.append(content_id)
                     logger.info(f"Deleted content: {content_id}")

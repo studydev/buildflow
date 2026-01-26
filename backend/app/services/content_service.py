@@ -14,6 +14,8 @@ from app.schemas.content import (
     ContentResponse,
     ContentUpdateRequest,
 )
+from app.services.llm_service import get_llm_service
+from app.services.search_service import get_search_service
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,8 @@ class ContentService:
     def __init__(self, repo: Optional[ContentRepository] = None):
         """Initialize with content repository."""
         self._repo = repo
+        self._search_service = None
+        self._llm_service = None
 
     @property
     def repo(self) -> ContentRepository:
@@ -31,6 +35,72 @@ class ContentService:
         if self._repo is None:
             self._repo = get_content_repo()
         return self._repo
+
+    @property
+    def search_service(self):
+        """Lazy load search service."""
+        if self._search_service is None:
+            self._search_service = get_search_service()
+        return self._search_service
+
+    @property
+    def llm_service(self):
+        """Lazy load LLM service."""
+        if self._llm_service is None:
+            self._llm_service = get_llm_service()
+        return self._llm_service
+
+    def _build_embedding_text(self, content: Content) -> str:
+        """Build text for embedding generation."""
+        parts = [
+            content.title or "",
+            getattr(content, 'title_kr', '') or "",
+            content.description or "",
+            getattr(content, 'description_kr', '') or "",
+            " ".join(content.technologies or []),
+        ]
+        return " ".join(filter(None, parts))
+
+    async def _sync_to_search_index(self, content: Content, delete: bool = False) -> None:
+        """
+        Sync content to Azure AI Search index.
+
+        Args:
+            content: Content to sync
+            delete: If True, delete from index instead of upsert
+        """
+        if not self.search_service.is_configured:
+            logger.debug("Search service not configured, skipping index sync")
+            return
+
+        try:
+            if delete:
+                await self.search_service.delete_document(content.id)
+                logger.info(f"Deleted content {content.id} from search index")
+                return
+
+            # Only index published content
+            if content.status != ContentStatus.PUBLISHED:
+                logger.debug(f"Skipping index sync for non-published content {content.id}")
+                return
+
+            # Generate embedding
+            embedding = None
+            embedding_text = self._build_embedding_text(content)
+
+            if self.llm_service.is_configured and embedding_text.strip():
+                try:
+                    embedding = await self.llm_service.generate_embedding(embedding_text)
+                except Exception as e:
+                    logger.warning(f"Embedding generation failed for {content.id}: {e}")
+
+            # Upsert to search index
+            await self.search_service.upsert_document(content, embedding)
+            logger.info(f"Synced content {content.id} to search index")
+
+        except Exception as e:
+            # Don't fail the main operation if search sync fails
+            logger.error(f"Failed to sync content {content.id} to search index: {e}")
 
     async def create_from_analysis(
         self,
@@ -131,6 +201,9 @@ class ContentService:
         created = await self.repo.create(content)
         logger.info(f"Created content {created.id} from analysis for {source_url}")
 
+        # Sync to search index (published content from analysis)
+        await self._sync_to_search_index(created)
+
         return created
 
     async def create(
@@ -168,6 +241,8 @@ class ContentService:
         try:
             created = await self.repo.create(content)
             logger.info(f"Created content {created.id} for contributor {contributor_id}")
+            # Sync to search index (only if published, but draft won't be synced)
+            await self._sync_to_search_index(created)
             return created
         except Exception as e:
             logger.warning(f"Failed to persist content to Cosmos, returning unpersisted: {e}")
@@ -237,6 +312,8 @@ class ContentService:
         try:
             updated = await self.repo.update(existing)
             logger.info(f"Updated content {content_id}")
+            # Sync to search index
+            await self._sync_to_search_index(updated)
             return updated
         except Exception as e:
             logger.warning(f"Failed to persist content update to Cosmos: {e}")
@@ -279,6 +356,11 @@ class ContentService:
         try:
             updated = await self.repo.update(existing)
             logger.info(f"Updated content {content_id} status to {new_status}")
+            # Sync to search index (add on publish, remove on archive)
+            if new_status == "published":
+                await self._sync_to_search_index(updated)
+            elif new_status == "archived":
+                await self._sync_to_search_index(updated, delete=True)
             return updated
         except Exception as e:
             logger.warning(f"Failed to persist status update to Cosmos: {e}")
