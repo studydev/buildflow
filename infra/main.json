@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "12481685830952856457"
+      "templateHash": "1211809683442000836"
     }
   },
   "parameters": {
@@ -1096,7 +1096,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.38.33.27573",
-              "templateHash": "17400802434855593491"
+              "templateHash": "4022299227697773018"
             }
           },
           "parameters": {
@@ -1157,7 +1157,7 @@
                 "accessTier": "Hot",
                 "supportsHttpsTrafficOnly": true,
                 "minimumTlsVersion": "TLS1_2",
-                "allowBlobPublicAccess": true,
+                "allowBlobPublicAccess": false,
                 "allowSharedKeyAccess": true,
                 "networkAcls": {
                   "bypass": "AzureServices",
@@ -1197,7 +1197,7 @@
               "apiVersion": "2024-01-01",
               "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'repo-images')]",
               "properties": {
-                "publicAccess": "Blob",
+                "publicAccess": "None",
                 "metadata": {
                   "purpose": "AI-generated thumbnail images for content cards"
                 }

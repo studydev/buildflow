@@ -199,7 +199,7 @@ The image should intuitively represent the workshop's goal and make viewers curi
             categories: Optional categories
 
         Returns:
-            Blob URL of uploaded image
+            SAS URL of uploaded image (valid for 1 year)
 
         Raises:
             ImageGenerationError: If generation or upload fails
@@ -220,7 +220,7 @@ The image should intuitively represent the workshop's goal and make viewers curi
         try:
             # Upload to storage
             storage_service = StorageService()
-            blob_url = await storage_service.upload_blob(
+            await storage_service.upload_blob(
                 container_name=REPO_IMAGES_CONTAINER,
                 blob_path=blob_path,
                 data=image_bytes,
@@ -232,8 +232,16 @@ The image should intuitively represent the workshop's goal and make viewers curi
                 },
             )
 
-            logger.info(f"Uploaded thumbnail to: {blob_url}")
-            return blob_url
+            # Generate SAS URL (valid for 1 year = 8760 hours)
+            sas_url = storage_service.get_sas_url(
+                container_name=REPO_IMAGES_CONTAINER,
+                blob_path=blob_path,
+                expiry_hours=8760,  # 1 year
+                permissions="r",
+            )
+
+            logger.info("Uploaded thumbnail with SAS URL")
+            return sas_url
 
         except Exception as e:
             raise ImageGenerationError(f"Failed to upload image: {e}")

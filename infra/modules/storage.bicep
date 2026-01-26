@@ -50,8 +50,8 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2024-01-01' = {
     accessTier: 'Hot'
     supportsHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
-    allowBlobPublicAccess: true  // Required for public thumbnail images in repo-images container
-    allowSharedKeyAccess: true // Required for SDK access, consider disabling in prod
+    allowBlobPublicAccess: false  // Public access blocked by Azure Policy - use SAS URLs instead
+    allowSharedKeyAccess: true // Required for SDK access and SAS URL generation
     networkAcls: {
       bypass: 'AzureServices'
       defaultAction: 'Allow' // Dev environment allows public access
@@ -95,7 +95,7 @@ resource repoImagesContainer 'Microsoft.Storage/storageAccounts/blobServices/con
   parent: blobService
   name: 'repo-images'
   properties: {
-    publicAccess: 'Blob'  // Allow public read access for thumbnail images
+    publicAccess: 'None'  // Private - use SAS URLs for image access
     metadata: {
       purpose: 'AI-generated thumbnail images for content cards'
     }
