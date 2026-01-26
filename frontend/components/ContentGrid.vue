@@ -67,6 +67,7 @@ const fallbackContentItems = [
     icon: '🤖',
     title: 'LAB510: VS Code에서 GitHub Copilot의 강력한 기능',
     description: '이 실습형 랩에서는 Visual Studio Code에서 GitHub Copilot을 활용하여 일상적인 코딩 작업에서 가치를 극대화하는 방법을 심층적으로 다룹니다.',
+    thumbnailUrl: undefined,
     tags: [
       { label: 'AI', color: 'workshop' },
       { label: 'Copilot', color: 'workshop' },
@@ -83,6 +84,7 @@ const fallbackContentItems = [
     icon: '🔍',
     title: 'LAB511: Azure AI Search로 에이전틱 지식 베이스 구축',
     description: 'Azure AI Search의 차세대 검색 방식인 에이전틱 RAG를 사용하여 Knowledge Base를 구축합니다.',
+    thumbnailUrl: undefined,
     tags: [
       { label: 'AI', color: 'workshop' },
       { label: 'Azure', color: 'azure' },
@@ -99,6 +101,7 @@ const fallbackContentItems = [
     icon: '🎨',
     title: 'LAB512: Microsoft Foundry 및 AI Toolkit을 사용한 멀티모달 에이전트 프로토타이핑',
     description: '이 실습에서는 VS Code에서 AI Toolkit(AITK)과 Microsoft Foundry를 직접 사용하여 Model Catalog의 최신 멀티모달 및 추론 모델을 탐색합니다.',
+    thumbnailUrl: undefined,
     tags: [
       { label: 'AI', color: 'workshop' },
       { label: 'Azure', color: 'azure' },
@@ -115,6 +118,7 @@ const fallbackContentItems = [
     icon: '⚡',
     title: 'LAB514: MCP 및 Azure Functions로 AI 에이전트를 빌드하고 배포하기',
     description: 'Azure Functions를 사용하여 GitHub Copilot과 같은 AI 어시스턴트를 위한 MCP 도구를 만드는 방법을 학습합니다.',
+    thumbnailUrl: undefined,
     tags: [
       { label: 'AI', color: 'workshop' },
       { label: 'Azure', color: 'azure' },

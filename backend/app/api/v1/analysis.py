@@ -228,7 +228,6 @@ async def delete_analysis_request(
     - Thumbnail images from blob storage
     """
     from app.repositories.content_repo import get_content_repo
-    from app.services.storage_service import REPO_IMAGES_CONTAINER, StorageService
 
     # First, get the analysis request to find linked content_ids
     request = await service.get_request_cross_partition(request_id)
@@ -241,7 +240,14 @@ async def delete_analysis_request(
 
     # Delete linked content and thumbnails
     if request.content_ids:
-        storage_service = StorageService()
+        # Try to import storage service (may not be available in test environment)
+        storage_service = None
+        try:
+            from app.services.storage_service import REPO_IMAGES_CONTAINER, StorageService
+            storage_service = StorageService()
+        except ImportError:
+            logger.warning("StorageService not available, skipping thumbnail deletion")
+            REPO_IMAGES_CONTAINER = "repo-images"
 
         for content_id in request.content_ids:
             # Get content to check for thumbnail
@@ -249,7 +255,7 @@ async def delete_analysis_request(
                 content = await content_repo.get_by_id_cross_partition(content_id)
                 if content:
                     # Delete thumbnail from blob storage if exists
-                    if content.thumbnail_url:
+                    if content.thumbnail_url and storage_service:
                         try:
                             # Extract blob path from URL (format: https://account.blob.../container/path?sas)
                             # Blob path is typically: thumbnails/{content_id}.png
