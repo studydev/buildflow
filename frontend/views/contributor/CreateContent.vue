@@ -31,12 +31,12 @@ const handleSubmit = async () => {
   urlError.value = ''
   
   if (!githubUrl.value.trim()) {
-    urlError.value = 'URL을 입력해주세요'
+    urlError.value = 'Please enter a URL'
     return
   }
   
   if (!isValidUrl(githubUrl.value.trim())) {
-    urlError.value = '유효한 URL을 입력해주세요 (예: https://github.com/owner/repo 또는 리다이렉트 URL)'
+    urlError.value = 'Please enter a valid URL (e.g., https://github.com/owner/repo or a redirect URL)'
     return
   }
   
@@ -69,15 +69,15 @@ const getStatusColor = (status: AnalysisRequest['status']) => {
 const getStatusLabel = (status: AnalysisRequest['status']) => {
   switch (status) {
     case 'completed':
-      return '완료'
+      return 'completed'
     case 'fetching':
-      return '가져오는 중'
+      return 'fetching'
     case 'parsing':
-      return '분석 중'
+      return 'parsing'
     case 'failed':
-      return '실패'
+      return 'failed'
     default:
-      return '대기중'
+      return 'pending'
   }
 }
 
@@ -113,11 +113,11 @@ onUnmounted(() => {
         Create Content
       </h1>
       <p class="text-[var(--text-secondary)]">
-        GitHub 저장소 URL을 입력하여 새로운 학습 콘텐츠를 생성하세요
+        Enter a GitHub repository URL to create new learning content.        
       </p>
     </div>
 
-    <!-- GitHub URL 입력 폼 -->
+    <!-- GitHub URL input form -->
     <div class="card p-6 mb-8">
       <h2 class="font-header text-lg font-semibold text-[var(--text-primary)] mb-4">
         GitHub Repository URL
@@ -143,16 +143,16 @@ onUnmounted(() => {
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              제출 중...
+              Submitting…
             </span>
-            <span v-else>분석 요청</span>
+            <span v-else>Request Analysis</span>
           </Button>
         </div>
         
         <p v-if="urlError" class="text-sm text-red-500">{{ urlError }}</p>
         <p v-else-if="analysisStore.error" class="text-sm text-red-500">{{ analysisStore.error }}</p>
         <p v-else class="text-sm text-[var(--text-tertiary)]">
-          💡 저장소의 README.md를 분석하여 자동으로 콘텐츠 정보를 추출합니다
+          💡 The README.md of the repository will be analyzed to automatically extract content information.
         </p>
       </form>
     </div>
@@ -161,26 +161,26 @@ onUnmounted(() => {
     <div class="card overflow-hidden">
       <div class="px-6 py-4 border-b border-[var(--border)] flex items-center justify-between">
         <h2 class="font-header text-lg font-semibold text-[var(--text-primary)]">
-          최근 분석 요청
+          Recent Analysis Requests          
         </h2>
         <router-link 
           to="/contributor/contribute"
           class="text-sm text-primary hover:underline"
         >
-          전체 보기 →
+          View All →
         </router-link>
       </div>
 
       <!-- Loading -->
       <div v-if="analysisStore.isLoading" class="px-6 py-12 text-center">
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p class="mt-4 text-[var(--text-secondary)]">분석 요청을 불러오는 중...</p>
+        <p class="mt-4 text-[var(--text-secondary)]">Loading analysis requests...</p>
       </div>
 
       <!-- Empty State -->
       <div v-else-if="recentRequests.length === 0" class="px-6 py-12 text-center">
         <p class="text-[var(--text-tertiary)]">
-          아직 분석 요청이 없습니다. GitHub URL을 입력하여 시작하세요.
+          There are no analysis requests yet. Start by entering a GitHub URL.
         </p>
       </div>
 
@@ -277,10 +277,10 @@ onUnmounted(() => {
                   @click="handleRetry(request)"
                   class="text-xs"
                 >
-                  🔄 재시도
+                  🔄 Retry
                 </Button>
                 <span v-else-if="['pending', 'fetching', 'parsing'].includes(request.status)" class="text-xs text-[var(--text-tertiary)]">
-                  분석 중...
+                  Analyzing...
                 </span>
                 <span v-else class="text-xs text-[var(--text-tertiary)]">-</span>
               </td>

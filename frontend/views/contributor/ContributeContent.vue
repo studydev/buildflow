@@ -53,12 +53,12 @@ const handleUrlSubmit = async () => {
   urlError.value = ''
   
   if (!githubUrl.value.trim()) {
-    urlError.value = 'URL을 입력해주세요'
+    urlError.value = 'Please enter a URL'
     return
   }
   
   if (!isValidUrl(githubUrl.value.trim())) {
-    urlError.value = '유효한 URL을 입력해주세요 (예: https://github.com/owner/repo)'
+    urlError.value = 'Please enter a valid URL (e.g., https://github.com/owner/repo)'
     return
   }
   
@@ -97,15 +97,15 @@ function formatLastCommit(dateStr: string | undefined): string {
   const diffMs = now.getTime() - date.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
   
-  if (diffDays < 1) return '오늘'
-  if (diffDays === 1) return '어제'
-  if (diffDays < 30) return `${diffDays}일 전`
+  if (diffDays < 1) return 'Today'
+  if (diffDays === 1) return 'Yesterday'
+  if (diffDays < 30) return `${diffDays} days ago`
   
   const diffMonths = Math.floor(diffDays / 30)
-  if (diffMonths < 12) return `${diffMonths}개월 전`
+  if (diffMonths < 12) return `${diffMonths} months ago`
   
   const diffYears = Math.floor(diffMonths / 12)
-  return `${diffYears}년 전`
+  return `${diffYears} years ago`
 }
 const searchQuery = ref('')
 const contentSearchQuery = ref('')
@@ -155,12 +155,12 @@ const getStatusBadgeClass = (status: string) => {
 
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
-    pending: '대기중',
-    fetching: '가져오는 중...',
-    parsing: '분석 중...',
-    generating_thumbnail: '썸네일 생성 중...',
-    completed: '완료',
-    failed: '실패',
+    pending: 'Pending',
+    fetching: 'Fetching...',
+    parsing: 'Analyzing...',
+    generating_thumbnail: 'Generating thumbnail...',
+    completed: 'Completed',
+    failed: 'Failed',
   }
   return labels[status] || status
 }
@@ -173,7 +173,7 @@ const getRepoName = (url: string) => {
 
 // Format date
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('ko-KR', {
+  return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -188,20 +188,20 @@ const handleRetry = async (request: AnalysisRequest) => {
 }
 
 const handleCancel = async (request: AnalysisRequest) => {
-  if (confirm('정말로 이 분석을 취소하시겠습니까?')) {
+  if (confirm('Are you sure you want to cancel this analysis?')) {
     await analysisStore.cancelRequest(request.id)
   }
 }
 
 const handleDelete = async (request: AnalysisRequest) => {
-  if (confirm('정말로 이 요청을 삭제하시겠습니까?')) {
+  if (confirm('Are you sure you want to delete this request?')) {
     await analysisStore.deleteRequest(request.id)
   }
 }
 
 // Re-fetch completed analysis (re-collect from GitHub)
 const handleRefetch = async (request: AnalysisRequest) => {
-  if (confirm('GitHub에서 콘텐츠를 다시 수집하시겠습니까? 기존 분석 결과가 새로운 결과로 대체됩니다.')) {
+  if (confirm('Do you want to re-fetch content from GitHub? The existing analysis results will be replaced.')) {
     await analysisStore.retryRequest(request.id)
   }
 }
@@ -213,21 +213,21 @@ const handleEditContent = async (contentId: string) => {
   if (content) {
     openEditModal(content)
   } else {
-    alert('콘텐츠를 불러오는데 실패했습니다.')
+    alert('Failed to load content.')
   }
 }
 
 // Publish content from analysis
 const handlePublishContent = async (contentId: string) => {
-  if (!confirm('이 콘텐츠를 게시하시겠습니까?')) return
+  if (!confirm('Do you want to publish this content?')) return
   
   const result = await contentStore.updateStatus(contentId, 'published')
   if (result) {
-    alert('콘텐츠가 게시되었습니다.')
+    alert('Content has been published.')
     // Refresh the content list
     await contentStore.fetchContent()
   } else {
-    alert('게시에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+    alert('Failed to publish: ' + (contentStore.error || 'Unknown error'))
   }
 }
 
@@ -253,7 +253,7 @@ const openEditModal = (item: StoreContentItem) => {
 const isSyncing = ref(false)
 const handleSyncFromAnalysis = async () => {
   if (!editingItem.value?.id || !editingItem.value?.analysis_request_id) {
-    alert('연결된 분석 요청이 없습니다.')
+    alert('No linked analysis request found.')
     return
   }
   
@@ -267,13 +267,13 @@ const handleSyncFromAnalysis = async () => {
       editingItem.value = { ...result }
       // Refresh content list
       await contentStore.fetchAllContent()
-      alert('원본 데이터와 동기화되었습니다.')
+      alert('Synced with original data.')
     } else {
-      alert('동기화에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+      alert('Failed to sync: ' + (contentStore.error || 'Unknown error'))
     }
   } catch (e) {
     console.error('Failed to sync from analysis:', e)
-    alert('동기화에 실패했습니다.')
+    alert('Failed to sync.')
   } finally {
     isSyncing.value = false
   }
@@ -325,7 +325,7 @@ const saveEdit = async () => {
 const handleRegenerateThumbnail = async () => {
   if (!editingItem.value?.id) return
   
-  if (!confirm('썸네일을 재생성하시겠습니까? AI가 새로운 이미지를 생성합니다.')) return
+  if (!confirm('Do you want to regenerate the thumbnail? AI will generate a new image.')) return
   
   isRegeneratingThumbnail.value = true
   
@@ -334,13 +334,13 @@ const handleRegenerateThumbnail = async () => {
     
     if (result) {
       editingItem.value.thumbnail_url = result.thumbnail_url
-      alert('썸네일이 성공적으로 재생성되었습니다.')
+      alert('Thumbnail has been successfully regenerated.')
     } else {
-      alert('썸네일 재생성에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+      alert('Failed to regenerate thumbnail: ' + (contentStore.error || 'Unknown error'))
     }
   } catch (e) {
     console.error('Failed to regenerate thumbnail:', e)
-    alert('썸네일 재생성에 실패했습니다.')
+    alert('Failed to regenerate thumbnail.')
   } finally {
     isRegeneratingThumbnail.value = false
   }
@@ -353,35 +353,35 @@ const openUrl = (url: string) => {
 
 // Archive content (soft delete)
 const handleArchive = async (item: StoreContentItem) => {
-  if (!confirm('이 콘텐츠를 아카이브하시겠습니까?')) return
+  if (!confirm('Do you want to archive this content?')) return
   
   const result = await contentStore.updateStatus(item.id, 'archived')
   if (result) {
     // Refresh the list to show updated status
     await contentStore.fetchAllContent()
   } else {
-    alert('아카이브에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+    alert('Failed to archive: ' + (contentStore.error || 'Unknown error'))
   }
 }
 
 // Restore archived content to published
 const handleRestore = async (item: StoreContentItem) => {
-  if (!confirm('이 콘텐츠를 다시 게시하시겠습니까?')) return
+  if (!confirm('Do you want to republish this content?')) return
   
   const result = await contentStore.updateStatus(item.id, 'published')
   if (result) {
     // Refresh the list to show updated status
     await contentStore.fetchAllContent()
   } else {
-    alert('게시에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+    alert('Failed to restore: ' + (contentStore.error || 'Unknown error'))
   }
 }
 
 // Permanently delete content and linked analysis request
 const handlePermanentDelete = async (item: StoreContentItem) => {
   const confirmMessage = item.analysis_request_id 
-    ? '이 콘텐츠와 연결된 분석 요청을 모두 영구 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다!'
-    : '이 콘텐츠를 영구 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다!'
+    ? 'Do you want to permanently delete this content and all linked analysis requests?\n\n⚠️ This action cannot be undone!'
+    : 'Do you want to permanently delete this content?\n\n⚠️ This action cannot be undone!'
   
   if (!confirm(confirmMessage)) return
   
@@ -394,7 +394,7 @@ const handlePermanentDelete = async (item: StoreContentItem) => {
       await analysisStore.fetchRequests()
     }
   } else {
-    alert('영구 삭제에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+    alert('Failed to permanently delete: ' + (contentStore.error || 'Unknown error'))
   }
 }
 
@@ -402,7 +402,7 @@ const handlePermanentDelete = async (item: StoreContentItem) => {
 const refreshingRepoId = ref<string | null>(null)
 const handleRefreshRepo = async (item: StoreContentItem) => {
   if (!item.source_url) {
-    alert('소스 URL이 없습니다.')
+    alert('Source URL is missing.')
     return
   }
   
@@ -414,11 +414,11 @@ const handleRefreshRepo = async (item: StoreContentItem) => {
       // Update the item in the list with new data
       await contentStore.fetchAllContent()
     } else {
-      alert('저장소 정보 새로고침에 실패했습니다: ' + (contentStore.error || 'Unknown error'))
+      alert('Failed to refresh repository metadata: ' + (contentStore.error || 'Unknown error'))
     }
   } catch (e) {
     console.error('Failed to refresh repo metadata:', e)
-    alert('저장소 정보 새로고침에 실패했습니다.')
+    alert('Failed to refresh repository metadata.')
   } finally {
     refreshingRepoId.value = null
   }
@@ -443,7 +443,7 @@ onUnmounted(() => {
         Repos
       </h1>
       <p class="text-[var(--text-secondary)]">
-        GitHub 리포지토리를 분석하고 학습 콘텐츠를 관리하세요
+        Collect content from GitHub URLs and manage it on this platform.
       </p>
     </div>
 
@@ -458,7 +458,7 @@ onUnmounted(() => {
             : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
         ]"
       >
-        분석 요청
+        Request Analysis
         <span v-if="analysisStore.pendingRequests.length > 0" class="ml-1.5 px-1.5 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
           {{ analysisStore.pendingRequests.length }}
         </span>
@@ -473,14 +473,14 @@ onUnmounted(() => {
             : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
         ]"
       >
-        퍼블리싱 콘텐츠
+        Manage Content
         <span v-if="activeTab === 'content'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></span>
       </button>
     </div>
 
     <!-- Analysis Requests Tab -->
     <div v-if="activeTab === 'analysis'" class="space-y-6">
-      <!-- GitHub URL 입력 폼 -->
+      <!-- GitHub URL input form -->
       <div class="card p-6">
         <h2 class="font-header text-lg font-semibold text-[var(--text-primary)] mb-4">
           GitHub Repository URL
@@ -506,16 +506,16 @@ onUnmounted(() => {
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                제출 중...
+                Submitting...
               </span>
-              <span v-else>분석 요청</span>
+              <span v-else>Request Analysis</span>
             </button>
           </div>
           
           <p v-if="urlError" class="text-sm text-red-500">{{ urlError }}</p>
           <p v-else-if="analysisStore.error" class="text-sm text-red-500">{{ analysisStore.error }}</p>
           <p v-else class="text-sm text-[var(--text-tertiary)]">
-            💡 저장소의 README.md를 분석하여 자동으로 콘텐츠 정보를 추출합니다
+            💡 The README.md of the repository will be analyzed to automatically extract content information.
           </p>
         </form>
       </div>
@@ -536,7 +536,7 @@ onUnmounted(() => {
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="URL 또는 제목으로 검색..."
+            placeholder="Search by URL or title..."
             class="w-full pl-11 pr-4 py-2.5 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
           />
         </div>
@@ -551,7 +551,7 @@ onUnmounted(() => {
                 : 'bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-primary hover:text-primary'
             ]"
           >
-            전체
+            All
           </button>
           <button
             @click="statusFilter = 'pending'"
@@ -562,7 +562,7 @@ onUnmounted(() => {
                 : 'bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-yellow-500 hover:text-yellow-500'
             ]"
           >
-            대기중
+            Pending
           </button>
           <button
             @click="statusFilter = 'completed'"
@@ -573,7 +573,7 @@ onUnmounted(() => {
                 : 'bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-green-500 hover:text-green-500'
             ]"
           >
-            완료
+            Completed
           </button>
           <button
             @click="statusFilter = 'failed'"
@@ -584,7 +584,7 @@ onUnmounted(() => {
                 : 'bg-[var(--card-bg)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-red-500 hover:text-red-500'
             ]"
           >
-            실패
+            Failed
           </button>
         </div>
       </div>
@@ -592,7 +592,7 @@ onUnmounted(() => {
       <!-- Loading State -->
       <div v-if="analysisStore.isLoading" class="text-center py-12">
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p class="mt-4 text-[var(--text-secondary)]">분석 요청을 불러오는 중...</p>
+        <p class="mt-4 text-[var(--text-secondary)]">Loading analysis requests...</p>
       </div>
 
       <!-- Empty State -->
@@ -600,8 +600,8 @@ onUnmounted(() => {
         <svg class="mx-auto h-12 w-12 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
         </svg>
-        <h3 class="mt-4 text-lg font-header font-semibold text-[var(--text-primary)]">아직 분석 요청이 없습니다</h3>
-        <p class="mt-2 text-[var(--text-secondary)]">위의 GitHub 리포지토리 URL 입력란을 통해 콘텐츠 분석을 시작하세요</p>
+        <h3 class="mt-4 text-lg font-header font-semibold text-[var(--text-primary)]">No analysis requests yet</h3>
+        <p class="mt-2 text-[var(--text-secondary)]">Enter a GitHub repository URL above to start content analysis</p>
       </div>
 
       <!-- Analysis Requests Table -->
@@ -609,13 +609,13 @@ onUnmounted(() => {
         <table class="w-full">
           <thead>
             <tr class="bg-[var(--bg-secondary)] border-b border-[var(--border)]">
-              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">리포지토리</th>
-              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">상태</th>
-              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">진행률</th>
-              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">요청자</th>
-              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">제출일</th>
-              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">결과</th>
-              <th class="px-4 py-3 text-right text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">작업</th>
+              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Repository</th>
+              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Progress</th>
+              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Requester</th>
+              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Submitted</th>
+              <th class="px-4 py-3 text-left text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Result</th>
+              <th class="px-4 py-3 text-right text-xs font-header font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-[var(--border)]">
@@ -683,7 +683,7 @@ onUnmounted(() => {
                     </svg>
                     <div class="text-left">
                       <p class="font-medium text-[var(--text-primary)] truncate max-w-[180px] group-hover:text-primary transition-colors">{{ request.result.title }}</p>
-                      <p class="text-xs text-[var(--text-secondary)]">{{ request.content_ids.length }} 콘텐츠 생성됨</p>
+                      <p class="text-xs text-[var(--text-secondary)]">{{ request.content_ids.length }} content(s) created</p>
                     </div>
                   </button>
                 </template>
@@ -701,7 +701,7 @@ onUnmounted(() => {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                     <span class="text-red-500 truncate max-w-[180px] group-hover:underline" :title="request.error_message">
-                      {{ request.error_message || '분석 실패' }}
+                      {{ request.error_message || 'Analysis failed' }}
                     </span>
                   </button>
                 </template>
@@ -717,7 +717,7 @@ onUnmounted(() => {
                     <button
                       @click="handleRefetch(request)"
                       class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-blue-500 hover:bg-blue-500/10 transition-colors"
-                      title="GitHub에서 재수집"
+                      title="Re-fetch from GitHub"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -726,7 +726,7 @@ onUnmounted(() => {
                     <button
                       @click="toggleExpand(request.id)"
                       class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-primary hover:bg-primary/10 transition-colors"
-                      :title="isExpanded(request.id) ? '접기' : '상세 보기'"
+                      :title="isExpanded(request.id) ? 'Collapse' : 'View details'"
                     >
                       <svg :class="['w-4 h-4 transition-transform', isExpanded(request.id) ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -737,7 +737,7 @@ onUnmounted(() => {
                     <button
                       @click="toggleExpand(request.id)"
                       class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                      :title="isExpanded(request.id) ? '접기' : '상세 보기'"
+                      :title="isExpanded(request.id) ? 'Collapse' : 'View details'"
                     >
                       <svg :class="['w-4 h-4 transition-transform', isExpanded(request.id) ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -746,7 +746,7 @@ onUnmounted(() => {
                     <button
                       @click="handleRetry(request)"
                       class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-primary hover:bg-primary/10 transition-colors"
-                      title="재시도"
+                      title="Retry"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -757,7 +757,7 @@ onUnmounted(() => {
                     <button
                       @click="handleCancel(request)"
                       class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-yellow-500 hover:bg-yellow-500/10 transition-colors"
-                      title="취소"
+                      title="Cancel"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -767,7 +767,7 @@ onUnmounted(() => {
                   <button
                     @click="handleDelete(request)"
                     class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                    title="삭제"
+                    title="Delete"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -795,7 +795,7 @@ onUnmounted(() => {
                         {{ request.result.content_type }}
                       </span>
                       <span v-if="request.result.duration_minutes" class="px-2 py-1 bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-xs font-medium rounded">
-                        {{ request.result.duration_minutes }}분
+                        {{ request.result.duration_minutes }} min
                       </span>
                     </div>
                   </div>
@@ -803,7 +803,7 @@ onUnmounted(() => {
                   <!-- Categories & Technologies -->
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div v-if="request.result.categories && request.result.categories.length > 0">
-                      <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">카테고리</p>
+                      <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">Categories</p>
                       <div class="flex flex-wrap gap-1.5">
                         <span 
                           v-for="cat in request.result.categories" 
@@ -815,7 +815,7 @@ onUnmounted(() => {
                       </div>
                     </div>
                     <div v-if="request.result.technologies && request.result.technologies.length > 0">
-                      <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">기술 스택</p>
+                      <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">Technologies</p>
                       <div class="flex flex-wrap gap-1.5">
                         <span 
                           v-for="tech in request.result.technologies" 
@@ -830,7 +830,7 @@ onUnmounted(() => {
                   
                   <!-- Learning Objectives -->
                   <div v-if="request.result.learning_objectives && request.result.learning_objectives.length > 0" class="mb-4">
-                    <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">학습 목표</p>
+                    <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">Learning Objectives</p>
                     <ul class="list-disc list-inside space-y-1">
                       <li v-for="(objective, idx) in request.result.learning_objectives" :key="idx" class="text-sm text-[var(--text-secondary)]">
                         {{ objective }}
@@ -840,7 +840,7 @@ onUnmounted(() => {
                   
                   <!-- Prerequisites -->
                   <div v-if="request.result.prerequisites && request.result.prerequisites.length > 0" class="mb-4">
-                    <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">사전 요구사항</p>
+                    <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">Prerequisites</p>
                     <ul class="list-disc list-inside space-y-1">
                       <li v-for="(prereq, idx) in request.result.prerequisites" :key="idx" class="text-sm text-[var(--text-secondary)]">
                         {{ prereq }}
@@ -850,7 +850,7 @@ onUnmounted(() => {
                   
                   <!-- Generated Contents -->
                   <div v-if="request.content_ids && request.content_ids.length > 0">
-                    <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">생성된 콘텐츠 ({{ request.content_ids.length }}개)</p>
+                    <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">Generated Content ({{ request.content_ids.length }})</p>
                     <div class="space-y-2">
                       <div
                         v-for="contentId in request.content_ids"
@@ -870,22 +870,22 @@ onUnmounted(() => {
                           <button
                             @click="handleEditContent(contentId)"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:text-primary bg-[var(--bg-secondary)] hover:bg-primary/10 rounded-lg transition-colors"
-                            title="콘텐츠 수정"
+                            title="Edit content"
                           >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
-                            수정
+                            Edit
                           </button>
                           <button
                             @click="handlePublishContent(contentId)"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                            title="콘텐츠 퍼블리싱"
+                            title="Publish content"
                           >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                             </svg>
-                            퍼블리싱
+                            Publish
                           </button>
                         </div>
                       </div>
@@ -897,41 +897,41 @@ onUnmounted(() => {
                     <button
                       @click="handleRefetch(request)"
                       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-lg transition-colors"
-                      title="GitHub에서 다시 수집"
+                      title="Re-fetch from GitHub"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                       </svg>
-                      재수집
+                      Re-fetch
                     </button>
                     <button
                       v-if="request.content_ids && request.content_ids.length > 0"
                       @click="handleEditContent(request.content_ids[0]!)"
                       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primary-hover rounded-lg transition-colors"
-                      title="콘텐츠 수정"
+                      title="Edit content"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                       </svg>
-                      수정
+                      Edit
                     </button>
                     <button
                       v-if="request.content_ids && request.content_ids.length > 0"
                       @click="handlePublishContent(request.content_ids[0]!)"
                       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                      title="콘텐츠 퍼블리싱"
+                      title="Publish content"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                       </svg>
-                      퍼블리싱
+                      Publish
                     </button>
                   </div>
                   
                   <!-- Completed At -->
                   <div v-if="request.completed_at" class="mt-4 pt-3 border-t border-[var(--border)]">
                     <p class="text-xs text-[var(--text-tertiary)]">
-                      분석 완료: {{ formatDate(request.completed_at) }}
+                      Completed: {{ formatDate(request.completed_at) }}
                     </p>
                   </div>
                 </div>
@@ -949,14 +949,14 @@ onUnmounted(() => {
                       </svg>
                     </div>
                     <div class="flex-1">
-                      <h4 class="font-header font-semibold text-red-600 mb-2">분석 실패</h4>
+                      <h4 class="font-header font-semibold text-red-600 mb-2">Analysis Failed</h4>
                       <p class="text-sm text-[var(--text-secondary)] mb-4">
-                        {{ request.error_message || '알 수 없는 오류가 발생했습니다' }}
+                        {{ request.error_message || 'An unknown error occurred' }}
                       </p>
                       
                       <!-- Status History -->
                       <div v-if="request.status_history && request.status_history.length > 0" class="mb-4">
-                        <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">상태 기록</p>
+                        <p class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">Status History</p>
                         <div class="space-y-1">
                           <div 
                             v-for="(entry, idx) in request.status_history" 
@@ -981,13 +981,13 @@ onUnmounted(() => {
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                           </svg>
-                          다시 시도
+                          Retry
                         </button>
                         <button
                           @click="handleDelete(request)"
                           class="inline-flex items-center gap-2 px-4 py-2 bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-sm font-semibold rounded-lg border border-[var(--border)] transition-colors"
                         >
-                          삭제
+                          Delete
                         </button>
                       </div>
                     </div>
@@ -1004,14 +1004,14 @@ onUnmounted(() => {
       <div v-if="analysisStore.activePollingCount > 0" class="text-center text-sm text-[var(--text-secondary)]">
         <span class="inline-flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-          {{ analysisStore.activePollingCount }}개 요청 모니터링 중...
+          Monitoring {{ analysisStore.activePollingCount }} request(s)...
         </span>
       </div>
     </div>
 
     <!-- Content Tab (API-connected) -->
     <div v-if="activeTab === 'content'" class="space-y-6">
-      <!-- 검색바 및 언어 토글 -->
+      <!-- Search bar and language toggle -->
       <div class="flex items-center justify-between gap-4">
         <div class="relative flex-1 max-w-3xl">
           <svg 
@@ -1028,7 +1028,7 @@ onUnmounted(() => {
             v-model="contentSearchQuery"
             @input="onContentSearch"
             type="text"
-            placeholder="콘텐츠 검색..."
+            placeholder="Search content..."
             class="w-full pl-11 pr-4 py-3 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
           />
         </div>
@@ -1042,10 +1042,10 @@ onUnmounted(() => {
 
       <!-- Empty State -->
       <div v-else-if="contentStore.isEmpty" class="text-center py-12">
-        <p class="text-[var(--text-secondary)]">등록된 콘텐츠가 없습니다</p>
+        <p class="text-[var(--text-secondary)]">No content registered</p>
       </div>
 
-      <!-- 콘텐츠 카드 그리드 -->
+      <!-- Content card grid -->
       <div v-else class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
         <div
           v-for="item in contentStore.items"
@@ -1150,7 +1150,7 @@ onUnmounted(() => {
                 @click.stop="handleRefreshRepo(item)"
                 :disabled="refreshingRepoId === item.id"
                 class="p-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--border-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
-                title="저장소 정보 새로고침 (stars, forks, 마지막 커밋)"
+                title="Refresh repository info (stars, forks, last commit)"
               >
                 <svg 
                   class="w-4 h-4"
@@ -1178,33 +1178,33 @@ onUnmounted(() => {
               <button
                 @click.stop="openEditModal(item)"
                 class="flex-1 px-4 py-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center gap-1.5 bg-primary hover:bg-primary-hover text-white"
-                title="편집"
+                title="Edit"
               >
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
-                <span>편집</span>
+                <span>Edit</span>
               </button>
               <!-- Restore Button for Archived Content (right of Edit) -->
               <button
                 v-if="item.status === 'archived'"
                 @click.stop="handleRestore(item)"
                 class="flex-1 px-4 py-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-700 text-white"
-                title="복원"
+                title="Restore"
               >
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
                   <path d="M3 3v5h5"></path>
                 </svg>
-                <span>복원</span>
+                <span>Restore</span>
               </button>
               <!-- Permanent Delete Button for Archived Content -->
               <button
                 v-if="item.status === 'archived'"
                 @click.stop="handlePermanentDelete(item)"
                 class="p-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center bg-red-600 hover:bg-red-700 text-white"
-                title="영구 삭제 (콘텐츠 + 분석 요청)"
+                title="Permanently delete (content + analysis request)"
               >
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M3 6h18"></path>
@@ -1218,7 +1218,7 @@ onUnmounted(() => {
                 v-if="item.status !== 'archived'"
                 @click.stop="handleArchive(item)"
                 class="p-2.5 rounded-lg text-xs font-header font-semibold transition-all flex items-center justify-center bg-amber-600 hover:bg-amber-700 text-white"
-                title="아카이브"
+                title="Archive"
               >
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 8v13H3V8"></path>
@@ -1237,25 +1237,25 @@ onUnmounted(() => {
           @click="contentStore.loadMore()"
           class="px-6 py-2 text-sm font-header font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
         >
-          더 보기
+          Load more
         </button>
       </div>
     </div>
 
-    <!-- 편집 모달 -->
+    <!-- Edit Modal -->
     <Dialog v-model:open="isEditModalOpen">
       <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle class="text-xl font-header">콘텐츠 편집</DialogTitle>
+          <DialogTitle class="text-xl font-header">Edit Content</DialogTitle>
           <DialogDescription>
-            학습 콘텐츠의 정보를 수정하세요
+            Modify the content information
           </DialogDescription>
         </DialogHeader>
         
         <div v-if="editingItem" class="grid gap-6 py-4">
-          <!-- EN/KR 언어 토글 -->
+          <!-- EN/KR Language Toggle -->
           <div class="flex items-center justify-between p-3 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border)]">
-            <span class="text-sm font-medium text-[var(--text-secondary)]">편집 언어</span>
+            <span class="text-sm font-medium text-[var(--text-secondary)]">Edit Language</span>
             <div class="flex items-center gap-2">
               <button
                 @click="editLanguage = 'en'"
@@ -1282,21 +1282,21 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- 제목 (EN) -->
+          <!-- Title (EN) -->
           <div v-show="editLanguage === 'en'" class="grid gap-2">
-            <Label for="title">제목 (English)</Label>
+            <Label for="title">Title (English)</Label>
             <Input id="title" v-model="editingItem.title" placeholder="Content Title" />
           </div>
 
-          <!-- 제목 (KR) -->
+          <!-- Title (KR) -->
           <div v-show="editLanguage === 'ko'" class="grid gap-2">
-            <Label for="title_kr">제목 (한국어)</Label>
-            <Input id="title_kr" v-model="editingItem.title_kr" placeholder="콘텐츠 제목" />
+            <Label for="title_kr">Title (Korean)</Label>
+            <Input id="title_kr" v-model="editingItem.title_kr" placeholder="Content Title (Korean)" />
           </div>
 
-          <!-- 설명 (EN) -->
+          <!-- Description (EN) -->
           <div v-show="editLanguage === 'en'" class="grid gap-2">
-            <Label for="description">설명 (English)</Label>
+            <Label for="description">Description (English)</Label>
             <textarea 
               id="description"
               v-model="editingItem.description"
@@ -1305,20 +1305,20 @@ onUnmounted(() => {
             />
           </div>
 
-          <!-- 설명 (KR) -->
+          <!-- Description (KR) -->
           <div v-show="editLanguage === 'ko'" class="grid gap-2">
-            <Label for="description_kr">설명 (한국어)</Label>
+            <Label for="description_kr">Description (Korean)</Label>
             <textarea 
               id="description_kr"
               v-model="editingItem.description_kr"
               class="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
-              placeholder="콘텐츠에 대한 설명을 입력하세요"
+              placeholder="Enter content description (Korean)"
             />
           </div>
 
-          <!-- 카테고리 -->
+          <!-- Categories -->
           <div class="grid gap-2">
-            <Label for="categories">카테고리 (쉼표로 구분)</Label>
+            <Label for="categories">Categories (comma separated)</Label>
             <Input 
               id="categories" 
               :value="(editingItem.categories || []).join(', ')"
@@ -1328,23 +1328,23 @@ onUnmounted(() => {
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <!-- 난이도 -->
+            <!-- Level -->
             <div class="grid gap-2">
-              <Label for="level">난이도</Label>
+              <Label for="level">Level</Label>
               <select 
                 id="level"
                 v-model="editingItem.level"
                 class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="beginner">초급</option>
-                <option value="intermediate">중급</option>
-                <option value="advanced">고급</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
               </select>
             </div>
 
-            <!-- 예상 시간 -->
+            <!-- Estimated Time -->
             <div class="grid gap-2">
-              <Label for="duration">예상 시간 (분)</Label>
+              <Label for="duration">Estimated Time (min)</Label>
               <Input 
                 id="duration" 
                 type="number" 
@@ -1356,9 +1356,9 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- 썸네일 URL with AI Generation -->
+          <!-- Thumbnail URL with AI Generation -->
           <div class="grid gap-2">
-            <Label for="thumbnail">썸네일 URL</Label>
+            <Label for="thumbnail">Thumbnail URL</Label>
             <div class="flex gap-2">
               <Input 
                 id="thumbnail" 
@@ -1371,23 +1371,23 @@ onUnmounted(() => {
                 @click="handleRegenerateThumbnail"
                 :disabled="isRegeneratingThumbnail || isSaving"
                 class="px-3 py-2 rounded-lg text-sm font-medium transition-all bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
-                title="AI로 새 썸네일 이미지 생성"
+                title="Generate new thumbnail with AI"
               >
                 <span v-if="isRegeneratingThumbnail" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                 <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                {{ isRegeneratingThumbnail ? '생성 중...' : 'AI 생성' }}
+                {{ isRegeneratingThumbnail ? 'Generating...' : 'AI Generate' }}
               </button>
             </div>
             <p class="text-xs text-[var(--text-tertiary)]">
-              AI가 워크샵 내용을 기반으로 Microsoft 스타일의 전문적인 썸네일을 자동 생성합니다.
+              AI automatically generates a professional Microsoft-style thumbnail based on the workshop content.
             </p>
           </div>
 
-          <!-- 썸네일 미리보기 -->
+          <!-- Thumbnail Preview -->
           <div v-if="editingItem.thumbnail_url" class="grid gap-2">
-            <Label>썸네일 미리보기</Label>
+            <Label>Thumbnail Preview</Label>
             <div class="relative aspect-[3/2] w-full max-w-md rounded-lg overflow-hidden border border-[var(--border)] bg-[var(--bg-secondary)]">
               <img 
                 :src="editingItem.thumbnail_url" 
@@ -1398,9 +1398,9 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- 아이콘 -->
+          <!-- Icon -->
           <div class="grid gap-2">
-            <Label for="icon">아이콘</Label>
+            <Label for="icon">Icon</Label>
             <Input 
               id="icon" 
               v-model="editingItem.icon" 
@@ -1410,7 +1410,7 @@ onUnmounted(() => {
 
           <!-- Resource Links Section -->
           <div class="border-t border-[var(--border)] pt-4">
-            <h3 class="text-sm font-semibold text-[var(--text-primary)] mb-4">관련 리소스 링크</h3>
+            <h3 class="text-sm font-semibold text-[var(--text-primary)] mb-4">Related Resource Links</h3>
             
             <!-- YouTube URL -->
             <div class="grid gap-2 mb-4">
@@ -1418,7 +1418,7 @@ onUnmounted(() => {
                 <svg class="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                 </svg>
-                YouTube 링크
+                YouTube Link
               </Label>
               <Input 
                 id="video_url" 
@@ -1434,7 +1434,7 @@ onUnmounted(() => {
                 <svg class="w-4 h-4 text-red-600" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/>
                 </svg>
-                PDF 문서 링크
+                PDF Document Link
               </Label>
               <Input 
                 id="docs_url" 
@@ -1450,7 +1450,7 @@ onUnmounted(() => {
                 <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z"/>
                 </svg>
-                PPTX 문서 링크
+                PPTX Document Link
               </Label>
               <Input 
                 id="pptx_url" 
@@ -1463,30 +1463,30 @@ onUnmounted(() => {
         </div>
 
         <DialogFooter class="flex justify-between gap-2">
-          <!-- 왼쪽: 원본 Sync 버튼 -->
+          <!-- Left: Sync button -->
           <div class="flex">
             <button 
               @click="handleSyncFromAnalysis"
               :disabled="isSaving || isSyncing || !editingItem?.analysis_request_id"
               class="px-4 py-2.5 rounded-lg text-sm font-header font-semibold transition-all bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              :title="editingItem?.analysis_request_id ? '원본 분석 데이터와 동기화' : '연결된 분석 요청이 없습니다'"
+              :title="editingItem?.analysis_request_id ? 'Sync with original analysis data' : 'No linked analysis request'"
             >
               <span v-if="isSyncing" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
               <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              {{ isSyncing ? '동기화 중...' : '원본 Sync' }}
+              {{ isSyncing ? 'Syncing...' : 'Sync' }}
             </button>
           </div>
           
-          <!-- 오른쪽: 취소/저장 버튼 -->
+          <!-- Right: Cancel/Save buttons -->
           <div class="flex gap-2">
             <button 
               @click="isEditModalOpen = false"
               :disabled="isSaving"
               class="px-4 py-2.5 rounded-lg text-sm font-header font-semibold transition-all bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--border-hover)] disabled:opacity-50"
             >
-              취소
+              Cancel
             </button>
             <button 
               @click="saveEdit"
@@ -1494,7 +1494,7 @@ onUnmounted(() => {
               class="px-4 py-2.5 rounded-lg text-sm font-header font-semibold transition-all bg-primary hover:bg-primary-hover text-white disabled:opacity-50 flex items-center gap-2"
             >
               <span v-if="isSaving" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-              {{ isSaving ? '저장 중...' : '저장' }}
+              {{ isSaving ? 'Saving...' : 'Save' }}
             </button>
           </div>
         </DialogFooter>

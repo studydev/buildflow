@@ -149,7 +149,7 @@ export const useContentStore = defineStore('content', () => {
   const searchResults = ref<SearchResultItem[]>([])
   
   // Language display state for T502 (Milestone 5)
-  const displayLanguage = ref<'en' | 'ko'>('ko')
+  const displayLanguage = ref<'en' | 'ko'>('en')
   
   // Getters
   const isEmpty = computed(() => items.value.length === 0 && !isLoading.value)

@@ -29,15 +29,15 @@ function formatLastCommit(dateStr: string | undefined): string {
   const diffMs = now.getTime() - date.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
   
-  if (diffDays < 1) return '오늘'
-  if (diffDays === 1) return '어제'
-  if (diffDays < 30) return `${diffDays}일 전`
+  if (diffDays < 1) return 'Today'
+  if (diffDays === 1) return 'Yesterday'
+  if (diffDays < 30) return `${diffDays} days ago`
   
   const diffMonths = Math.floor(diffDays / 30)
-  if (diffMonths < 12) return `${diffMonths}개월 전`
+  if (diffMonths < 12) return `${diffMonths} months ago`
   
   const diffYears = Math.floor(diffMonths / 12)
-  return `${diffYears}년 전`
+  return `${diffYears} years ago`
 }
 
 // Map content items to display format with language support
@@ -97,8 +97,8 @@ const fallbackContentItems = [
   {
     id: '1',
     icon: '🤖',
-    title: 'LAB510: VS Code에서 GitHub Copilot의 강력한 기능',
-    description: '이 실습형 랩에서는 Visual Studio Code에서 GitHub Copilot을 활용하여 일상적인 코딩 작업에서 가치를 극대화하는 방법을 심층적으로 다룹니다.',
+    title: 'LAB510: Power of GitHub Copilot in VS Code',
+    description: 'This hands-on lab provides an in-depth look at how to leverage GitHub Copilot in Visual Studio Code to maximize value in everyday coding tasks.',
     thumbnailUrl: undefined,
     stars: undefined,
     lastCommitDate: undefined,
@@ -116,8 +116,8 @@ const fallbackContentItems = [
   {
     id: '2',
     icon: '🔍',
-    title: 'LAB511: Azure AI Search로 에이전틱 지식 베이스 구축',
-    description: 'Azure AI Search의 차세대 검색 방식인 에이전틱 RAG를 사용하여 Knowledge Base를 구축합니다.',
+    title: 'LAB511: Building an Agentic Knowledge Base with Azure AI Search',
+    description: 'Build a Knowledge Base using Agentic RAG, the next-generation search approach of Azure AI Search.',
     thumbnailUrl: undefined,
     stars: undefined,
     lastCommitDate: undefined,
@@ -135,8 +135,8 @@ const fallbackContentItems = [
   {
     id: '3',
     icon: '🎨',
-    title: 'LAB512: Microsoft Foundry 및 AI Toolkit을 사용한 멀티모달 에이전트 프로토타이핑',
-    description: '이 실습에서는 VS Code에서 AI Toolkit(AITK)과 Microsoft Foundry를 직접 사용하여 Model Catalog의 최신 멀티모달 및 추론 모델을 탐색합니다.',
+    title: 'LAB512: Multimodal Agent Prototyping with Microsoft Foundry and AI Toolkit',
+    description: 'In this hands-on lab, you will directly use AI Toolkit (AITK) and Microsoft Foundry in VS Code to explore the latest multimodal and reasoning models from the Model Catalog.',
     thumbnailUrl: undefined,
     stars: undefined,
     lastCommitDate: undefined,
@@ -154,8 +154,8 @@ const fallbackContentItems = [
   {
     id: '4',
     icon: '⚡',
-    title: 'LAB514: MCP 및 Azure Functions로 AI 에이전트를 빌드하고 배포하기',
-    description: 'Azure Functions를 사용하여 GitHub Copilot과 같은 AI 어시스턴트를 위한 MCP 도구를 만드는 방법을 학습합니다.',
+    title: 'LAB514: Build and Deploy AI Agents with MCP and Azure Functions',
+    description: 'Learn how to create MCP tools for AI assistants like GitHub Copilot using Azure Functions.',
     thumbnailUrl: undefined,
     stars: undefined,
     lastCommitDate: undefined,
@@ -193,7 +193,7 @@ function handleActionClick(action: { label: string; icon: string; primary: boole
   <div v-if="contentStore.isLoading && contentStore.items.length === 0" class="flex justify-center items-center py-12">
     <div class="flex flex-col items-center gap-4">
       <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      <span class="text-[var(--text-secondary)]">콘텐츠를 불러오는 중...</span>
+      <span class="text-[var(--text-secondary)]">Loading content...</span>
     </div>
   </div>
   
@@ -205,7 +205,7 @@ function handleActionClick(action: { label: string; icon: string; primary: boole
         @click="contentStore.fetchContent()"
         class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
       >
-        다시 시도
+        Retry
       </button>
     </div>
   </div>
@@ -213,12 +213,12 @@ function handleActionClick(action: { label: string; icon: string; primary: boole
   <!-- Empty State -->
   <div v-else-if="contentStore.isEmpty" class="flex justify-center items-center py-12">
     <div class="text-center">
-      <p class="text-[var(--text-secondary)] mb-2">검색 결과가 없습니다</p>
+      <p class="text-[var(--text-secondary)] mb-2">No results found</p>
       <button 
         @click="contentStore.clearFilters()"
         class="text-primary hover:underline"
       >
-        필터 초기화
+        Clear filters
       </button>
     </div>
   </div>
@@ -341,7 +341,7 @@ function handleActionClick(action: { label: string; icon: string; primary: boole
       @click="contentStore.loadMore()"
       class="px-6 py-3 bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-lg border border-[var(--border)] hover:border-[var(--border-hover)] font-header font-semibold transition-all"
     >
-      더 보기
+      Load more
     </button>
   </div>
   

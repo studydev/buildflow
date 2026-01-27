@@ -11,7 +11,6 @@ defineProps<{
 
 const emit = defineEmits<{
   toggleDarkMode: []
-  toggleSidebar: []
 }>()
 
 const authStore = useAuthStore()
@@ -65,18 +64,11 @@ watch(() => route.query.login, (newVal) => {
 
 <template>
   <header class="bg-[var(--header-bg)] border-b border-[var(--border)] px-8 py-4 flex items-center justify-between backdrop-blur-sm">
-    <!-- 좌측: 사이드바 토글 + NexusSkill Platform 제목 -->
+    <!-- 좌측: NexusSkill Platform 제목 -->
     <div class="flex items-center gap-3">
-      <button 
-        @click="$emit('toggleSidebar')"
-        class="w-10 h-10 rounded-lg hover:bg-[var(--bg-tertiary)] flex items-center justify-center transition-all"
-        title="Toggle Sidebar"
-      >
-        ☰
-      </button>
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-header font-bold text-sm">
-          WP
+          WS
         </div>
         <span class="font-header font-bold text-lg" :class="isDarkMode ? 'text-white' : 'text-primary'">NexusSkill Platform</span>
       </div>

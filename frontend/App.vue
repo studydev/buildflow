@@ -39,13 +39,12 @@ const handleSelectContent = (contentId: string) => {
     <!-- 헤더 -->
     <Header 
       @toggle-dark-mode="toggleDarkMode"
-      @toggle-sidebar="toggleSidebar"
       :is-dark-mode="isDarkMode" 
     />
     
     <!-- 하단: 좌측 사이드바 + 우측 본문 -->
     <div class="flex flex-1 overflow-hidden">
-      <Sidebar :is-dark-mode="isDarkMode" :is-open="isSidebarOpen" />
+      <Sidebar :is-dark-mode="isDarkMode" :is-open="isSidebarOpen" @toggle="toggleSidebar" />
       
       <main class="flex-1 overflow-y-auto bg-[var(--bg-secondary)] p-8">
         <router-view />
