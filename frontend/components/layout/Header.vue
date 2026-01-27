@@ -64,7 +64,7 @@ watch(() => route.query.login, (newVal) => {
 
 <template>
   <header class="bg-[var(--header-bg)] border-b border-[var(--border)] px-8 py-4 flex items-center justify-between backdrop-blur-sm">
-    <!-- 좌측: NexusSkill Platform 제목 -->
+    <!-- Left: NexusSkill Platform title -->
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-header font-bold text-sm">
@@ -74,7 +74,7 @@ watch(() => route.query.login, (newVal) => {
       </div>
     </div>
     
-    <!-- 우측: 다크모드 + 로그인/사용자 정보 -->
+    <!-- Right: Dark mode + Login/User info -->
     <div class="flex items-center gap-3">
       <!-- Contributor 링크 (contributor 권한 있을 때만) -->
       <router-link 
@@ -92,16 +92,16 @@ watch(() => route.query.login, (newVal) => {
         {{ isDarkMode ? '🌙' : '☀️' }}
       </button>
 
-      <!-- 로그인 안된 경우 -->
+      <!-- Not logged in -->
       <button 
         v-if="!isAuthenticated"
         @click="openLogin"
         class="px-4 py-2 text-sm font-header font-semibold bg-primary hover:bg-primary-hover text-white rounded-lg transition-all"
       >
-        로그인
+        Sign In
       </button>
       
-      <!-- 로그인된 경우 -->
+      <!-- Logged in -->
       <div v-else class="relative">
         <button 
           @click="showUserMenu = !showUserMenu"
@@ -114,21 +114,21 @@ watch(() => route.query.login, (newVal) => {
           {{ displayName }}
         </button>
         
-        <!-- 드롭다운 메뉴 -->
+        <!-- Dropdown menu -->
         <div 
           v-if="showUserMenu"
           @mouseleave="showUserMenu = false"
           class="absolute top-full right-0 mt-2 w-48 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg shadow-lg py-2 z-50"
         >
           <div class="px-4 py-2 border-b border-[var(--border)]">
-            <p class="text-xs text-[var(--text-secondary)]">로그인됨</p>
+            <p class="text-xs text-[var(--text-secondary)]">Signed in as</p>
             <p class="text-sm font-medium text-[var(--text-primary)] truncate">{{ userEmail }}</p>
           </div>
           <button 
             @click="handleLogout"
             class="w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           >
-            로그아웃
+            Sign Out
           </button>
         </div>
       </div>

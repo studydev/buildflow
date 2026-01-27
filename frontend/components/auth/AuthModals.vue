@@ -84,19 +84,19 @@ const handleRequestOtp = async () => {
     if (e instanceof APIError) {
       // T021: Handle domain validation errors
       if (e.code === 'DOMAIN_NOT_ALLOWED') {
-        error.value = '내부 직원 전용 로그인 서비스입니다.'
+        error.value = 'This service is for internal employees only.'
       } else if (e.code === 'EMAIL_SEND_FAILED') {
-        error.value = '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.'
+        error.value = 'Failed to send email. Please try again later.'
       } else if (e.code === 'VALIDATION_ERROR') {
-        error.value = '올바른 이메일 형식을 입력해주세요.'
+        error.value = 'Please enter a valid email format.'
       } else if (e.code === 'RATE_LIMIT_EXCEEDED') {
         // Handle resend rate limit
-        error.value = '잠시 후 다시 시도해주세요.'
+        error.value = 'Please try again later.'
       } else {
         error.value = e.message
       }
     } else {
-      error.value = '인증 코드 요청에 실패했습니다. 다시 시도해주세요.'
+      error.value = 'Failed to request verification code. Please try again.'
     }
   } finally {
     isLoading.value = false
@@ -133,12 +133,12 @@ const handleVerifyOtp = async () => {
   } catch (e) {
     if (e instanceof APIError) {
       if (e.code === 'RATE_LIMIT_EXCEEDED') {
-        error.value = '인증 시도 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.'
+        error.value = 'Too many verification attempts. Please try again later.'
       } else {
         error.value = e.message
       }
     } else {
-      error.value = '인증에 실패했습니다. 코드를 확인해주세요.'
+      error.value = 'Verification failed. Please check your code.'
     }
   } finally {
     isLoading.value = false
@@ -160,12 +160,12 @@ const handleResendOtp = async () => {
   } catch (e) {
     if (e instanceof APIError) {
       if (e.code === 'RATE_LIMIT_EXCEEDED') {
-        error.value = '잠시 후 다시 시도해주세요.'
+        error.value = 'Please try again later.'
       } else {
         error.value = e.message
       }
     } else {
-      error.value = '인증 코드 재발송에 실패했습니다.'
+      error.value = 'Failed to resend verification code.'
     }
   } finally {
     isLoading.value = false
@@ -201,12 +201,12 @@ defineExpose({
     <DialogContent class="sm:max-w-md">
       <DialogHeader>
         <DialogTitle class="text-xl font-header">
-          {{ step === 'email' ? '로그인' : '인증 코드 입력' }}
+          {{ step === 'email' ? 'Sign In' : 'Enter Verification Code' }}
         </DialogTitle>
         <DialogDescription>
           {{ step === 'email' 
-            ? '이메일 주소를 입력하면 인증 코드를 보내드립니다.' 
-            : `${email}로 전송된 6자리 인증 코드를 입력해주세요.` 
+            ? 'Enter your email address and we\'ll send you a verification code.' 
+            : `Enter the 6-digit code sent to ${email}.` 
           }}
         </DialogDescription>
       </DialogHeader>
@@ -216,10 +216,10 @@ defineExpose({
         {{ error }}
       </div>
       
-      <!-- 이메일 입력 단계 -->
+      <!-- Email input step -->
       <div v-if="step === 'email'" class="grid gap-4 py-4">
         <div class="grid gap-2">
-          <Label for="login-email">이메일 주소</Label>
+          <Label for="login-email">Email Address</Label>
           <Input
             id="login-email"
             v-model="email"
@@ -232,10 +232,10 @@ defineExpose({
         </div>
       </div>
 
-      <!-- OTP 입력 단계 -->
+      <!-- OTP input step -->
       <div v-else class="grid gap-4 py-4">
         <div class="grid gap-2">
-          <Label for="otp-code">인증 코드</Label>
+          <Label for="otp-code">Verification Code</Label>
           <Input
             id="otp-code"
             v-model="otpCode"
@@ -250,14 +250,14 @@ defineExpose({
             class="text-center text-2xl tracking-widest font-mono"
           />
           <p class="text-xs text-muted-foreground text-center">
-            인증 코드는 {{ Math.floor(otpExpiresIn / 60) }}분간 유효합니다.
+            This code is valid for {{ Math.floor(otpExpiresIn / 60) }} minutes.
           </p>
         </div>
       </div>
 
       <DialogFooter class="flex gap-2 w-full">
         <Button variant="outline" @click="closeAndReset" class="flex-1" :disabled="isLoading">
-          취소
+          Cancel
         </Button>
         <Button 
           v-if="step === 'email'"
@@ -266,9 +266,9 @@ defineExpose({
           :disabled="!canSubmitEmail"
         >
           <span v-if="isLoading" class="flex items-center gap-2">
-            <span class="animate-spin">⏳</span> 전송 중...
+            <span class="animate-spin">⏳</span> Sending...
           </span>
-          <span v-else>인증 코드 받기</span>
+          <span v-else>Get Verification Code</span>
         </Button>
         <Button 
           v-else
@@ -277,26 +277,26 @@ defineExpose({
           :disabled="!canSubmitOtp"
         >
           <span v-if="isLoading" class="flex items-center gap-2">
-            <span class="animate-spin">⏳</span> 확인 중...
+            <span class="animate-spin">⏳</span> Verifying...
           </span>
-          <span v-else>로그인</span>
+          <span v-else>Sign In</span>
         </Button>
       </DialogFooter>
       
-      <!-- OTP 단계에서 다시 보내기 옵션 -->
+      <!-- OTP resend option -->
       <div v-if="step === 'otp'" class="w-2/3 mx-auto border-t border-[var(--border)] mt-4 pt-4">
         <div class="text-center text-sm">
-          <span class="text-muted-foreground">코드를 받지 못하셨나요? </span>
+          <span class="text-muted-foreground">Didn't receive the code? </span>
           <button 
             v-if="canResendOtp"
             @click="handleResendOtp"
             class="text-primary hover:underline font-semibold transition-colors"
             :disabled="isLoading"
           >
-            다시 받기
+            Resend
           </button>
           <span v-else class="text-muted-foreground">
-            {{ Math.floor(resendCountdown / 60) }}:{{ String(resendCountdown % 60).padStart(2, '0') }} 후 재발송 가능
+            Resend available in {{ Math.floor(resendCountdown / 60) }}:{{ String(resendCountdown % 60).padStart(2, '0') }}
           </span>
         </div>
       </div>

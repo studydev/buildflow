@@ -36,18 +36,18 @@ class MailHogEmailService(EmailService):
 
     async def send_otp(self, email: str, otp: str) -> bool:
         """Send OTP via MailHog."""
-        subject = "NexusSkill - 인증 코드"
+        subject = "NexusSkill - Verification Code"
         html_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>NexusSkill 로그인 인증</h2>
-            <p>아래 코드를 입력하여 로그인을 완료하세요:</p>
+            <h2>NexusSkill Sign-in Verification</h2>
+            <p>Enter the code below to complete your sign-in:</p>
             <div style="background: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0;">
                 <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px;">{otp}</span>
             </div>
-            <p>이 코드는 5분간 유효합니다.</p>
+            <p>This code is valid for 5 minutes.</p>
             <p style="color: #666; font-size: 12px;">
-                본인이 요청하지 않은 경우, 이 이메일을 무시하세요.
+                If you didn't request this, please ignore this email.
             </p>
         </body>
         </html>
@@ -57,21 +57,21 @@ class MailHogEmailService(EmailService):
 
     async def send_welcome(self, email: str, name: str) -> bool:
         """Send welcome email via MailHog."""
-        subject = "NexusSkill에 오신 것을 환영합니다!"
+        subject = "Welcome to NexusSkill!"
         html_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>환영합니다, {name}님! 🎉</h2>
-            <p>NexusSkill에 가입해 주셔서 감사합니다.</p>
-            <p>이제 Azure 학습 콘텐츠를 탐색하고 북마크할 수 있습니다.</p>
+            <h2>Welcome, {name}! 🎉</h2>
+            <p>Thank you for joining NexusSkill.</p>
+            <p>You can now explore and bookmark Azure learning content.</p>
             <ul>
-                <li>워크샵, 튜토리얼, 샘플 코드 탐색</li>
-                <li>관심 콘텐츠 북마크</li>
-                <li>콘텐츠 기여자로 참여</li>
+                <li>Explore workshops, tutorials, and sample code</li>
+                <li>Bookmark your favorite content</li>
+                <li>Become a content contributor</li>
             </ul>
             <p>
                 <a href="https://nexus.studydev.com" style="background: #0078d4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">
-                    시작하기
+                    Get Started
                 </a>
             </p>
         </body>
@@ -125,18 +125,18 @@ class AzureCommunicationEmailService(EmailService):
 
     async def send_otp(self, email: str, otp: str) -> bool:
         """Send OTP via Azure Communication Services."""
-        subject = "NexusSkill - 인증 코드"
+        subject = "NexusSkill - Verification Code"
         html_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>NexusSkill 로그인 인증</h2>
-            <p>아래 코드를 입력하여 로그인을 완료하세요:</p>
+            <h2>NexusSkill Sign-in Verification</h2>
+            <p>Enter the code below to complete your sign-in:</p>
             <div style="background: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0;">
                 <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px;">{otp}</span>
             </div>
-            <p>이 코드는 5분간 유효합니다.</p>
+            <p>This code is valid for 5 minutes.</p>
             <p style="color: #666; font-size: 12px;">
-                본인이 요청하지 않은 경우, 이 이메일을 무시하세요.
+                If you didn't request this, please ignore this email.
             </p>
         </body>
         </html>
@@ -146,13 +146,13 @@ class AzureCommunicationEmailService(EmailService):
 
     async def send_welcome(self, email: str, name: str) -> bool:
         """Send welcome email via Azure Communication Services."""
-        subject = "NexusSkill에 오신 것을 환영합니다!"
+        subject = "Welcome to NexusSkill!"
         html_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>환영합니다, {name}님! 🎉</h2>
-            <p>NexusSkill에 가입해 주셔서 감사합니다.</p>
-            <p>이제 Azure 학습 콘텐츠를 탐색하고 북마크할 수 있습니다.</p>
+            <h2>Welcome, {name}! 🎉</h2>
+            <p>Thank you for joining NexusSkill.</p>
+            <p>You can now explore and bookmark Azure learning content.</p>
         </body>
         </html>
         """

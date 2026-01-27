@@ -145,7 +145,7 @@ function toggleChat() {
     messages.value.push({
       id: generateId(),
       role: 'assistant',
-      content: 'Azure 학습 콘텐츠에 대해 무엇이든 물어보세요! 관련 리소스를 찾아드리고, 학습 경로를 추천해 드립니다.',
+      content: 'Ask me anything about Azure learning content! I can help you find relevant resources and recommend learning paths.',
       timestamp: new Date(),
     })
   }
@@ -154,7 +154,7 @@ function toggleChat() {
 async function sendMessage() {
   if (!inputMessage.value.trim() || isLoading.value) return
   if (!isAuthenticated.value) {
-    error.value = '로그인이 필요합니다.'
+    error.value = 'Please sign in to continue.'
     return
   }
 
@@ -204,7 +204,7 @@ async function sendMessage() {
       })
     }
   } catch (err: any) {
-    error.value = err.message || '응답을 받는 데 실패했습니다.'
+    error.value = err.message || 'Failed to get a response.'
     console.error('Chat error:', err)
   } finally {
     isLoading.value = false
@@ -228,7 +228,7 @@ function clearChat() {
   messages.value.push({
     id: generateId(),
     role: 'assistant',
-    content: 'Azure 학습 콘텐츠에 대해 무엇이든 물어보세요! 관련 리소스를 찾아드리고, 학습 경로를 추천해 드립니다.',
+    content: 'Ask me anything about Azure learning content! I can help you find relevant resources and recommend learning paths.',
     timestamp: new Date(),
   })
 }
@@ -297,9 +297,9 @@ watch(() => props.contentId, (newId) => {
         <button
           @click="clearChat"
           class="text-white/80 hover:text-white text-sm"
-          title="대화 초기화"
+          title="Clear conversation"
         >
-          초기화
+          Clear
         </button>
       </div>
 
@@ -308,7 +308,7 @@ watch(() => props.contentId, (newId) => {
         v-if="!isAuthenticated"
         class="px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 text-sm"
       >
-        ⚠️ 어시스턴트를 사용하려면 로그인이 필요합니다.
+        ⚠️ Please sign in to use the assistant.
       </div>
 
       <!-- Messages Container -->
@@ -340,7 +340,7 @@ watch(() => props.contentId, (newId) => {
             v-if="message.citations && message.citations.length > 0"
             class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600"
           >
-            <p class="text-xs font-semibold mb-2 text-gray-600 dark:text-gray-300">📚 참고 자료:</p>
+            <p class="text-xs font-semibold mb-2 text-gray-600 dark:text-gray-300">📚 References:</p>
             <div class="space-y-2">
               <div
                 v-for="citation in message.citations"
@@ -349,7 +349,7 @@ watch(() => props.contentId, (newId) => {
               >
                 <div class="flex items-start justify-between gap-2 mb-1">
                   <span class="text-xs font-medium text-amber-700 dark:text-amber-300">{{ getLocalizedTitle(citation) }}</span>
-                  <span class="text-[10px] text-amber-500 dark:text-amber-400 shrink-0">({{ Math.round(citation.relevance) }}점)</span>
+                  <span class="text-[10px] text-amber-500 dark:text-amber-400 shrink-0">({{ Math.round(citation.relevance) }} pts)</span>
                 </div>
                 <p v-if="getLocalizedDescription(citation)" class="text-[11px] text-gray-600 dark:text-gray-400 line-clamp-3 mb-2">
                   {{ getLocalizedDescription(citation) }}
@@ -364,7 +364,7 @@ watch(() => props.contentId, (newId) => {
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
-                  GitHub에서 보기
+                  View on GitHub
                 </a>
               </div>
             </div>
@@ -375,7 +375,7 @@ watch(() => props.contentId, (newId) => {
             v-if="message.suggestedContent && message.suggestedContent.length > 0"
             class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600"
           >
-            <p class="text-xs font-semibold mb-2 text-gray-600 dark:text-gray-300">💡 추천 콘텐츠 ({{ message.suggestedContent.length }}개):</p>
+            <p class="text-xs font-semibold mb-2 text-gray-600 dark:text-gray-300">💡 Suggested Content ({{ message.suggestedContent.length }}):</p>
             <div class="space-y-2">
               <div
                 v-for="suggestion in message.suggestedContent.slice(0, 5)"
@@ -384,7 +384,7 @@ watch(() => props.contentId, (newId) => {
               >
                 <div class="flex items-start justify-between gap-2 mb-1">
                   <span class="text-xs font-medium text-blue-700 dark:text-blue-300">{{ getLocalizedTitle(suggestion) }}</span>
-                  <span class="text-[10px] text-blue-500 dark:text-blue-400 shrink-0">{{ Math.round(suggestion.relevance) }}점</span>
+                  <span class="text-[10px] text-blue-500 dark:text-blue-400 shrink-0">{{ Math.round(suggestion.relevance) }} pts</span>
                 </div>
                 <p v-if="suggestion.reason" class="text-[11px] text-gray-600 dark:text-gray-400 line-clamp-3 mb-2">
                   {{ suggestion.reason }}
@@ -403,7 +403,7 @@ watch(() => props.contentId, (newId) => {
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
-                  GitHub에서 보기
+                  View on GitHub
                 </a>
               </div>
             </div>
@@ -414,7 +414,7 @@ watch(() => props.contentId, (newId) => {
             v-if="message.externalResults && message.externalResults.length > 0"
             class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600"
           >
-            <p class="text-xs font-semibold mb-2 text-gray-600 dark:text-gray-300">🌐 외부 검색 결과:</p>
+            <p class="text-xs font-semibold mb-2 text-gray-600 dark:text-gray-300">🌐 External Search Results:</p>
             <div class="space-y-1">
               <a
                 v-for="(result, idx) in message.externalResults"
@@ -448,7 +448,7 @@ watch(() => props.contentId, (newId) => {
               <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
               <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
             </div>
-            <span class="text-sm text-gray-500 dark:text-gray-400">생각하는 중...</span>
+            <span class="text-sm text-gray-500 dark:text-gray-400">Thinking...</span>
           </div>
         </div>
       </div>
@@ -468,7 +468,7 @@ watch(() => props.contentId, (newId) => {
             v-model="inputMessage"
             @keypress="handleKeyPress"
             :disabled="!isAuthenticated || isLoading"
-            placeholder="메시지를 입력하세요..."
+            placeholder="Type a message..."
             rows="1"
             class="flex-1 resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           />

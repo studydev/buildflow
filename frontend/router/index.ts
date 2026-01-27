@@ -19,7 +19,7 @@ const routes: RouteRecordRaw[] = [
     name: 'Home',
     component: () => import('@/views/Home.vue'),
     meta: {
-      title: 'NexusSkill - Repo 모음'
+      title: 'NexusSkill - Repository Collection'
     }
   },
   {
@@ -47,7 +47,7 @@ const routes: RouteRecordRaw[] = [
     name: 'NotFound',
     component: () => import('@/views/Home.vue'),
     meta: {
-      title: '페이지를 찾을 수 없습니다'
+      title: 'Page Not Found'
     }
   }
 ]
@@ -86,7 +86,7 @@ router.beforeEach(async (
       sessionStorage.setItem('redirectAfterLogin', to.fullPath)
 
       // T023: Show login required message (FR-013)
-      sessionStorage.setItem('loginRequiredMessage', '이 기능을 사용하려면 로그인이 필요합니다')
+      sessionStorage.setItem('loginRequiredMessage', 'Please sign in to use this feature')
 
       // Redirect to home with login prompt
       return next({

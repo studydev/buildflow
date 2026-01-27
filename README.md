@@ -1,6 +1,4 @@
-# NexusSkill
-
-Microsoft & Azure 콘텐츠 학습 플랫폼
+# NexusSkill - Microsoft & Azure 콘텐츠 학습 플랫폼
 
 [![Backend CI](https://github.com/studydev/buildflow/actions/workflows/backend-ci.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/studydev/buildflow/actions/workflows/frontend-ci.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/frontend-ci.yml)

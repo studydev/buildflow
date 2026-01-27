@@ -86,12 +86,12 @@ def validate_internal_email(email: str) -> tuple[bool, str]:
         - (False, error_message) if invalid
     """
     if not email:
-        return False, "이메일을 입력해주세요."
+        return False, "Please enter your email address."
 
     if not validate_email_format(email):
-        return False, "올바른 이메일 형식을 입력해주세요."
+        return False, "Please enter a valid email format."
 
     if not is_allowed_domain(email):
-        return False, "내부 직원 전용 로그인 서비스입니다."
+        return False, "This service is for internal employees only."
 
     return True, ""

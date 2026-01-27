@@ -125,7 +125,7 @@ class DomainNotAllowedError(AppException):
     Use for: email domain is not in the allowed list for internal employees.
     """
 
-    def __init__(self, message: str = "내부 직원 전용 로그인 서비스입니다."):
+    def __init__(self, message: str = "This service is for internal employees only."):
         super().__init__(
             message=message,
             code="DOMAIN_NOT_ALLOWED",
@@ -140,7 +140,7 @@ class EmailSendError(AppException):
     Use for: failed to send email via Azure Communication Services.
     """
 
-    def __init__(self, message: str = "이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요."):
+    def __init__(self, message: str = "Failed to send email. Please try again later."):
         super().__init__(
             message=message,
             code="EMAIL_SEND_FAILED",
