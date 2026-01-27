@@ -535,6 +535,18 @@ export const useContentStore = defineStore('content', () => {
       await fetchContent({ page: page.value + 1, append: true })
     }
   }
+
+  /**
+   * Go to a specific page
+   */
+  async function goToPage(targetPage: number) {
+    if (targetPage < 1 || isLoading.value) return
+    const totalPages = Math.ceil(total.value / limit.value)
+    if (targetPage > totalPages) return
+    
+    page.value = targetPage
+    await fetchContent({ page: targetPage, append: false })
+  }
   
   function setCategory(category: string | null) {
     selectedCategory.value = category
@@ -829,6 +841,7 @@ export const useContentStore = defineStore('content', () => {
     search,
     advancedSearch,
     loadMore,
+    goToPage,
     setCategory,
     clearFilters,
     getById,

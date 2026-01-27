@@ -11,6 +11,57 @@ onMounted(async () => {
   }
 })
 
+// Pagination computed values
+const currentPage = computed(() => contentStore.page)
+const totalPages = computed(() => Math.ceil(contentStore.total / contentStore.limit) || 1)
+const totalItems = computed(() => contentStore.total)
+
+// Generate page numbers to display
+const visiblePages = computed(() => {
+  const current = currentPage.value
+  const total = totalPages.value
+  const pages: (number | string)[] = []
+  
+  if (total <= 7) {
+    // Show all pages if 7 or fewer
+    for (let i = 1; i <= total; i++) {
+      pages.push(i)
+    }
+  } else {
+    // Always show first page
+    pages.push(1)
+    
+    if (current > 3) {
+      pages.push('...')
+    }
+    
+    // Show pages around current
+    const start = Math.max(2, current - 1)
+    const end = Math.min(total - 1, current + 1)
+    
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    
+    if (current < total - 2) {
+      pages.push('...')
+    }
+    
+    // Always show last page
+    pages.push(total)
+  }
+  
+  return pages
+})
+
+function goToPage(page: number) {
+  if (page >= 1 && page <= totalPages.value) {
+    contentStore.goToPage(page)
+    // Scroll to top of content
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
 // Format star count (e.g., 1500 -> "1.5k")
 function formatStars(stars: number | undefined): string {
   if (!stars) return '0'
@@ -335,17 +386,64 @@ function handleActionClick(action: { label: string; icon: string; primary: boole
     </div>
   </div>
   
-  <!-- Load More Button -->
-  <div v-if="contentStore.hasMore && !contentStore.isLoading" class="flex justify-center mt-8">
-    <button 
-      @click="contentStore.loadMore()"
-      class="px-6 py-3 bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-lg border border-[var(--border)] hover:border-[var(--border-hover)] font-header font-semibold transition-all"
-    >
-      Load more
-    </button>
+  <!-- Pagination -->
+  <div v-if="totalPages > 1 && !contentStore.isLoading" class="flex flex-col items-center gap-4 mt-8">
+    <!-- Page info -->
+    <p class="text-sm text-[var(--text-secondary)]">
+      Showing {{ (currentPage - 1) * contentStore.limit + 1 }}-{{ Math.min(currentPage * contentStore.limit, totalItems) }} of {{ totalItems }} items
+    </p>
+    
+    <!-- Pagination controls -->
+    <nav class="flex items-center gap-1">
+      <!-- Previous button -->
+      <button
+        @click="goToPage(currentPage - 1)"
+        :disabled="currentPage === 1"
+        class="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        aria-label="Previous page"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      
+      <!-- Page numbers -->
+      <template v-for="(pageNum, index) in visiblePages" :key="index">
+        <span 
+          v-if="pageNum === '...'" 
+          class="px-3 py-2 text-[var(--text-secondary)]"
+        >
+          ...
+        </span>
+        <button
+          v-else
+          @click="goToPage(pageNum as number)"
+          :class="[
+            'px-3 py-2 rounded-lg border transition-all font-medium min-w-[40px]',
+            pageNum === currentPage
+              ? 'bg-primary text-white border-primary'
+              : 'border-[var(--border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
+          ]"
+        >
+          {{ pageNum }}
+        </button>
+      </template>
+      
+      <!-- Next button -->
+      <button
+        @click="goToPage(currentPage + 1)"
+        :disabled="currentPage === totalPages"
+        class="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        aria-label="Next page"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </nav>
   </div>
   
-  <!-- Loading More -->
+  <!-- Loading indicator when changing pages -->
   <div v-if="contentStore.isLoading && contentStore.items.length > 0" class="flex justify-center mt-8">
     <div class="w-6 h-6 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
   </div>

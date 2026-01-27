@@ -140,6 +140,75 @@ const filteredAnalysisRequests = computed(() => {
   return requests
 })
 
+// Pagination computed values for content list
+const currentPage = computed(() => contentStore.page)
+const totalPages = computed(() => Math.ceil(contentStore.total / contentStore.limit) || 1)
+const totalItems = computed(() => contentStore.total)
+
+// Generate page numbers to display
+const visiblePages = computed(() => {
+  const current = currentPage.value
+  const total = totalPages.value
+  const pages: (number | string)[] = []
+  
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) {
+      pages.push(i)
+    }
+  } else {
+    pages.push(1)
+    if (current > 3) pages.push('...')
+    const start = Math.max(2, current - 1)
+    const end = Math.min(total - 1, current + 1)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    if (current < total - 2) pages.push('...')
+    pages.push(total)
+  }
+  return pages
+})
+
+function goToPage(page: number) {
+  if (page >= 1 && page <= totalPages.value) {
+    contentStore.goToPage(page)
+  }
+}
+
+// Pagination computed values for analysis requests
+const analysisCurrentPage = computed(() => analysisStore.page)
+const analysisTotalPages = computed(() => Math.ceil(analysisStore.total / analysisStore.limit) || 1)
+const analysisTotalItems = computed(() => analysisStore.total)
+
+const analysisVisiblePages = computed(() => {
+  const current = analysisCurrentPage.value
+  const total = analysisTotalPages.value
+  const pages: (number | string)[] = []
+  
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) {
+      pages.push(i)
+    }
+  } else {
+    pages.push(1)
+    if (current > 3) pages.push('...')
+    const start = Math.max(2, current - 1)
+    const end = Math.min(total - 1, current + 1)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    if (current < total - 2) pages.push('...')
+    pages.push(total)
+  }
+  return pages
+})
+
+function goToAnalysisPage(page: number) {
+  if (page >= 1 && page <= analysisTotalPages.value) {
+    analysisStore.goToPage(page)
+  }
+}
+
 // Status badge styling
 const getStatusBadgeClass = (status: string) => {
   const classes: Record<string, string> = {
@@ -1007,6 +1076,63 @@ onUnmounted(() => {
           Monitoring {{ analysisStore.activePollingCount }} request(s)...
         </span>
       </div>
+
+      <!-- Pagination -->
+      <div v-if="analysisTotalPages > 1 && !analysisStore.isLoading" class="flex flex-col items-center gap-3 pt-4">
+        <!-- Page info -->
+        <p class="text-xs text-[var(--text-secondary)]">
+          Showing {{ (analysisCurrentPage - 1) * analysisStore.limit + 1 }}-{{ Math.min(analysisCurrentPage * analysisStore.limit, analysisTotalItems) }} of {{ analysisTotalItems }} requests
+        </p>
+        
+        <!-- Pagination controls -->
+        <nav class="flex items-center gap-1">
+          <!-- Previous button -->
+          <button
+            @click="goToAnalysisPage(analysisCurrentPage - 1)"
+            :disabled="analysisCurrentPage === 1"
+            class="px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            aria-label="Previous page"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          <!-- Page numbers -->
+          <template v-for="(pageNum, index) in analysisVisiblePages" :key="index">
+            <span 
+              v-if="pageNum === '...'" 
+              class="px-2 py-1.5 text-[var(--text-secondary)] text-sm"
+            >
+              ...
+            </span>
+            <button
+              v-else
+              @click="goToAnalysisPage(pageNum as number)"
+              :class="[
+                'px-2.5 py-1.5 rounded-lg border transition-all text-sm font-medium min-w-[32px]',
+                pageNum === analysisCurrentPage
+                  ? 'bg-primary text-white border-primary'
+                  : 'border-[var(--border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
+              ]"
+            >
+              {{ pageNum }}
+            </button>
+          </template>
+          
+          <!-- Next button -->
+          <button
+            @click="goToAnalysisPage(analysisCurrentPage + 1)"
+            :disabled="analysisCurrentPage === analysisTotalPages"
+            class="px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            aria-label="Next page"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </nav>
+      </div>
     </div>
 
     <!-- Content Tab (API-connected) -->
@@ -1231,14 +1357,61 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Load More -->
-      <div v-if="contentStore.hasMore && !contentStore.isLoading" class="flex justify-center pt-4">
-        <button
-          @click="contentStore.loadMore()"
-          class="px-6 py-2 text-sm font-header font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
-        >
-          Load more
-        </button>
+      <!-- Pagination -->
+      <div v-if="totalPages > 1 && !contentStore.isLoading" class="flex flex-col items-center gap-3 pt-4">
+        <!-- Page info -->
+        <p class="text-xs text-[var(--text-secondary)]">
+          Showing {{ (currentPage - 1) * contentStore.limit + 1 }}-{{ Math.min(currentPage * contentStore.limit, totalItems) }} of {{ totalItems }} items
+        </p>
+        
+        <!-- Pagination controls -->
+        <nav class="flex items-center gap-1">
+          <!-- Previous button -->
+          <button
+            @click="goToPage(currentPage - 1)"
+            :disabled="currentPage === 1"
+            class="px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            aria-label="Previous page"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          <!-- Page numbers -->
+          <template v-for="(pageNum, index) in visiblePages" :key="index">
+            <span 
+              v-if="pageNum === '...'" 
+              class="px-2 py-1.5 text-[var(--text-secondary)] text-sm"
+            >
+              ...
+            </span>
+            <button
+              v-else
+              @click="goToPage(pageNum as number)"
+              :class="[
+                'px-2.5 py-1.5 rounded-lg border transition-all text-sm font-medium min-w-[32px]',
+                pageNum === currentPage
+                  ? 'bg-primary text-white border-primary'
+                  : 'border-[var(--border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
+              ]"
+            >
+              {{ pageNum }}
+            </button>
+          </template>
+          
+          <!-- Next button -->
+          <button
+            @click="goToPage(currentPage + 1)"
+            :disabled="currentPage === totalPages"
+            class="px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            aria-label="Next page"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </nav>
       </div>
     </div>
 
