@@ -1,99 +1,79 @@
-# NexusSkill - Microsoft & Azure 콘텐츠 학습 플랫폼
+# NexusSkill
 
+A curated learning platform for Microsoft & Azure content
+
+[![GitHub license](https://img.shields.io/github/license/studydev/buildflow.svg)](https://github.com/studydev/buildflow/blob/develop/LICENSE)
 [![Backend CI](https://github.com/studydev/buildflow/actions/workflows/backend-ci.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/studydev/buildflow/actions/workflows/frontend-ci.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/frontend-ci.yml)
 [![Deploy Backend](https://github.com/studydev/buildflow/actions/workflows/deploy-backend.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/deploy-backend.yml)
 [![Deploy Frontend](https://github.com/studydev/buildflow/actions/workflows/deploy-frontend.yml/badge.svg?branch=develop)](https://github.com/studydev/buildflow/actions/workflows/deploy-frontend.yml)
 
-## 플랫폼 미리보기
+## Preview
 
 ![NexusSkill Platform Preview](docs/images/platform-preview.png)
 
-*워크샵과 튜토리얼을 탐색하고 기술 역량을 가속화할 수 있는 큐레이션된 학습 경로를 제공합니다.*  
-[Demo 접속하기](https://nexus.studydev.com/)
+*Explore workshops and tutorials with curated learning paths to accelerate your technical skills.*  
+[Try the Demo](https://nexus.studydev.com/)
 
-## 프로젝트 개요
+## Overview
 
-NexusSkill은 GitHub 저장소를 분석하여 Microsoft 및 Azure 클라우드 개발 학습 콘텐츠를 자동으로 큐레이션하고, AI 기반 검색 및 추천 기능을 제공하는 플랫폼입니다.
+NexusSkill automatically curates Microsoft and Azure cloud development learning content by analyzing GitHub repositories, powered by AI-based search and recommendation features.
 
-### 주요 기능
+### Key Features
 
-| 기능 | 설명 | 상태 |
-|------|------|------|
-| GitHub 저장소 분석 | README, 메타데이터, 커밋 활동 자동 추출 | ✅ |
-| AI 기반 콘텐츠 강화 | GPT-5.2를 활용한 요약, 난이도, 학습 성과 생성 | ✅ |
-| 다국어 지원 | 한국어 <-> 영어 자동 번역 | ✅ |
-| 자산 자동 생성 | 썸네일 이미지 자동 생성 | ✅ |
-| 하이브리드 검색 | Azure AI Search 기반 키워드 + 벡터 검색 | ✅ |
-| AI 챗봇 | 의미 기반 콘텐츠 검색 및 추천 챗봇 | ✅ |
+| Feature | Description |
+|---------|-------------|
+| **GitHub Repository Analysis** | Automatically extracts README, metadata, and commit activity |
+| **AI-Powered Content Enrichment** | Generates summaries, difficulty levels, and learning outcomes using GPT |
+| **Multilingual Support** | Automatic Korean ↔ English translation |
+| **Asset Auto-Generation** | Automatic thumbnail image generation with DALL-E |
+| **Hybrid Search** | Keyword + vector search powered by Azure AI Search |
+| **AI Chatbot** | Semantic content search and recommendation assistant |
 
-## 아키텍처 개요
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         NexusSkill                              │
 ├──────────────────────┬──────────────────────────────────────────┤
 │  Frontend            │  Vue 3 + TypeScript + Vite               │
-│  (Azure SWA)         │  Pinia 상태관리, Tailwind CSS              │
+│  (Azure SWA)         │  Pinia state management, Tailwind CSS    │
 ├──────────────────────┼──────────────────────────────────────────┤
 │  Backend API         │  FastAPI + Python 3.9                    │
 │  (Container Apps)    │  Cosmos DB, Azure OpenAI                 │
 ├──────────────────────┼──────────────────────────────────────────┤
 │  Analysis Pipeline   │  BackgroundTasks (in-process)            │
-│                      │  GitHub 분석, AI 메타데이터 추출              │
+│                      │  GitHub analysis, AI metadata extraction │
 └──────────────────────┴──────────────────────────────────────────┘
 ```
 
-## 프로젝트 구조
+## Project Structure
 
 ```
 buildflow/
-├── backend/              # FastAPI 백엔드 → backend/README.md
-├── frontend/             # Vue 3 프론트엔드
+├── backend/              # FastAPI backend → backend/README.md
+├── frontend/             # Vue 3 frontend
 ├── infra/                # Azure Bicep IaC → infra/README.md
-├── .github/workflows/    # CI/CD 워크플로우 → .github/workflows/README.md
-└── docs/                 # 추가 문서
+├── .github/workflows/    # CI/CD workflows
+└── docs/                 # Additional documentation
 ```
 
-> 각 폴더의 상세 문서는 해당 폴더의 README.md를 참조하세요.
+## Tech Stack
 
-## 구현 현황
+| Area | Technology |
+|------|------------|
+| Frontend | Vue 3, TypeScript, Vite, Pinia, Tailwind CSS |
+| Backend | FastAPI, Python 3.9, Pydantic v2 |
+| Database | Azure Cosmos DB (Serverless) |
+| Search | Azure AI Search (Hybrid: BM25 + Vector) |
+| AI | Azure OpenAI (GPT, DALL-E, Embeddings) |
+| Hosting | Azure Container Apps, Azure Static Web Apps |
+| CI/CD | GitHub Actions |
+| IaC | Bicep |
 
-### 완료 기능
+## Quick Start
 
-| 카테고리 | 항목 | 완료일 | 비고 |
-|----------|------|--------|------|
-| **인프라** | Azure Container Apps 배포 | 2026-01-21 | Dev 환경 |
-| **인프라** | Azure Static Web Apps 배포 | 2026-01-21 | Frontend 호스팅 |
-| **인프라** | Cosmos DB 설정 | 2026-01-21 | Serverless |
-| **인프라** | Container Registry (ACR) | 2026-01-21 | Docker 이미지 저장 |
-| **CI/CD** | Backend CI (Lint + Test) | 2026-01-21 | Ruff + pytest |
-| **CI/CD** | Frontend CI (Lint + Test + Build) | 2026-01-21 | ESLint + Vitest + Vite |
-| **CI/CD** | Deploy to Dev 파이프라인 | 2026-01-21 | Backend CI 성공 시 자동 배포 |
-| **CI/CD** | Deploy Frontend 파이프라인 | 2026-01-21 | Azure SWA 자동 배포 |
-| **Backend** | Health Check 엔드포인트 | 2026-01-21 | /health, /api/v1/health |
-| **Backend** | Content CRUD API | 2026-01-21 | 기본 CRUD |
-| **Backend** | GitHub 분석 파이프라인 | 2026-01-21 | 저장소 메타데이터 추출 |
-| **Backend** | OTP 이메일 인증 | 2026-01-22 | @microsoft.com, @github.com 도메인 |
-| **Frontend** | 콘텐츠 그리드 UI | 2026-01-21 | ContentGrid 컴포넌트 |
-| **Frontend** | 언어 토글 (EN/KR) | 2026-01-21 | LanguageToggle 컴포넌트 |
-| **Frontend** | OTP 로그인 UI | 2026-01-22 | 이메일 입력 + OTP 입력 모달 |
-| **인프라** | Azure AI Search 통합 | 2026-01-27 | 하이브리드 검색 인덱스 |
-| **Backend** | 하이브리드 검색 API | 2026-01-27 | BM25 + 벡터 검색 |
-| **Backend** | AI Assistant API | 2026-01-27 | RAG 기반 채팅, 콘텐츠 추천 |
-| **Backend** | 이미지 자동 생성 | 2026-01-27 | DALL-E 썸네일 생성 |
-| **Frontend** | AI 어시스턴트 UI | 2026-01-27 | 플로팅 채팅, 마크다운 렌더링 |
-| **Frontend** | 고급 검색 필터 | 2026-01-27 | 카테고리, 난이도, 기술 필터 |
-
-### ⏳ 예정된 기능
-
-| 카테고리 | 항목 | 우선순위 | 예상 일정 |
-|----------|------|----------|-----------|
-| **인프라** | Prod 환경 배포 | 낮음 | 추후 결정 |
-
-## 🚀 빠른 시작
-
-### 로컬 개발
+### Local Development
 
 ```bash
 # Frontend
@@ -103,27 +83,50 @@ npm run dev
 # Backend
 cd backend
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8001
+uvicorn app.main:app --reload --port 8000
 ```
 
-### 상세 가이드
+### Documentation
 
-- **인프라 배포**: [infra/README.md](infra/README.md)
-- **Backend 개발**: [backend/README.md](backend/README.md)
-- **Frontend 개발**: [frontend/README.md](frontend/README.md)
-- **CI/CD 워크플로우**: [.github/workflows/README.md](.github/workflows/README.md)
+- **Infrastructure Deployment**: [infra/README.md](infra/README.md)
+- **Backend Development**: [backend/README.md](backend/README.md)
+- **Frontend Development**: [frontend/README.md](frontend/README.md)
 
-## 🛠️ 기술 스택
-
-| 영역 | 기술 |
-|------|------|
-| Frontend | Vue 3, TypeScript, Vite, Pinia, Tailwind CSS |
-| Backend | FastAPI, Python 3.9, Pydantic v2 |
-| Database | Azure Cosmos DB (Serverless) |
-| Hosting | Azure Container Apps, Azure Static Web Apps |
-| CI/CD | GitHub Actions |
-| IaC | Bicep |
-
-## 📄 라이선스
+## License
 
 MIT License
+
+---
+
+## Implementation History
+
+<details>
+<summary>Click to expand</summary>
+
+### Completed Features
+
+| Category | Item | Date | Notes |
+|----------|------|------|-------|
+| **Infrastructure** | Azure Container Apps deployment | 2026-01-21 | Dev environment |
+| **Infrastructure** | Azure Static Web Apps deployment | 2026-01-21 | Frontend hosting |
+| **Infrastructure** | Cosmos DB setup | 2026-01-21 | Serverless mode |
+| **Infrastructure** | Container Registry (ACR) | 2026-01-21 | Docker image storage |
+| **Infrastructure** | Azure AI Search integration | 2026-01-27 | Hybrid search index |
+| **CI/CD** | Backend CI (Lint + Test) | 2026-01-21 | Ruff + pytest |
+| **CI/CD** | Frontend CI (Lint + Test + Build) | 2026-01-21 | ESLint + Vitest + Vite |
+| **CI/CD** | Deploy to Dev pipeline | 2026-01-21 | Auto-deploy on Backend CI success |
+| **CI/CD** | Deploy Frontend pipeline | 2026-01-21 | Azure SWA auto-deploy |
+| **Backend** | Health Check endpoints | 2026-01-21 | /health, /api/v1/health |
+| **Backend** | Content CRUD API | 2026-01-21 | Basic CRUD operations |
+| **Backend** | GitHub Analysis Pipeline | 2026-01-21 | Repository metadata extraction |
+| **Backend** | OTP Email Authentication | 2026-01-22 | @microsoft.com, @github.com domains |
+| **Backend** | Hybrid Search API | 2026-01-27 | BM25 + vector search |
+| **Backend** | AI Assistant API | 2026-01-27 | RAG-based chat, content recommendations |
+| **Backend** | Image Auto-Generation | 2026-01-27 | DALL-E thumbnail generation |
+| **Frontend** | Content Grid UI | 2026-01-21 | ContentGrid component |
+| **Frontend** | Language Toggle (EN/KR) | 2026-01-21 | LanguageToggle component |
+| **Frontend** | OTP Login UI | 2026-01-22 | Email + OTP input modal |
+| **Frontend** | AI Assistant UI | 2026-01-27 | Floating chat, markdown rendering |
+| **Frontend** | Advanced Search Filters | 2026-01-27 | Category, difficulty, technology filters |
+
+</details>
