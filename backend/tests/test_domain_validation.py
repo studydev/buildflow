@@ -120,19 +120,19 @@ class TestValidateInternalEmail:
         """External email should be blocked with proper message."""
         is_valid, error = validate_internal_email("user@gmail.com")
         assert is_valid is False
-        assert "내부 직원 전용" in error
+        assert "internal employees only" in error
 
     def test_invalid_format_blocked(self):
         """Invalid format should be blocked with proper message."""
         is_valid, error = validate_internal_email("not-an-email")
         assert is_valid is False
-        assert "올바른 이메일 형식" in error
+        assert "valid email format" in error
 
     def test_empty_email_blocked(self):
         """Empty email should be blocked with proper message."""
         is_valid, error = validate_internal_email("")
         assert is_valid is False
-        assert "입력" in error
+        assert "enter" in error.lower()
 
     def test_case_insensitive_validation(self):
         """Email validation should be case-insensitive."""
