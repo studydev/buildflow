@@ -22,7 +22,6 @@ const showUserMenu = ref(false)
 
 // Computed properties from auth store
 const isAuthenticated = computed(() => authStore.isAuthenticated)
-const userEmail = computed(() => authStore.user?.email || null)
 const displayName = computed(() => authStore.user?.display_name || authStore.user?.email || null)
 const isContributor = computed(() => authStore.isContributor)
 

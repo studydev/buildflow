@@ -104,7 +104,6 @@ const contentSearchQuery = ref('')
 const statusFilter = ref<string | null>(null)
 const expandedRequests = ref<Set<string>>(new Set())
 const refreshingRequests = ref<Set<string>>(new Set())
-const refreshingContents = ref<Set<string>>(new Set())
 
 // Computed
 const filteredAnalysisRequests = computed(() => {
@@ -264,21 +263,6 @@ const handleRefreshMetadata = async (requestId: string) => {
   }
 }
 
-// Refresh metadata for content
-const handleRefreshContentMetadata = async (contentId: string) => {
-  if (refreshingContents.value.has(contentId)) return
-  
-  refreshingContents.value.add(contentId)
-  try {
-    const result = await youtubeStore.refreshContentMetadata(contentId)
-    if (result) {
-      console.log(`Content metadata refreshed: ${result.updated_sources.join(', ')}`)
-    }
-  } finally {
-    refreshingContents.value.delete(contentId)
-  }
-}
-
 // Edit content generated from analysis
 const handleEditContent = async (contentId: string) => {
   const content = await youtubeStore.getContentById(contentId)
@@ -396,12 +380,12 @@ const pendingRequestsCount = computed(() => {
 
 // Lifecycle
 onMounted(() => {
-  youtubeStore.fetchRequests()
-  youtubeStore.fetchContents()
+  youtubeStore.fetchRequests({})
+  youtubeStore.fetchContents({})
 })
 
 onUnmounted(() => {
-  youtubeStore.stopPolling()
+  youtubeStore.stopAllPolling()
 })
 </script>
 
@@ -703,8 +687,8 @@ onUnmounted(() => {
                   <div class="flex items-center justify-end gap-2">
                     <template v-if="request.status === 'completed'">
                       <button
-                        v-if="request.content_id"
-                        @click="handleEditContent(request.content_id)"
+                        v-if="request.content_ids?.length"
+                        @click="handleEditContent(request.content_ids[0]!)"
                         class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-primary hover:bg-primary/10 transition-colors"
                         title="Edit content"
                       >
@@ -713,8 +697,8 @@ onUnmounted(() => {
                         </svg>
                       </button>
                       <button
-                        v-if="request.content_id"
-                        @click="handlePublishContent(request.content_id)"
+                        v-if="request.content_ids?.length"
+                        @click="handlePublishContent(request.content_ids[0]!)"
                         class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-green-500 hover:bg-green-500/10 transition-colors"
                         title="Publish content"
                       >
@@ -790,10 +774,10 @@ onUnmounted(() => {
                       </div>
                       
                       <!-- Description -->
-                      <div v-if="request.result.description_en || request.result.description_kr || request.result.description" class="space-y-1">
+                      <div v-if="request.result.description_en || request.result.description_kr" class="space-y-1">
                         <p class="text-xs font-medium text-[var(--text-tertiary)]">Description</p>
                         <p class="text-sm text-[var(--text-secondary)] line-clamp-3">
-                          {{ getLocalizedText(request.result.description_en || request.result.description, request.result.description_kr) }}
+                          {{ getLocalizedText(request.result.description_en, request.result.description_kr) }}
                         </p>
                       </div>
                       

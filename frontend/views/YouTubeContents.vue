@@ -200,8 +200,8 @@ function formatViewCount(count: number): string {
 
 // Get tag color class
 function getTagColor(index: number): string {
-  const colors = ['azure', 'workshop', 'tutorial']
-  return colors[index % colors.length]
+  const colors: string[] = ['azure', 'workshop', 'tutorial']
+  return colors[index % colors.length] ?? 'azure'
 }
 
 // Open YouTube video
@@ -684,7 +684,7 @@ onMounted(() => {
             <!-- Footer -->
             <div class="flex items-center justify-end gap-3 p-6 border-t border-[var(--border)]">
               <button
-                @click="openVideo(selectedContent?.source_url)"
+                @click="selectedContent?.source_url && openVideo(selectedContent.source_url)"
                 class="px-4 py-2 rounded-lg text-sm font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 hover:border-red-500/50 transition-colors flex items-center gap-2"
               >
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">

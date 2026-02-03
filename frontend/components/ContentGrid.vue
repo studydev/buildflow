@@ -2,6 +2,24 @@
 import { onMounted, computed } from 'vue'
 import { useContentStore } from '@/stores/content'
 
+// Content item display interface
+interface ContentItemDisplay {
+  id: string
+  icon: string
+  title: string
+  description: string
+  tags: { label: string; color: string }[]
+  actions: { label: string; icon: string; primary: boolean; url?: string; hasUrl?: boolean }[]
+  level?: string
+  duration?: number
+  viewCount?: number
+  thumbnailUrl?: string
+  prerequisites?: string[]
+  learningOutcomes?: string[]
+  stars?: number
+  lastCommitDate?: string
+}
+
 const contentStore = useContentStore()
 
 // Fetch content on mount
@@ -140,11 +158,11 @@ const displayItems = computed(() => {
     // Repository metadata
     stars: item.stars,
     lastCommitDate: item.last_commit_date,
-  }))
+  })) as ContentItemDisplay[]
 })
 
 // Fallback to hardcoded data if API fails or for development
-const fallbackContentItems = [
+const fallbackContentItems: ContentItemDisplay[] = [
   {
     id: '1',
     icon: '🤖',

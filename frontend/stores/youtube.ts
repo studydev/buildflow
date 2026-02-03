@@ -611,10 +611,13 @@ export const useYouTubeStore = defineStore('youtube', () => {
       
       // Update local state
       const index = requests.value.findIndex(r => r.id === requestId)
-      if (index !== -1 && requests.value[index].result) {
-        requests.value[index].result!.view_count = data.view_count
-        requests.value[index].result!.like_count = data.like_count
-        requests.value[index].result!.duration_seconds = data.duration_seconds
+      if (index !== -1 && requests.value[index]) {
+        const request = requests.value[index]
+        if (request.result) {
+          request.result.view_count = data.view_count
+          request.result.like_count = data.like_count
+          request.result.duration_seconds = data.duration_seconds
+        }
       }
       
       return data
@@ -650,10 +653,13 @@ export const useYouTubeStore = defineStore('youtube', () => {
       // Update local state
       const index = contents.value.findIndex(c => c.id === contentId)
       if (index !== -1) {
-        contents.value[index].view_count = data.view_count
-        contents.value[index].like_count = data.like_count
-        contents.value[index].duration_seconds = data.duration_seconds
-        contents.value[index].duration_minutes = Math.floor(data.duration_seconds / 60)
+        const content = contents.value[index]
+        if (content) {
+          content.view_count = data.view_count
+          content.like_count = data.like_count
+          content.duration_seconds = data.duration_seconds
+          content.duration_minutes = Math.floor(data.duration_seconds / 60)
+        }
       }
       
       return data
