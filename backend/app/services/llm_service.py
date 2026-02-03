@@ -9,6 +9,7 @@ import httpx
 
 from app.config import get_settings
 from app.models.analysis import AnalysisResult
+from app.models.youtube import YouTubeAnalysisResult
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -165,6 +166,10 @@ Respond ONLY with the JSON object, no additional text."""
 class LLMService:
     """Service for LLM-based content analysis."""
 
+    # Model for fast, long-context tasks (YouTube transcripts, translations)
+    FAST_MODEL = "gpt-4o-mini"
+    FAST_API_VERSION = "2024-08-01-preview"
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -178,7 +183,7 @@ class LLMService:
         Args:
             api_key: Azure OpenAI API key
             endpoint: Azure OpenAI endpoint URL
-            deployment: Deployment/model name
+            deployment: Deployment/model name (default for reasoning tasks)
             api_version: API version
         """
         self.api_key = api_key or getattr(settings, 'azure_openai_api_key', None)
@@ -192,8 +197,26 @@ class LLMService:
         """Check if LLM is properly configured."""
         return bool(self.api_key and self.endpoint)
 
-    async def get_client(self) -> httpx.AsyncClient:
-        """Get or create HTTP client."""
+    def _build_url(self, deployment: Optional[str] = None, api_version: Optional[str] = None) -> str:
+        """Build Azure OpenAI API URL."""
+        base = self.endpoint.rstrip('/')
+        dep = deployment or self.deployment
+        ver = api_version or self.api_version
+        return f"{base}/openai/deployments/{dep}/chat/completions?api-version={ver}"
+
+    def _build_headers(self) -> dict[str, str]:
+        """Build HTTP headers for API requests."""
+        return {
+            "Content-Type": "application/json",
+            "api-key": self.api_key or "",
+        }
+
+    async def get_client(self, timeout: float = 120.0) -> httpx.AsyncClient:
+        """Get or create HTTP client with specified timeout."""
+        # For long operations, create a new client with custom timeout
+        if timeout != 120.0:
+            return httpx.AsyncClient(timeout=timeout)
+
         if self._client is None or self._client.is_closed:
             self._client = httpx.AsyncClient(timeout=120.0)
         return self._client
@@ -202,11 +225,6 @@ class LLMService:
         """Close HTTP client."""
         if self._client and not self._client.is_closed:
             await self._client.aclose()
-
-    def _build_url(self) -> str:
-        """Build Azure OpenAI API URL."""
-        base = self.endpoint.rstrip('/')
-        return f"{base}/openai/deployments/{self.deployment}/chat/completions?api-version={self.api_version}"
 
     async def extract_metadata(
         self,
@@ -261,15 +279,11 @@ class LLMService:
 
             response = await client.post(
                 self._build_url(),
-                headers={
-                    "Content-Type": "application/json",
-                    "api-key": self.api_key,
-                },
+                headers=self._build_headers(),
                 json={
                     "messages": [
                         {"role": "user", "content": prompt}
                     ],
-                    "temperature": 0.3,  # Low temperature for consistent extraction
                     "max_completion_tokens": 2000,  # GPT-5.2 uses max_completion_tokens instead of max_tokens
                 },
             )
@@ -285,8 +299,14 @@ class LLMService:
             return self._parse_llm_response(content)
 
         except httpx.RequestError as e:
-            logger.error(f"LLM request error: {e}")
-            raise LLMAPIError(f"Failed to connect to LLM: {e}")
+            error_type = type(e).__name__
+            error_msg = str(e) if str(e) else "No error message"
+            logger.error(
+                f"LLM request error [{error_type}]: {error_msg} | "
+                f"URL: {self._build_url()} | "
+                f"Endpoint: {self.endpoint}"
+            )
+            raise LLMAPIError(f"Failed to connect to LLM [{error_type}]: {error_msg}")
         except (KeyError, json.JSONDecodeError) as e:
             logger.error(f"Failed to parse LLM response: {e}")
             # Fall back to basic extraction
@@ -481,15 +501,11 @@ class LLMService:
 
             response = await client.post(
                 self._build_url(),
-                headers={
-                    "Content-Type": "application/json",
-                    "api-key": self.api_key,
-                },
+                headers=self._build_headers(),
                 json={
                     "messages": [
                         {"role": "user", "content": prompt}
                     ],
-                    "temperature": 0.3,
                     "max_completion_tokens": 3000,
                 },
             )
@@ -513,8 +529,14 @@ class LLMService:
             logger.error(f"LLM timeout: {e}")
             raise LLMTimeoutError(f"LLM request timed out: {e}")
         except httpx.RequestError as e:
-            logger.error(f"LLM request error: {e}")
-            raise LLMAPIError(f"Failed to connect to LLM: {e}")
+            error_type = type(e).__name__
+            error_msg = str(e) if str(e) else "No error message"
+            logger.error(
+                f"LLM request error [{error_type}]: {error_msg} | "
+                f"URL: {self._build_url()} | "
+                f"Endpoint: {self.endpoint}"
+            )
+            raise LLMAPIError(f"Failed to connect to LLM [{error_type}]: {error_msg}")
 
     def _parse_enrichment_response(self, content: str) -> EnrichmentResult:
         """
@@ -745,8 +767,7 @@ class LLMService:
                             "content": prompt
                         }
                     ],
-                    "temperature": 0.3,
-                    "max_tokens": 2000,
+                    "max_completion_tokens": 2000,
                 },
             )
 
@@ -796,6 +817,272 @@ class LLMService:
             logger.error(f"Response content: {content[:500]}")
             raise LLMAPIError(f"Invalid JSON in translation response: {e}")
 
+    # =========================================================================
+    # YouTube Processing Methods
+    # =========================================================================
+
+    async def process_youtube_metadata(
+        self,
+        result: "YouTubeAnalysisResult",
+    ) -> "YouTubeAnalysisResult":
+        """
+        Process YouTube video metadata using LLM.
+
+        Generates bilingual titles/descriptions and summarizes transcript.
+
+        Args:
+            result: Partial YouTubeAnalysisResult with video metadata
+
+        Returns:
+            Enriched YouTubeAnalysisResult with translated and summarized content
+
+        Raises:
+            LLMConfigError: If LLM is not configured
+            LLMAPIError: If API call fails
+        """
+        if not self.is_configured:
+            logger.warning("LLM not configured, using fallback processing")
+            return self._fallback_youtube_processing(result)
+
+        # Prepare transcript - GPT-5.2 has 128K context, can handle long transcripts
+        transcript_excerpt = ""
+        if result.script_original:
+            # GPT-5.2 can handle large inputs
+            # 1 hour video ≈ 60,000-80,000 chars, well within limit
+            max_transcript_length = 80000
+            transcript_excerpt = result.script_original[:max_transcript_length]
+            if len(result.script_original) > max_transcript_length:
+                transcript_excerpt += "\n\n[Transcript truncated to first ~80000 characters for processing]"
+                logger.info(f"Transcript truncated from {len(result.script_original)} to {max_transcript_length} chars")
+
+        # Calculate duration in minutes
+        duration_minutes = result.duration_seconds // 60 if result.duration_seconds else 0
+
+        # Build prompt
+        prompt = YOUTUBE_METADATA_PROMPT.format(
+            title=result.title or "Untitled",
+            channel_name=result.channel_name or "Unknown",
+            description=result.description or "No description",
+            duration=duration_minutes,
+            view_count=result.view_count,
+            like_count=result.like_count,
+            tags=", ".join(result.tags[:20]) if result.tags else "None",
+            script_language=result.script_language or "unknown",
+            transcript_excerpt=transcript_excerpt or "(No transcript available)",
+        )
+
+        try:
+            # Use GPT-5.2 for YouTube processing (high quality, handles Korean translation well)
+            # Long timeout for large transcripts (10 minutes)
+            client = await self.get_client(timeout=600.0)
+
+            logger.info(f"Processing YouTube with {self.deployment}, transcript length: {len(transcript_excerpt)} chars")
+
+            response = await client.post(
+                self._build_url(),  # Uses default deployment (gpt-5.2)
+                headers=self._build_headers(),
+                json={
+                    "messages": [
+                        {"role": "user", "content": prompt}
+                    ],
+                    # GPT-5.2 (reasoning model) - use reasoning_effort=none for translation tasks
+                    "reasoning_effort": "none",  # No reasoning needed for translation
+                    "max_completion_tokens": 32000,  # Large output for full transcript translation
+                },
+            )
+
+            if response.status_code == 429:
+                raise LLMRateLimitError("Rate limit exceeded")
+
+            if response.status_code != 200:
+                logger.error(f"LLM API error: {response.status_code} - {response.text}")
+                raise LLMAPIError(f"LLM API returned {response.status_code}")
+
+            data = response.json()
+            content = data["choices"][0]["message"]["content"]
+
+            # Parse and merge with existing result
+            return self._parse_youtube_response(content, result)
+
+        except httpx.RequestError as e:
+            # Log detailed error information for debugging
+            error_type = type(e).__name__
+            error_msg = str(e) if str(e) else "No error message"
+            logger.error(
+                f"LLM request error [{error_type}]: {error_msg} | "
+                f"URL: {self._build_url()} | "
+                f"Endpoint: {self.endpoint}"
+            )
+            raise LLMAPIError(f"Failed to connect to LLM [{error_type}]: {error_msg}")
+        except (KeyError, json.JSONDecodeError) as e:
+            logger.error(f"Failed to parse LLM response: {e}")
+            return self._fallback_youtube_processing(result)
+
+    def _parse_youtube_response(
+        self,
+        content: str,
+        result: "YouTubeAnalysisResult",
+    ) -> "YouTubeAnalysisResult":
+        """
+        Parse YouTube LLM response and merge with existing result.
+
+        Args:
+            content: Raw LLM response content
+            result: Existing YouTubeAnalysisResult to enrich
+
+        Returns:
+            Enriched YouTubeAnalysisResult
+        """
+        # Clean markdown code blocks if present
+        content = content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+
+        try:
+            data = json.loads(content.strip())
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse YouTube LLM JSON: {e}")
+            raise LLMAPIError(f"Invalid JSON response from LLM: {e}")
+
+        # Update result with LLM-generated content
+        result.title_en = data.get("title_en") or result.title
+        result.title_kr = data.get("title_kr")
+        result.description_en = data.get("description_en") or result.description
+        result.description_kr = data.get("description_kr")
+
+        # Handle bilingual script (full transcript)
+        script_original = data.get("script_original")
+        if script_original:
+            result.script_original = script_original
+
+        script_original_kr = data.get("script_original_kr")
+        if script_original_kr:
+            result.script_original_kr = script_original_kr
+
+        # Update script_language if LLM detected it
+        detected_language = data.get("script_language")
+        if detected_language:
+            result.script_language = detected_language
+
+        # Handle script summaries with 1000 char limit
+        script_summary_en = data.get("script_summary_en")
+        if script_summary_en and len(script_summary_en) > 1000:
+            script_summary_en = script_summary_en[:997] + "..."
+        result.script_summary_en = script_summary_en
+
+        script_summary_kr = data.get("script_summary_kr")
+        if script_summary_kr and len(script_summary_kr) > 1000:
+            script_summary_kr = script_summary_kr[:997] + "..."
+        result.script_summary_kr = script_summary_kr
+
+        # Update classification with validation
+        raw_content_type = data.get("content_type") or result.content_type
+        result.content_type = self._normalize_content_type(raw_content_type)
+        result.categories = data.get("categories", []) or result.categories
+        result.technologies = data.get("technologies", []) or result.technologies
+        result.level = data.get("level") or result.level
+
+        return result
+
+    def _normalize_content_type(self, content_type: Optional[str]) -> str:
+        """
+        Normalize content_type to valid ContentType enum values.
+
+        LLM may return values like 'course', 'conference', 'webinar' that are
+        not in the ContentType enum. This maps them to valid values.
+        """
+        if not content_type:
+            return "tutorial"
+
+        content_type_lower = content_type.lower().strip()
+
+        # Direct mappings for valid enum values
+        valid_types = {
+            "workshop", "lab", "tutorial", "sample",
+            "template", "solution_idea", "video", "talk", "demo", "other"
+        }
+        if content_type_lower in valid_types:
+            return content_type_lower
+
+        # Map LLM responses to valid enum values
+        mapping = {
+            "course": "tutorial",
+            "conference": "talk",
+            "webinar": "talk",
+            "presentation": "talk",
+            "lecture": "tutorial",
+            "guide": "tutorial",
+            "walkthrough": "tutorial",
+            "demonstration": "demo",
+            "showcase": "demo",
+            "example": "sample",
+            "quickstart": "tutorial",
+            "hands-on": "lab",
+            "hands_on": "lab",
+        }
+
+        return mapping.get(content_type_lower, "video")
+
+    def _fallback_youtube_processing(
+        self,
+        result: "YouTubeAnalysisResult",
+    ) -> "YouTubeAnalysisResult":
+        """
+        Fallback YouTube processing without LLM.
+
+        Used when LLM is not configured or fails.
+        """
+        # Use original title as both versions
+        result.title_en = result.title
+        result.title_kr = None
+
+        # Use original description
+        result.description_en = result.description
+        result.description_kr = None
+
+        # No translation without LLM - keep original
+        # script_original already set, script_original_kr left as None
+        result.script_original_kr = None
+
+        # No summary without LLM
+        result.script_summary_en = None
+        result.script_summary_kr = None
+
+        # Default classification for YouTube
+        result.content_type = "video"
+        result.level = "intermediate"
+
+        # Try to extract categories from tags
+        category_mapping = {
+            "azure": "Azure",
+            "python": "Python",
+            "javascript": "Web",
+            "typescript": "Web",
+            "ai": "AI",
+            "machine-learning": "Machine Learning",
+            "ml": "Machine Learning",
+            "docker": "Containers",
+            "kubernetes": "Kubernetes",
+            "devops": "DevOps",
+            "copilot": "Copilot",
+            "agent": "Agent",
+        }
+
+        categories = set()
+        for tag in (result.tags or []):
+            tag_lower = tag.lower()
+            if tag_lower in category_mapping:
+                categories.add(category_mapping[tag_lower])
+
+        result.categories = list(categories) if categories else ["Other"]
+        result.technologies = result.tags[:10] if result.tags else []
+
+        return result
+
 
 @dataclass
 class TranslationResult:
@@ -808,7 +1095,7 @@ class TranslationResult:
     summary_kr: Optional[str] = None
     prerequisites_kr: List[str] = field(default_factory=list)
     learning_outcomes_kr: List[str] = field(default_factory=list)
-    model_used: str = "gpt-4o"
+    model_used: str = "gpt-5.2"
     raw_response: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -840,6 +1127,85 @@ IMPORTANT:
 - Keep code examples and command names in English
 - Use formal language style (존댓말)
 - Maintain the same number of items in lists
+
+Respond ONLY with the JSON object, no additional text."""
+
+
+# =============================================================================
+# YouTube Processing Prompts
+# =============================================================================
+
+YOUTUBE_METADATA_PROMPT = """You are a technical content analyst specializing in developer education. Analyze the following YouTube video metadata and generate comprehensive structured metadata.
+
+Video Information:
+---
+Title: {title}
+Channel: {channel_name}
+Description:
+{description}
+
+Duration: {duration} minutes
+View Count: {view_count}
+Like Count: {like_count}
+Tags: {tags}
+---
+
+Transcript (excerpt, original language: {script_language}):
+{transcript_excerpt}
+---
+
+IMPORTANT: The video may be in English, Korean, or mixed languages.
+
+For Title and Description:
+- Provide BOTH English and Korean versions
+- If the original is in English: keep as title_en, translate to title_kr
+- If the original is in Korean: translate to title_en, keep as title_kr
+
+For Transcript Processing (CRITICAL):
+- You are provided with the original transcript which has timestamps removed
+- "script_original" MUST contain the FULL transcript in English (translate if original is Korean)
+- "script_original_kr" MUST contain the FULL transcript in Korean (translate if original is English)
+- While translating, correct pronunciation errors by referring to the title and description
+- Preserve the full content - do NOT summarize, do NOT truncate
+
+FORMATTING FOR READABILITY (Very Important):
+- The raw transcript is a continuous stream of text without proper sentence/paragraph breaks
+- You MUST restructure the transcript into readable paragraphs and sentences
+- Break text into logical sentences with proper punctuation (periods, commas, question marks)
+- Group related sentences into paragraphs (3-5 sentences per paragraph is ideal)
+- Add paragraph breaks (blank lines) when the topic or speaker's focus changes
+- Preserve ALL original content - just reorganize for readability, do NOT remove any words
+- The goal is to make it easy to read like a well-formatted article or book
+
+- Summaries go in separate fields: script_summary_en and script_summary_kr (max 1000 chars each)
+
+Respond with a valid JSON object:
+
+{{
+  "title_en": "English title (max 100 chars)",
+  "title_kr": "한국어 제목 (max 100 chars)",
+  "description_en": "English description (2-3 sentences summarizing what viewers will learn)",
+  "description_kr": "한국어 설명 (2-3 문장으로 시청자가 배울 내용 요약)",
+  "script_language": "Detected language of the original transcript: 'en' or 'ko'",
+  "script_original": "The FULL transcript in English, formatted into readable paragraphs and sentences. Break into logical paragraphs with blank lines between them. Each sentence should end with proper punctuation. If original was Korean, translate entirely. Preserve all content but make it easy to read.",
+  "script_original_kr": "전체 스크립트를 한국어로, 읽기 쉽게 문장과 문단으로 정리. 문단 사이에 빈 줄을 넣고, 각 문장은 적절한 구두점으로 마무리. 원본이 영어면 전체 번역, 한국어면 발음 오류 수정 후 가독성 있게 재구성. 모든 내용을 보존하되 읽기 쉽게 정리.",
+  "script_summary_en": "English summary of the transcript content (max 1000 chars). Summarize the main points naturally.",
+  "script_summary_kr": "스크립트 내용의 한국어 요약 (최대 1000자). 주요 내용을 자연스럽게 요약.",
+  "content_type": "One of: video, tutorial, workshop, talk, demo, lab, sample, other",
+  "categories": ["List of relevant categories from: AI, Azure, DevOps, Web, Mobile, Data, Security, Cloud, IoT, Serverless, Containers, Kubernetes, Machine Learning, Databases, Copilot, Agent, Analytics"],
+  "technologies": ["List of specific technologies, frameworks, services, and tools mentioned"],
+  "level": "One of: beginner, intermediate, advanced"
+}}
+
+IMPORTANT:
+- script_original and script_original_kr are MANDATORY - both MUST be provided
+- script_original_kr MUST contain the FULL Korean translation of the transcript (this is CRITICAL)
+- script_summary_en and script_summary_kr MUST both be provided (max 1000 chars each)
+- If the original transcript is in English, you MUST translate the entire content to Korean for script_original_kr
+- DO NOT set script_original_kr to null when transcript is available
+- Be specific about technologies (include version numbers if mentioned)
+- Categories should reflect the main focus areas (select 2-5 relevant categories)
+- Korean translations should be natural and professional (use 존댓말 formal style)
 
 Respond ONLY with the JSON object, no additional text."""
 

@@ -23,6 +23,14 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/contents/youtube',
+    name: 'YouTubeContents',
+    component: () => import('@/views/YouTubeContents.vue'),
+    meta: {
+      title: 'NexusSkill - YouTube Collection'
+    }
+  },
+  {
     path: '/contributor/manage',
     name: 'ContentManagement',
     component: () => import('@/views/contributor/ContributeContent.vue'),
@@ -30,6 +38,16 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       requiresContributor: true,
       title: 'NexusSkill - Repos'
+    }
+  },
+  {
+    path: '/contributor/youtube',
+    name: 'YouTubeManagement',
+    component: () => import('@/views/contributor/YouTubeContent.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresContributor: true,
+      title: 'NexusSkill - YouTube'
     }
   },
   // Legacy redirects

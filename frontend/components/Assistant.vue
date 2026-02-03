@@ -37,6 +37,8 @@ interface Citation {
   description?: string
   description_kr?: string
   url?: string
+  source_type?: string  // 'github' or 'youtube'
+  thumbnail_url?: string
 }
 
 interface SuggestedContent {
@@ -47,7 +49,9 @@ interface SuggestedContent {
   description_kr?: string
   relevance: number
   reason?: string
-  url?: string  // GitHub repo URL
+  url?: string  // GitHub repo URL or YouTube URL
+  source_type?: string  // 'github' or 'youtube'
+  thumbnail_url?: string
 }
 
 interface ExternalResult {
@@ -347,25 +351,39 @@ watch(() => props.contentId, (newId) => {
                 :key="citation.content_id"
                 class="w-full text-left p-2 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 border border-amber-200 dark:border-amber-800"
               >
-                <div class="flex items-start justify-between gap-2 mb-1">
-                  <span class="text-xs font-medium text-amber-700 dark:text-amber-300">{{ getLocalizedTitle(citation) }}</span>
-                  <span class="text-[10px] text-amber-500 dark:text-amber-400 shrink-0">({{ Math.round(citation.relevance) }} pts)</span>
+                <div class="flex gap-3">
+                  <!-- Thumbnail (left) -->
+                  <div v-if="citation.thumbnail_url" class="w-16 h-10 flex-shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
+                    <img :src="citation.thumbnail_url" :alt="citation.title" class="w-full h-full object-cover" />
+                  </div>
+                  <div v-else class="w-16 h-10 flex-shrink-0 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                    <span v-if="citation.source_type === 'youtube'" class="text-red-500 text-lg">▶</span>
+                    <span v-else class="text-gray-400 text-xs">📁</span>
+                  </div>
+                  <!-- Content (right) -->
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2 mb-0.5">
+                      <span class="text-xs font-medium text-amber-700 dark:text-amber-300 truncate">{{ getLocalizedTitle(citation) }}</span>
+                      <span class="text-[10px] text-amber-500 dark:text-amber-400 shrink-0">({{ Math.round(citation.relevance) }} pts)</span>
+                    </div>
+                    <p v-if="getLocalizedDescription(citation)" class="text-[10px] text-gray-600 dark:text-gray-400 line-clamp-2 mb-1">
+                      {{ getLocalizedDescription(citation) }}
+                    </p>
+                    <a
+                      v-if="citation.url"
+                      :href="citation.url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center gap-1 text-[10px] hover:underline"
+                      :class="citation.source_type === 'youtube' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      {{ citation.source_type === 'youtube' ? 'Watch on YouTube' : 'View on GitHub' }}
+                    </a>
+                  </div>
                 </div>
-                <p v-if="getLocalizedDescription(citation)" class="text-[11px] text-gray-600 dark:text-gray-400 line-clamp-3 mb-2">
-                  {{ getLocalizedDescription(citation) }}
-                </p>
-                <a
-                  v-if="citation.url"
-                  :href="citation.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 hover:underline"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  View on GitHub
-                </a>
               </div>
             </div>
           </div>
@@ -382,29 +400,43 @@ watch(() => props.contentId, (newId) => {
                 :key="suggestion.content_id"
                 class="w-full text-left p-2 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200 dark:border-blue-800"
               >
-                <div class="flex items-start justify-between gap-2 mb-1">
-                  <span class="text-xs font-medium text-blue-700 dark:text-blue-300">{{ getLocalizedTitle(suggestion) }}</span>
-                  <span class="text-[10px] text-blue-500 dark:text-blue-400 shrink-0">{{ Math.round(suggestion.relevance) }} pts</span>
+                <div class="flex gap-3">
+                  <!-- Thumbnail (left) -->
+                  <div v-if="suggestion.thumbnail_url" class="w-16 h-10 flex-shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
+                    <img :src="suggestion.thumbnail_url" :alt="suggestion.title" class="w-full h-full object-cover" />
+                  </div>
+                  <div v-else class="w-16 h-10 flex-shrink-0 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                    <span v-if="suggestion.source_type === 'youtube'" class="text-red-500 text-lg">▶</span>
+                    <span v-else class="text-gray-400 text-xs">📁</span>
+                  </div>
+                  <!-- Content (right) -->
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2 mb-0.5">
+                      <span class="text-xs font-medium text-blue-700 dark:text-blue-300 truncate">{{ getLocalizedTitle(suggestion) }}</span>
+                      <span class="text-[10px] text-blue-500 dark:text-blue-400 shrink-0">{{ Math.round(suggestion.relevance) }} pts</span>
+                    </div>
+                    <p v-if="suggestion.reason" class="text-[10px] text-gray-600 dark:text-gray-400 line-clamp-2 mb-1">
+                      {{ suggestion.reason }}
+                    </p>
+                    <p v-else-if="getLocalizedDescription(suggestion)" class="text-[10px] text-gray-600 dark:text-gray-400 line-clamp-2 mb-1">
+                      {{ getLocalizedDescription(suggestion) }}
+                    </p>
+                    <a
+                      v-if="suggestion.url"
+                      :href="suggestion.url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center gap-1 text-[10px] hover:underline"
+                      :class="suggestion.source_type === 'youtube' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'"
+                      @click.stop
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      {{ suggestion.source_type === 'youtube' ? 'Watch on YouTube' : 'View on GitHub' }}
+                    </a>
+                  </div>
                 </div>
-                <p v-if="suggestion.reason" class="text-[11px] text-gray-600 dark:text-gray-400 line-clamp-3 mb-2">
-                  {{ suggestion.reason }}
-                </p>
-                <p v-else-if="getLocalizedDescription(suggestion)" class="text-[11px] text-gray-600 dark:text-gray-400 line-clamp-3 mb-2">
-                  {{ getLocalizedDescription(suggestion) }}
-                </p>
-                <a
-                  v-if="suggestion.url"
-                  :href="suggestion.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
-                  @click.stop
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  View on GitHub
-                </a>
               </div>
             </div>
           </div>

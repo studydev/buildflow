@@ -232,6 +232,9 @@ class Containers:
     CONTENTS = "contents"
     OTP_CODES = "otp_codes"  # For OTP storage if needed
     ANALYSIS_REQUESTS = "analysis_requests"
+    # YouTube containers
+    YOUTUBE_ANALYSIS = "youtube_analysis"
+    YOUTUBE_CONTENTS = "youtube_contents"
 
 
 # =============================================================================

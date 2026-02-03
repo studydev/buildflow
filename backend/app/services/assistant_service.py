@@ -26,6 +26,10 @@ import httpx
 
 from app.config import get_settings
 from app.services.search_service import SearchFilters, SearchResult, SearchService
+from app.services.youtube_search_service import (
+    YouTubeSearchService,
+    get_youtube_search_service,
+)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -47,6 +51,8 @@ class Citation:
     description_kr: Optional[str] = None
     url: Optional[str] = None
     title_kr: Optional[str] = None
+    source_type: str = "github"  # github or youtube
+    thumbnail_url: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to API response format."""
@@ -58,6 +64,8 @@ class Citation:
             "description": self.description,
             "description_kr": self.description_kr,
             "url": self.url,
+            "source_type": self.source_type,
+            "thumbnail_url": self.thumbnail_url,
         }
 
 
@@ -70,9 +78,11 @@ class SuggestedContent:
     description: Optional[str]
     relevance: float
     reason: Optional[str] = None  # Why it was suggested
-    url: Optional[str] = None  # GitHub repo URL
+    url: Optional[str] = None  # GitHub repo URL or YouTube URL
     title_kr: Optional[str] = None
     description_kr: Optional[str] = None
+    source_type: str = "github"  # github or youtube
+    thumbnail_url: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to API response format."""
@@ -85,6 +95,8 @@ class SuggestedContent:
             "relevance": self.relevance,
             "reason": self.reason,
             "url": self.url,
+            "source_type": self.source_type,
+            "thumbnail_url": self.thumbnail_url,
         }
 
 
@@ -192,17 +204,28 @@ SYSTEM_PROMPT = """You are NexusSkill Assistant, an AI helper for discovering an
 
 Your capabilities:
 1. Answer questions about Azure, cloud development, and DevOps using the knowledge base
-2. Recommend relevant repositories, tutorials, and learning resources
+2. Recommend relevant GitHub repositories, YouTube tutorials, and learning resources
 3. Explain how to use specific content items
 4. Suggest learning paths based on user's skill level
+
+KNOWLEDGE BASE:
+- GitHub Repositories: Curated repos with workshops, tutorials, and sample code
+- YouTube Videos: Curated videos from Microsoft Developer and other channels
 
 IMPORTANT RULES:
 - ALWAYS base your answers on the provided context from the knowledge base
 - ALWAYS cite your sources using [Source: content_id] format
+- For YouTube content, mention the video title and channel name
 - If you cannot find relevant information in the context, clearly say so
 - NEVER fabricate or invent content references
 - Be concise and actionable in your responses
 - Use Korean if the user writes in Korean, English otherwise
+
+YOUTUBE RECOMMENDATION PRIORITY:
+- When the user wants to learn visually, watch tutorials, or prefers video content, PRIORITIZE YouTube videos
+- Even if YouTube content has lower search scores, actively recommend videos when they are relevant
+- Explicitly mention that YouTube videos provide visual/hands-on learning experiences
+- For topics like "AI Agents", "MCP", "GitHub Copilot", recommend relevant YouTube tutorials first
 
 Current context about user:
 - Visibility level: {visibility_level}
@@ -284,6 +307,7 @@ class AssistantService:
     def __init__(
         self,
         search_service: Optional[SearchService] = None,
+        youtube_search_service: Optional[YouTubeSearchService] = None,
         openai_endpoint: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         openai_deployment: Optional[str] = None,
@@ -292,12 +316,14 @@ class AssistantService:
         Initialize assistant service.
 
         Args:
-            search_service: SearchService instance for RAG retrieval
+            search_service: SearchService instance for GitHub content (buildflow-content)
+            youtube_search_service: YouTubeSearchService instance for YouTube content (buildflow-youtube)
             openai_endpoint: Azure OpenAI endpoint
             openai_api_key: Azure OpenAI API key
             openai_deployment: Azure OpenAI deployment name
         """
         self.search_service = search_service or SearchService()
+        self.youtube_search_service = youtube_search_service or get_youtube_search_service()
         self.openai_endpoint = openai_endpoint or settings.azure_openai_endpoint
         self.openai_api_key = openai_api_key or settings.azure_openai_api_key
         self.openai_deployment = openai_deployment or settings.azure_openai_deployment
@@ -441,17 +467,21 @@ class AssistantService:
         limit: int = 10,
     ) -> List[SearchResult]:
         """
-        Retrieve relevant content from search index.
+        Retrieve relevant content from both GitHub and YouTube search indexes.
+
+        Performs ensemble search across:
+        - buildflow-content (GitHub repositories)
+        - buildflow-youtube (YouTube videos)
 
         Args:
             query: Search query
             context: Chat context with visibility settings
-            limit: Maximum results
+            limit: Maximum results per index
 
         Returns:
-            List of search results
+            Combined list of search results from both indexes
         """
-        # Build filters based on context
+        # Build filters based on context for GitHub content
         filters = SearchFilters()
 
         # Apply visibility filter
@@ -468,29 +498,124 @@ class AssistantService:
             if "technologies" in context.filters:
                 filters.technologies = context.filters["technologies"]
 
-        # Perform hybrid search
-        results = await self.search_service.hybrid_search(
+        # Perform parallel searches on both indexes
+        import asyncio
+
+        # GitHub content search
+        github_task = self.search_service.hybrid_search(
             query=query,
             filters=filters,
             limit=limit,
         )
 
-        return results.items
+        # YouTube content search (build filters)
+        youtube_filters = {}
+        if context.filters:
+            if "categories" in context.filters:
+                youtube_filters["category"] = context.filters["categories"][0] if context.filters["categories"] else None
+            if "level" in context.filters:
+                youtube_filters["level"] = context.filters["level"]
+
+        logger.info(f"[Ensemble Search] Query: {query}")
+        logger.info(f"[Ensemble Search] YouTube service configured: {self.youtube_search_service.is_configured}")
+
+        # YouTube uses keyword-only search (no vector) for better score comparability
+        youtube_task = self.youtube_search_service.search(
+            query=query,
+            filters=youtube_filters if youtube_filters else None,
+            top=limit,
+            use_vector=False,  # Keyword search only for consistent scoring
+        )
+
+        # Wait for both searches
+        github_results, youtube_results = await asyncio.gather(
+            github_task,
+            youtube_task,
+            return_exceptions=True,
+        )
+
+        logger.info(f"[Ensemble Search] GitHub results type: {type(github_results)}")
+        logger.info(f"[Ensemble Search] YouTube results type: {type(youtube_results)}")
+
+        # Combine results
+        combined_results: List[SearchResult] = []
+
+        # Add GitHub results
+        if not isinstance(github_results, Exception):
+            logger.info(f"[Ensemble Search] GitHub found {len(github_results.items)} results")
+            combined_results.extend(github_results.items)
+        else:
+            logger.warning(f"GitHub search failed: {github_results}")
+
+        # Convert YouTube results to SearchResult format
+        if not isinstance(youtube_results, Exception):
+            logger.info(f"[Ensemble Search] YouTube found {len(youtube_results.results)} results")
+            for yt_result in youtube_results.results:
+                # Convert YouTubeSearchResult to SearchResult
+                search_result = SearchResult(
+                    id=yt_result.id,
+                    title=yt_result.title,
+                    title_kr=yt_result.title_kr,
+                    description=yt_result.description,
+                    description_kr=yt_result.description_kr,
+                    summary=None,  # YouTube doesn't have summary in search result
+                    summary_kr=None,
+                    categories=yt_result.categories,
+                    technologies=yt_result.technologies,
+                    difficulty_level=yt_result.level,
+                    score=yt_result.score,
+                    source_type="youtube",  # Mark as YouTube content
+                    source_url=yt_result.source_url,
+                    thumbnail_url=yt_result.thumbnail_url,
+                    channel_name=yt_result.channel_name,
+                    duration_minutes=yt_result.duration_minutes,
+                    view_count=yt_result.view_count,
+                )
+                combined_results.append(search_result)
+        else:
+            logger.warning(f"YouTube search failed: {youtube_results}")
+
+        # Sort by score (descending) and limit total results
+        combined_results.sort(key=lambda x: x.score, reverse=True)
+        return combined_results[:limit * 2]  # Return up to 2x limit for ensemble
 
     def _format_context_for_llm(
         self,
         search_results: List[SearchResult],
     ) -> str:
-        """Format search results as context for LLM."""
+        """Format search results as context for LLM.
+
+        Includes both GitHub repositories and YouTube videos.
+        """
         if not search_results:
             return "No relevant content found in the knowledge base."
 
         context_parts = []
         for i, result in enumerate(search_results, 1):
+            # Base info
+            source_type = getattr(result, 'source_type', 'github')
+            source_label = "📺 YouTube Video" if source_type == "youtube" else "📁 GitHub Repository"
+
             part = f"""
-[{i}] Content ID: {result.id}
+[{i}] {source_label}
+Content ID: {result.id}
 Title: {result.title}
-Description: {result.description or 'N/A'}
+"""
+            # Add YouTube-specific info
+            if source_type == "youtube":
+                channel = getattr(result, 'channel_name', None)
+                duration = getattr(result, 'duration_minutes', None)
+                views = getattr(result, 'view_count', 0)
+                if channel:
+                    part += f"Channel: {channel}\n"
+                if duration:
+                    part += f"Duration: {duration} minutes\n"
+                if views:
+                    part += f"Views: {views:,}\n"
+                part += f"URL: {result.source_url or 'N/A'}\n"
+
+            # Common info
+            part += f"""Description: {result.description or 'N/A'}
 Summary: {result.summary or 'N/A'}
 Categories: {', '.join(result.categories) if result.categories else 'N/A'}
 Technologies: {', '.join(result.technologies) if result.technologies else 'N/A'}
@@ -590,9 +715,7 @@ Relevance Score: {result.score:.2f}
 
         payload = {
             "messages": messages,
-            "temperature": 0.7,
             "max_completion_tokens": 1500,
-            "top_p": 0.95,
         }
 
         headers = {
@@ -646,6 +769,8 @@ Relevance Score: {result.score:.2f}
                         description=result.description,
                         description_kr=result.description_kr,
                         url=result.source_url,
+                        source_type=getattr(result, 'source_type', 'github'),
+                        thumbnail_url=getattr(result, 'thumbnail_url', None),
                     ))
                     break
 
@@ -662,6 +787,8 @@ Relevance Score: {result.score:.2f}
                         description=result.description,
                         description_kr=result.description_kr,
                         url=result.source_url,
+                        source_type=getattr(result, 'source_type', 'github'),
+                        thumbnail_url=getattr(result, 'thumbnail_url', None),
                     ))
 
         return citations
@@ -799,6 +926,8 @@ Relevance Score: {result.score:.2f}
                     relevance=result.score,
                     reason=reasons.get(result.id),
                     url=result.source_url,
+                    source_type=getattr(result, 'source_type', 'github'),
+                    thumbnail_url=getattr(result, 'thumbnail_url', None),
                 ))
 
         return suggestions

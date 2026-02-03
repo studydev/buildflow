@@ -93,9 +93,13 @@ watch(() => route.query.login, (newVal) => {
       <router-link 
         v-if="isContributor"
         to="/contributor/manage"
-        class="px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-primary transition-colors"
+        class="w-10 h-10 rounded-lg hover:bg-[var(--bg-tertiary)] flex items-center justify-center transition-all text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+        title="Manage Content"
       >
-        Repos
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
       </router-link>
 
       <button 
@@ -114,37 +118,27 @@ watch(() => route.query.login, (newVal) => {
         Sign In
       </button>
       
-      <!-- Logged in -->
-      <div v-else class="relative">
-        <button 
-          @click="showUserMenu = !showUserMenu"
-          @mouseenter="showUserMenu = true"
-          class="px-4 py-2 text-sm font-header font-medium text-[var(--text-primary)] hover:text-primary transition-colors border border-[var(--border)] rounded-lg hover:border-primary flex items-center gap-2"
+      <!-- Logged in - Hover to show Sign Out -->
+      <button 
+        v-else
+        @mouseenter="showUserMenu = true"
+        @mouseleave="showUserMenu = false"
+        @click="showUserMenu ? handleLogout() : null"
+        class="px-4 py-2 text-sm font-header font-medium transition-colors border rounded-lg flex items-center gap-2"
+        :class="showUserMenu 
+          ? 'text-red-500 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20' 
+          : 'text-[var(--text-primary)] border-[var(--border)] hover:border-primary'"
+      >
+        <span 
+          class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+          :class="showUserMenu ? 'bg-red-100 text-red-500' : 'bg-primary/20 text-primary'"
         >
-          <span class="w-6 h-6 bg-primary/20 text-primary rounded-full flex items-center justify-center text-xs font-bold">
-            {{ displayName ? displayName?.[0]?.toUpperCase() : 'U' }}
-          </span>
-          {{ displayName }}
-        </button>
-        
-        <!-- Dropdown menu -->
-        <div 
-          v-if="showUserMenu"
-          @mouseleave="showUserMenu = false"
-          class="absolute top-full right-0 mt-2 w-48 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg shadow-lg py-2 z-50"
-        >
-          <div class="px-4 py-2 border-b border-[var(--border)]">
-            <p class="text-xs text-[var(--text-secondary)]">Signed in as</p>
-            <p class="text-sm font-medium text-[var(--text-primary)] truncate">{{ userEmail }}</p>
-          </div>
-          <button 
-            @click="handleLogout"
-            class="w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
+          {{ showUserMenu ? '→' : (displayName ? displayName?.[0]?.toUpperCase() : 'U') }}
+        </span>
+        <span class="inline-block" :style="{ minWidth: displayName ? `${displayName.length * 0.55}em` : '5em' }">
+          {{ showUserMenu ? 'Sign Out' : displayName }}
+        </span>
+      </button>
     </div>
   </header>
 

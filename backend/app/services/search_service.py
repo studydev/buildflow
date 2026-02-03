@@ -347,6 +347,9 @@ class SearchResult:
     learning_outcomes_kr: List[str] = field(default_factory=list)
     prerequisites: List[str] = field(default_factory=list)
     prerequisites_kr: List[str] = field(default_factory=list)
+    # Source type for ensemble search (github, youtube)
+    source_type: str = "github"
+    channel_name: Optional[str] = None
 
     @classmethod
     def from_document(cls, doc: Dict[str, Any]) -> "SearchResult":

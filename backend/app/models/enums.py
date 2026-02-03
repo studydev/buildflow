@@ -31,6 +31,9 @@ class ContentType(str, Enum):
     SAMPLE = "sample"
     TEMPLATE = "template"
     SOLUTION_IDEA = "solution_idea"
+    VIDEO = "video"  # YouTube videos
+    TALK = "talk"  # Conference talks, webinars
+    DEMO = "demo"  # Demonstrations
     OTHER = "other"
 
 
@@ -136,3 +139,28 @@ class PromotionStatus(str, Enum):
     PENDING_APPROVAL = "pending_approval"      # Awaiting admin approval
     REJECTED = "rejected"                      # Admin rejected
     PROMOTED = "promoted"                      # Successfully promoted to Prod
+
+
+# =============================================================================
+# YouTube Analysis Enums
+# =============================================================================
+
+
+class YouTubeAnalysisStatus(str, Enum):
+    """
+    YouTube video analysis status.
+
+    Valid transitions:
+    - PENDING → FETCHING
+    - FETCHING → TRANSCRIPT, FAILED
+    - TRANSCRIPT → PARSING, FAILED
+    - PARSING → COMPLETED, FAILED
+    - FAILED → PENDING (retry)
+    """
+
+    PENDING = "pending"              # Queued, waiting to start
+    FETCHING = "fetching"            # Fetching video metadata from YouTube API
+    TRANSCRIPT = "transcript"        # Fetching transcript/subtitles
+    PARSING = "parsing"              # LLM processing (translation, summarization)
+    COMPLETED = "completed"          # Successfully finished
+    FAILED = "failed"                # Terminal failure (can retry next day if quota exceeded)

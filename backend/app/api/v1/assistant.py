@@ -82,6 +82,8 @@ class CitationResponse(BaseModel):
     description: Optional[str] = None
     description_kr: Optional[str] = None
     url: Optional[str] = None
+    source_type: str = "github"  # github or youtube
+    thumbnail_url: Optional[str] = None
 
 
 class SuggestedContentResponse(BaseModel):
@@ -94,7 +96,9 @@ class SuggestedContentResponse(BaseModel):
     description_kr: Optional[str] = None
     relevance: float
     reason: Optional[str] = None
-    url: Optional[str] = None  # GitHub repo URL
+    url: Optional[str] = None  # GitHub repo URL or YouTube URL
+    source_type: str = "github"  # github or youtube
+    thumbnail_url: Optional[str] = None
 
 
 class ExternalResultResponse(BaseModel):
@@ -258,6 +262,8 @@ async def chat(
                     description=c.description,
                     description_kr=c.description_kr,
                     url=c.url,
+                    source_type=c.source_type,
+                    thumbnail_url=c.thumbnail_url,
                 )
                 for c in response.citations
             ],
@@ -271,6 +277,8 @@ async def chat(
                     relevance=s.relevance,
                     reason=s.reason,
                     url=s.url,
+                    source_type=s.source_type,
+                    thumbnail_url=s.thumbnail_url,
                 )
                 for s in response.suggested_content
             ],
@@ -355,6 +363,8 @@ async def explain_content(
                     description=c.description,
                     description_kr=c.description_kr,
                     url=c.url,
+                    source_type=c.source_type,
+                    thumbnail_url=c.thumbnail_url,
                 )
                 for c in response.citations
             ],
@@ -368,6 +378,8 @@ async def explain_content(
                     relevance=s.relevance,
                     reason=s.reason,
                     url=s.url,
+                    source_type=s.source_type,
+                    thumbnail_url=s.thumbnail_url,
                 )
                 for s in response.suggested_content
             ],
@@ -440,6 +452,8 @@ async def recommend_content(
                     description=c.description,
                     description_kr=c.description_kr,
                     url=c.url,
+                    source_type=c.source_type,
+                    thumbnail_url=c.thumbnail_url,
                 )
                 for c in response.citations
             ],
@@ -453,6 +467,8 @@ async def recommend_content(
                     relevance=s.relevance,
                     reason=s.reason,
                     url=s.url,
+                    source_type=s.source_type,
+                    thumbnail_url=s.thumbnail_url,
                 )
                 for s in response.suggested_content
             ],

@@ -20,3 +20,8 @@ python-dotenv>=1.0.1
 
 # Azure Communication Services (OTP Email)
 azure-communication-email>=1.0.0
+
+# YouTube API
+google-api-python-client>=2.100.0
+youtube-transcript-api>=0.6.1
+

@@ -93,6 +93,11 @@ class Settings(BaseSettings):
     # GitHub Settings (for higher API rate limits)
     github_token: Optional[str] = None  # Personal Access Token for 5000 req/hour
 
+    # YouTube Settings
+    youtube_api_key: Optional[str] = None  # YouTube Data API v3 key
+    youtube_transcript_api_url: Optional[str] = None  # External transcript API (if youtube-transcript-api doesn't work)
+    youtube_transcript_api_key: Optional[str] = None  # External transcript API key
+
     # OTP Settings (T035: 3-minute validity and resend limit)
     otp_ttl_minutes: int = 3  # OTP validity period
     otp_rate_limit_minutes: int = 3  # Minimum time between OTP requests
