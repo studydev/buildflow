@@ -288,7 +288,7 @@ watch(() => props.contentId, (newId) => {
   <Transition name="slide-up">
     <div
       v-if="isOpen"
-      class="fixed bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)] h-[500px] bg-white dark:bg-gray-800 rounded-lg shadow-2xl flex flex-col z-50 border border-gray-200 dark:border-gray-700"
+      class="fixed bottom-24 right-6 w-[576px] max-w-[calc(100vw-3rem)] h-[calc(100vh-96px-10px-82px)] bg-white dark:bg-gray-800 rounded-lg shadow-2xl flex flex-col z-50 border border-gray-200 dark:border-gray-700"
     >
       <!-- Header -->
       <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white rounded-t-lg">
