@@ -44,6 +44,9 @@ NexusSkill automatically curates Microsoft and Azure cloud development learning 
 ├──────────────────────┼──────────────────────────────────────────┤
 │  Analysis Pipeline   │  BackgroundTasks (in-process)            │
 │                      │  GitHub analysis, AI metadata extraction │
+├──────────────────────┼──────────────────────────────────────────┤
+│  Metadata Refresh    │  Azure Functions (Timer: daily KST 02:00)│
+│  (Functions)         │  GitHub stars/forks, YouTube views/likes  │
 └──────────────────────┴──────────────────────────────────────────┘
 ```
 
@@ -53,6 +56,7 @@ NexusSkill automatically curates Microsoft and Azure cloud development learning 
 buildflow/
 ├── backend/              # FastAPI backend → backend/README.md
 ├── frontend/             # Vue 3 frontend
+├── functions/            # Azure Functions (daily metadata refresh) → functions/README.md
 ├── infra/                # Azure Bicep IaC → infra/README.md
 ├── .github/workflows/    # CI/CD workflows
 └── docs/                 # Additional documentation
@@ -67,6 +71,7 @@ buildflow/
 | Database | Azure Cosmos DB (Serverless) |
 | Search | Azure AI Search (Hybrid: BM25 + Vector) |
 | AI | Azure OpenAI (GPT, DALL-E, Embeddings) |
+| Scheduled Jobs | Azure Functions (Consumption Plan, Python 3.11) |
 | Hosting | Azure Container Apps, Azure Static Web Apps |
 | CI/CD | GitHub Actions |
 | IaC | Bicep |
@@ -128,5 +133,9 @@ MIT License
 | **Frontend** | OTP Login UI | 2026-01-22 | Email + OTP input modal |
 | **Frontend** | AI Assistant UI | 2026-01-27 | Floating chat, markdown rendering |
 | **Frontend** | Advanced Search Filters | 2026-01-27 | Category, difficulty, technology filters |
+| **Infrastructure** | Azure Functions (Metadata Refresh) | 2026-03-02 | Bicep module, Consumption Plan (Y1) |
+| **Backend** | Daily GitHub Metadata Refresh | 2026-03-02 | Stars, forks, last_commit_date auto-update |
+| **Backend** | Daily YouTube Metadata Refresh | 2026-03-02 | Views, likes, comment_count auto-update |
+| **CI/CD** | Functions deploy job | 2026-03-02 | Added to deploy-backend.yml workflow |
 
 </details>

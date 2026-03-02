@@ -6,8 +6,12 @@
 
 | 소스 | 업데이트 항목 | 대상 저장소 |
 |------|-------------|------------|
-| **GitHub** | stars, forks, last_commit_date | contents, analysis_requests, AI Search |
-| **YouTube** | view_count, like_count, comment_count | youtube_contents, youtube_analysis, AI Search |
+| **GitHub** | stars, forks, last_commit_date | contents, analysis_requests, AI Search (`buildflow-content`) |
+| **YouTube** | view_count, like_count, comment_count | youtube_contents, youtube_analysis, AI Search (`buildflow-youtube`) |
+
+> **참고**: AI Search 인덱스에는 스키마에 존재하는 필드만 업데이트합니다.
+> - `buildflow-content`: `stars`, `last_commit_date` (forks 필드 없음)
+> - `buildflow-youtube`: `view_count`, `like_count` (comment_count 필드 없음)
 
 ## API Rate Limit 안전 장치
 
@@ -29,12 +33,29 @@
 
 ## 로컬 실행
 
+### Azure Functions Core Tools로 실행
 ```bash
 cd functions
 pip install -r requirements.txt
 # local.settings.json에 환경 변수 설정 후
 func start
 ```
+
+### 로컬 테스트 스크립트
+```bash
+cd functions
+
+# Dry run (읽기만, 업데이트 안함)
+python3 test_local.py github --dry    # GitHub만
+python3 test_local.py youtube --dry   # YouTube만
+python3 test_local.py both --dry      # 전체
+
+# 실제 업데이트 실행
+python3 test_local.py both
+```
+
+> `test_local.py`는 `backend/.env.local`에서 크레덴셜을 자동 로드합니다.
+> `.env.local`이 없으면 Azure CLI(`az`)에서 가져옵니다.
 
 ## 수동 실행 (HTTP Trigger)
 
@@ -51,23 +72,50 @@ curl -X POST "https://<function-app>.azurewebsites.net/api/refresh-metadata?code
 
 ## 배포
 
+### GitHub Actions (자동)
+`develop` 브랜치에 push하면 `.github/workflows/deploy-backend.yml`의 `deploy-functions` job이 자동 실행됩니다.
+
+```
+deploy-infrastructure → deploy-functions → validate
+```
+
+### Azure CLI (수동)
 ```bash
-# Azure CLI로 배포
 func azure functionapp publish <function-app-name>
 ```
+
+## 인프라
+
+| 리소스 | 설명 |
+|--------|------|
+| Storage Account (`stfunc*`) | AzureWebJobsStorage |
+| App Service Plan (Y1/Dynamic) | Consumption 과금 |
+| Function App (Python 3.11, Linux) | 실행 환경 |
+| Diagnostic Settings | Log Analytics 연동 |
+
+Bicep 모듈: `infra/modules/function-app.bicep`
+
+> 환경변수는 Container App과 동일한 GitHub Secrets에서 Bicep을 통해 주입됩니다.
 
 ## 아키텍처
 
 ```
 Timer (매일 UTC 17:00 = KST 02:00)
   │
-  ├─ GitHub Updater
+  ├─ GitHub Updater (119 repos, ~4분 소요)
   │   ├─ Cosmos DB: contents → stars, forks, last_commit_date
   │   ├─ Cosmos DB: analysis_requests → result.stars, result.forks, result.last_commit_date
-  │   └─ AI Search: buildflow-contents → stars, forks, last_commit_date
+  │   └─ AI Search: buildflow-content → stars, last_commit_date
   │
-  └─ YouTube Updater (batch 50개씩)
+  └─ YouTube Updater (batch 50개씩, ~1초 소요)
       ├─ Cosmos DB: youtube_contents → view_count, like_count, comment_count
       ├─ Cosmos DB: youtube_analysis → result.view_count, result.like_count, result.comment_count
-      └─ AI Search: buildflow-youtube → view_count, like_count, comment_count
+      └─ AI Search: buildflow-youtube → view_count, like_count
 ```
+
+## 테스트 결과 (2026-03-02)
+
+| 소스 | 전체 | 업데이트 | 실패 | 스킵 |
+|------|------|---------|------|------|
+| GitHub | 119 | 1 | 0 | 118 |
+| YouTube | 8 | 3 | 0 | 5 |
