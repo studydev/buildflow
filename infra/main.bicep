@@ -45,6 +45,10 @@ param acsSenderAddress string = ''
 @description('CORS allowed origins (comma-separated)')
 param corsOrigins string = 'http://localhost:5173,http://localhost:3000'
 
+@secure()
+@description('YouTube Data API v3 Key')
+param youtubeApiKey string = ''
+
 @description('Dev bypass email for non-prod environments')
 param devBypassEmail string = ''
 
@@ -209,6 +213,14 @@ resource openAiKeyKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = if (!empty
   }
 }
 
+resource youtubeApiKeyKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = if (!empty(youtubeApiKey)) {
+  parent: keyVault
+  name: 'youtube-api-key'
+  properties: {
+    value: youtubeApiKey
+  }
+}
+
 resource acsConnectionStringKv 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = if (!empty(acsConnectionString)) {
   parent: keyVault
   name: 'acs-connection-string'
@@ -365,6 +377,13 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
           keyVaultUrl: openAiKeyKv.properties.secretUri
           identity: managedIdentity.id
         }
+      ] : [], !empty(youtubeApiKey) ? [
+        {
+          name: 'youtube-api-key'
+          #disable-next-line BCP318
+          keyVaultUrl: youtubeApiKeyKv.properties.secretUri
+          identity: managedIdentity.id
+        }
       ] : [], [
         {
           name: 'search-admin-key'
@@ -404,6 +423,8 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'GITHUB_TOKEN', secretRef: 'github-token' }
           ] : [], !empty(azureOpenAiKey) ? [
             { name: 'AZURE_OPENAI_API_KEY', secretRef: 'azure-openai-key' }
+          ] : [], !empty(youtubeApiKey) ? [
+            { name: 'YOUTUBE_API_KEY', secretRef: 'youtube-api-key' }
           ] : [], [
             { name: 'AZURE_SEARCH_ENDPOINT', value: search.outputs.searchEndpoint }
             { name: 'AZURE_SEARCH_API_KEY', secretRef: 'search-admin-key' }

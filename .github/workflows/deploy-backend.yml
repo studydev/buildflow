@@ -111,6 +111,7 @@ jobs:
             azureOpenAiDeployment=${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
             acsConnectionString=${{ secrets.ACS_CONNECTION_STRING }}
             acsSenderAddress=${{ secrets.ACS_SENDER_ADDRESS }}
+            youtubeApiKey=${{ secrets.YOUTUBE_API_KEY }}
             devBypassEmail=${{ secrets.DEV_BYPASS_EMAIL }}
             corsOrigins=https://nexus.studydev.com,http://localhost:5173,http://localhost:3000
             enableMonitoring=true
