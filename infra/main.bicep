@@ -58,6 +58,9 @@ param enableMonitoring bool = true
 @description('Enable frontend Static Web App deployment')
 param enableFrontend bool = true
 
+@description('Enable Azure Functions for scheduled metadata refresh')
+param enableFunctions bool = true
+
 @description('Email for alert notifications')
 param alertEmail string = ''
 
@@ -414,10 +417,11 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'AZURE_STORAGE_CONNECTION_STRING', secretRef: 'storage-connection' }
             { name: 'AZURE_STORAGE_ACCOUNT_NAME', secretRef: 'storage-account-name' }
             { name: 'AZURE_STORAGE_ACCOUNT_KEY', secretRef: 'storage-account-key' }
-            { name: 'ACS_CONNECTION_STRING', secretRef: 'acs-connection-string' }
             { name: 'ACS_SENDER_ADDRESS', value: acsSenderAddress }
             { name: 'CORS_ORIGINS', value: corsOrigins }
-          ], environment != 'prod' && !empty(devBypassEmail) ? [
+          ], !empty(acsConnectionString) ? [
+            { name: 'ACS_CONNECTION_STRING', secretRef: 'acs-connection-string' }
+          ] : [], environment != 'prod' && !empty(devBypassEmail) ? [
             { name: 'DEV_BYPASS_EMAIL', value: devBypassEmail }
           ] : [], !empty(githubToken) ? [
             { name: 'GITHUB_TOKEN', secretRef: 'github-token' }
@@ -540,6 +544,31 @@ output searchEndpoint string = search.outputs.searchEndpoint
 // Monitoring outputs
 output appInsightsName string = enableMonitoring ? monitoring!.outputs.appInsightsName : ''
 output appInsightsConnectionString string = enableMonitoring ? monitoring!.outputs.appInsightsConnectionString : ''
+
+// ============================================================================
+// Azure Function App – Daily Metadata Refresh
+// ============================================================================
+
+module functionApp 'modules/function-app.bicep' = if (enableFunctions) {
+  name: 'functionAppDeployment'
+  params: {
+    projectName: projectName
+    environment: environment
+    location: location
+    tags: tags
+    logAnalyticsWorkspaceId: logAnalytics.id
+    cosmosConnectionString: 'AccountEndpoint=${cosmosAccount.properties.documentEndpoint};AccountKey=${cosmosAccount.listKeys().primaryMasterKey}'
+    githubToken: githubToken
+    youtubeApiKey: youtubeApiKey
+    searchEndpoint: search.outputs.searchEndpoint
+    searchAdminKey: search.outputs.adminKey
+    appInsightsConnectionString: enableMonitoring ? monitoring!.outputs.appInsightsConnectionString : ''
+  }
+}
+
+// Function App outputs
+output functionAppName string = enableFunctions ? functionApp!.outputs.functionAppName : ''
+output functionAppUrl string = enableFunctions ? functionApp!.outputs.functionAppUrl : ''
 
 // ============================================================================
 // Frontend Static Web App (T901)

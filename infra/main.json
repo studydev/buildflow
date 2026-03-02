@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "16942691969943194708"
+      "templateHash": "5443473645169982322"
     }
   },
   "parameters": {
@@ -98,6 +98,13 @@
         "description": "CORS allowed origins (comma-separated)"
       }
     },
+    "youtubeApiKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "YouTube Data API v3 Key"
+      }
+    },
     "devBypassEmail": {
       "type": "string",
       "defaultValue": "",
@@ -117,6 +124,13 @@
       "defaultValue": true,
       "metadata": {
         "description": "Enable frontend Static Web App deployment"
+      }
+    },
+    "enableFunctions": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable Azure Functions for scheduled metadata refresh"
       }
     },
     "alertEmail": {
@@ -316,6 +330,18 @@
         "keyVault"
       ]
     },
+    "youtubeApiKeyKv": {
+      "condition": "[not(empty(parameters('youtubeApiKey')))]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-02-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'youtube-api-key')]",
+      "properties": {
+        "value": "[parameters('youtubeApiKey')]"
+      },
+      "dependsOn": [
+        "keyVault"
+      ]
+    },
     "acsConnectionStringKv": {
       "condition": "[not(empty(parameters('acsConnectionString')))]",
       "type": "Microsoft.KeyVault/vaults/secrets",
@@ -421,7 +447,7 @@
               "allowCredentials": true
             }
           },
-          "secrets": "[concat(createArray(createObject('name', 'jwt-secret', 'keyVaultUrl', reference('jwtSecretKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'cosmos-connection-string', 'keyVaultUrl', reference('cosmosConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'storage-connection', 'keyVaultUrl', reference('storageConnectionKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'storage-account-name', 'keyVaultUrl', reference('storageAccountNameKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'storage-account-key', 'keyVaultUrl', reference('storageAccountKeyKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), if(not(empty(parameters('acsConnectionString'))), createArray(createObject('name', 'acs-connection-string', 'keyVaultUrl', reference('acsConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'github-token', 'keyVaultUrl', reference('githubTokenKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('azureOpenAiKey'))), createArray(createObject('name', 'azure-openai-key', 'keyVaultUrl', reference('openAiKeyKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), createArray(createObject('name', 'search-admin-key', 'keyVaultUrl', reference('searchAdminKeyKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))))]"
+          "secrets": "[concat(createArray(createObject('name', 'jwt-secret', 'keyVaultUrl', reference('jwtSecretKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'cosmos-connection-string', 'keyVaultUrl', reference('cosmosConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'storage-connection', 'keyVaultUrl', reference('storageConnectionKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'storage-account-name', 'keyVaultUrl', reference('storageAccountNameKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix')))), createObject('name', 'storage-account-key', 'keyVaultUrl', reference('storageAccountKeyKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), if(not(empty(parameters('acsConnectionString'))), createArray(createObject('name', 'acs-connection-string', 'keyVaultUrl', reference('acsConnectionStringKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'github-token', 'keyVaultUrl', reference('githubTokenKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('azureOpenAiKey'))), createArray(createObject('name', 'azure-openai-key', 'keyVaultUrl', reference('openAiKeyKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), if(not(empty(parameters('youtubeApiKey'))), createArray(createObject('name', 'youtube-api-key', 'keyVaultUrl', reference('youtubeApiKeyKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))), createArray()), createArray(createObject('name', 'search-admin-key', 'keyVaultUrl', reference('searchAdminKeyKv').secretUri, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', variables('resourceSuffix'))))))]"
         },
         "template": {
           "containers": [
@@ -432,7 +458,7 @@
                 "cpu": "[json('0.5')]",
                 "memory": "1Gi"
               },
-              "env": "[concat(createArray(createObject('name', 'ENV', 'value', parameters('environment')), createObject('name', 'JWT_SECRET', 'secretRef', 'jwt-secret'), createObject('name', 'JWT_ALGORITHM', 'value', 'HS256'), createObject('name', 'COSMOS_CONNECTION_STRING', 'secretRef', 'cosmos-connection-string'), createObject('name', 'COSMOS_DATABASE_NAME', 'value', 'buildflow'), createObject('name', 'AZURE_OPENAI_ENDPOINT', 'value', parameters('azureOpenAiEndpoint')), createObject('name', 'AZURE_OPENAI_DEPLOYMENT', 'value', parameters('azureOpenAiDeployment')), createObject('name', 'AZURE_DALLE_DEPLOYMENT', 'value', 'gpt-image-1.5'), createObject('name', 'AZURE_DALLE_IMAGE_SIZE', 'value', '1536x1024'), createObject('name', 'AZURE_STORAGE_CONNECTION_STRING', 'secretRef', 'storage-connection'), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'secretRef', 'storage-account-name'), createObject('name', 'AZURE_STORAGE_ACCOUNT_KEY', 'secretRef', 'storage-account-key'), createObject('name', 'ACS_CONNECTION_STRING', 'secretRef', 'acs-connection-string'), createObject('name', 'ACS_SENDER_ADDRESS', 'value', parameters('acsSenderAddress')), createObject('name', 'CORS_ORIGINS', 'value', parameters('corsOrigins'))), if(and(not(equals(parameters('environment'), 'prod')), not(empty(parameters('devBypassEmail')))), createArray(createObject('name', 'DEV_BYPASS_EMAIL', 'value', parameters('devBypassEmail'))), createArray()), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'GITHUB_TOKEN', 'secretRef', 'github-token')), createArray()), if(not(empty(parameters('azureOpenAiKey'))), createArray(createObject('name', 'AZURE_OPENAI_API_KEY', 'secretRef', 'azure-openai-key')), createArray()), createArray(createObject('name', 'AZURE_SEARCH_ENDPOINT', 'value', reference('search').outputs.searchEndpoint.value), createObject('name', 'AZURE_SEARCH_API_KEY', 'secretRef', 'search-admin-key'), createObject('name', 'AZURE_SEARCH_INDEX_NAME', 'value', 'buildflow-content')))]",
+              "env": "[concat(createArray(createObject('name', 'ENV', 'value', parameters('environment')), createObject('name', 'JWT_SECRET', 'secretRef', 'jwt-secret'), createObject('name', 'JWT_ALGORITHM', 'value', 'HS256'), createObject('name', 'COSMOS_CONNECTION_STRING', 'secretRef', 'cosmos-connection-string'), createObject('name', 'COSMOS_DATABASE_NAME', 'value', 'buildflow'), createObject('name', 'AZURE_OPENAI_ENDPOINT', 'value', parameters('azureOpenAiEndpoint')), createObject('name', 'AZURE_OPENAI_DEPLOYMENT', 'value', parameters('azureOpenAiDeployment')), createObject('name', 'AZURE_DALLE_DEPLOYMENT', 'value', 'gpt-image-1.5'), createObject('name', 'AZURE_DALLE_IMAGE_SIZE', 'value', '1536x1024'), createObject('name', 'AZURE_STORAGE_CONNECTION_STRING', 'secretRef', 'storage-connection'), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'secretRef', 'storage-account-name'), createObject('name', 'AZURE_STORAGE_ACCOUNT_KEY', 'secretRef', 'storage-account-key'), createObject('name', 'ACS_SENDER_ADDRESS', 'value', parameters('acsSenderAddress')), createObject('name', 'CORS_ORIGINS', 'value', parameters('corsOrigins'))), if(not(empty(parameters('acsConnectionString'))), createArray(createObject('name', 'ACS_CONNECTION_STRING', 'secretRef', 'acs-connection-string')), createArray()), if(and(not(equals(parameters('environment'), 'prod')), not(empty(parameters('devBypassEmail')))), createArray(createObject('name', 'DEV_BYPASS_EMAIL', 'value', parameters('devBypassEmail'))), createArray()), if(not(empty(parameters('githubToken'))), createArray(createObject('name', 'GITHUB_TOKEN', 'secretRef', 'github-token')), createArray()), if(not(empty(parameters('azureOpenAiKey'))), createArray(createObject('name', 'AZURE_OPENAI_API_KEY', 'secretRef', 'azure-openai-key')), createArray()), if(not(empty(parameters('youtubeApiKey'))), createArray(createObject('name', 'YOUTUBE_API_KEY', 'secretRef', 'youtube-api-key')), createArray()), createArray(createObject('name', 'AZURE_SEARCH_ENDPOINT', 'value', reference('search').outputs.searchEndpoint.value), createObject('name', 'AZURE_SEARCH_API_KEY', 'secretRef', 'search-admin-key'), createObject('name', 'AZURE_SEARCH_INDEX_NAME', 'value', 'buildflow-content')))]",
               "probes": [
                 {
                   "type": "Liveness",
@@ -483,7 +509,8 @@
         "searchAdminKeyKv",
         "storageAccountKeyKv",
         "storageAccountNameKv",
-        "storageConnectionKv"
+        "storageConnectionKv",
+        "youtubeApiKeyKv"
       ]
     },
     "searchAdminKeyKv": {
@@ -1442,6 +1469,283 @@
         "logAnalytics"
       ]
     },
+    "functionApp": {
+      "condition": "[parameters('enableFunctions')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "functionAppDeployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "logAnalyticsWorkspaceId": {
+            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', format('log-{0}', variables('resourceSuffix')))]"
+          },
+          "cosmosConnectionString": {
+            "value": "[format('AccountEndpoint={0};AccountKey={1}', reference('cosmosAccount').documentEndpoint, listKeys('cosmosAccount', '2023-04-15').primaryMasterKey)]"
+          },
+          "githubToken": {
+            "value": "[parameters('githubToken')]"
+          },
+          "youtubeApiKey": {
+            "value": "[parameters('youtubeApiKey')]"
+          },
+          "searchEndpoint": {
+            "value": "[reference('search').outputs.searchEndpoint.value]"
+          },
+          "searchAdminKey": {
+            "value": "[listOutputsWithSecureValues('search', '2025-04-01').adminKey]"
+          },
+          "appInsightsConnectionString": "[if(parameters('enableMonitoring'), createObject('value', reference('monitoring').outputs.appInsightsConnectionString.value), createObject('value', ''))]"
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.38.33.27573",
+              "templateHash": "10338463352584642350"
+            }
+          },
+          "parameters": {
+            "projectName": {
+              "type": "string",
+              "metadata": {
+                "description": "Project name"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Resource tags"
+              }
+            },
+            "logAnalyticsWorkspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics Workspace ID for diagnostics"
+              }
+            },
+            "cosmosConnectionString": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Cosmos DB connection string"
+              }
+            },
+            "githubToken": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "GitHub Personal Access Token"
+              }
+            },
+            "youtubeApiKey": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "YouTube Data API v3 key"
+              }
+            },
+            "searchEndpoint": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Azure AI Search endpoint"
+              }
+            },
+            "searchAdminKey": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Azure AI Search admin key"
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Application Insights connection string"
+              }
+            }
+          },
+          "variables": {
+            "shortSuffix": "[take(uniqueString(resourceGroup().id), 6)]",
+            "funcStorageName": "[toLower(take(format('stfunc{0}{1}{2}', parameters('projectName'), parameters('environment'), variables('shortSuffix')), 24))]",
+            "functionAppName": "[format('func-{0}-{1}-{2}', parameters('projectName'), parameters('environment'), variables('shortSuffix'))]",
+            "appServicePlanName": "[format('asp-{0}-func-{1}-{2}', parameters('projectName'), parameters('environment'), variables('shortSuffix'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-01-01",
+              "name": "[variables('funcStorageName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "properties": {
+                "supportsHttpsTrafficOnly": true,
+                "minimumTlsVersion": "TLS1_2"
+              }
+            },
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2023-01-01",
+              "name": "[variables('appServicePlanName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "functionapp",
+              "sku": {
+                "name": "Y1",
+                "tier": "Dynamic"
+              },
+              "properties": {
+                "reserved": true
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-01-01",
+              "name": "[variables('functionAppName')]",
+              "location": "[parameters('location')]",
+              "tags": "[union(parameters('tags'), createObject('azd-service-name', 'functions'))]",
+              "kind": "functionapp,linux",
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+                "reserved": true,
+                "siteConfig": {
+                  "pythonVersion": "3.11",
+                  "linuxFxVersion": "Python|3.11",
+                  "appSettings": [
+                    {
+                      "name": "AzureWebJobsStorage",
+                      "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', variables('funcStorageName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('funcStorageName')), '2023-01-01').keys[0].value)]"
+                    },
+                    {
+                      "name": "FUNCTIONS_EXTENSION_VERSION",
+                      "value": "~4"
+                    },
+                    {
+                      "name": "FUNCTIONS_WORKER_RUNTIME",
+                      "value": "python"
+                    },
+                    {
+                      "name": "WEBSITE_RUN_FROM_PACKAGE",
+                      "value": "1"
+                    },
+                    {
+                      "name": "COSMOS_CONNECTION_STRING",
+                      "value": "[parameters('cosmosConnectionString')]"
+                    },
+                    {
+                      "name": "COSMOS_DATABASE_NAME",
+                      "value": "buildflow"
+                    },
+                    {
+                      "name": "GITHUB_TOKEN",
+                      "value": "[parameters('githubToken')]"
+                    },
+                    {
+                      "name": "YOUTUBE_API_KEY",
+                      "value": "[parameters('youtubeApiKey')]"
+                    },
+                    {
+                      "name": "AZURE_SEARCH_ENDPOINT",
+                      "value": "[parameters('searchEndpoint')]"
+                    },
+                    {
+                      "name": "AZURE_SEARCH_API_KEY",
+                      "value": "[parameters('searchAdminKey')]"
+                    },
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('appInsightsConnectionString')]"
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('funcStorageName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Web/sites/{0}', variables('functionAppName'))]",
+              "name": "[format('{0}-diagnostics', variables('functionAppName'))]",
+              "properties": {
+                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "logs": [
+                  {
+                    "category": "FunctionAppLogs",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "functionAppName": {
+              "type": "string",
+              "value": "[variables('functionAppName')]"
+            },
+            "functionAppUrl": {
+              "type": "string",
+              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-01-01').defaultHostName)]"
+            },
+            "functionStorageName": {
+              "type": "string",
+              "value": "[variables('funcStorageName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "cosmosAccount",
+        "logAnalytics",
+        "monitoring",
+        "search"
+      ]
+    },
     "staticWebApp": {
       "condition": "[parameters('enableFrontend')]",
       "type": "Microsoft.Resources/deployments",
@@ -1583,6 +1887,14 @@
     "appInsightsConnectionString": {
       "type": "string",
       "value": "[if(parameters('enableMonitoring'), reference('monitoring').outputs.appInsightsConnectionString.value, '')]"
+    },
+    "functionAppName": {
+      "type": "string",
+      "value": "[if(parameters('enableFunctions'), reference('functionApp').outputs.functionAppName.value, '')]"
+    },
+    "functionAppUrl": {
+      "type": "string",
+      "value": "[if(parameters('enableFunctions'), reference('functionApp').outputs.functionAppUrl.value, '')]"
     },
     "staticWebAppName": {
       "type": "string",

@@ -36,19 +36,13 @@
     "azureOpenAiDeployment": {
       "value": "gpt-5.2"
     },
-    "containerRegistryLoginServer": {
-      "value": "crbuildflowprod.azurecr.io"
-    },
-    "pipelineImageTag": {
-      "value": "latest"
-    },
     "enableMonitoring": {
       "value": true
     },
-    "enablePipelines": {
-      "value": false
-    },
     "enableFrontend": {
+      "value": true
+    },
+    "enableFunctions": {
       "value": true
     },
     "alertEmail": {

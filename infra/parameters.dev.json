@@ -26,19 +26,13 @@
     "azureOpenAiDeployment": {
       "value": "gpt-5.2"
     },
-    "containerRegistryLoginServer": {
-      "value": ""
-    },
-    "pipelineImageTag": {
-      "value": "latest"
-    },
     "enableMonitoring": {
       "value": true
     },
-    "enablePipelines": {
+    "enableFrontend": {
       "value": true
     },
-    "enableFrontend": {
+    "enableFunctions": {
       "value": true
     },
     "corsOrigins": {

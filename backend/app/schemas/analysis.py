@@ -69,6 +69,11 @@ class AnalysisResultResponse(BaseModel):
     learning_objectives: List[str] = []
     lab_modules: List[str] = []
 
+    # 저장소 메타데이터
+    stars: int = 0
+    forks: int = 0
+    last_commit_date: Optional[str] = None
+
     # 메타데이터
     raw_metadata: Optional[dict] = None
 

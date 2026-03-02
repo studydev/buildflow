@@ -270,8 +270,39 @@ const handleDelete = async (request: AnalysisRequest) => {
 
 // Re-fetch completed analysis (re-collect from GitHub)
 const handleRefetch = async (request: AnalysisRequest) => {
-  if (confirm('Do you want to re-fetch content from GitHub? The existing analysis results will be replaced.')) {
+  if (confirm('Do you want to re-collect content from GitHub? The existing analysis results will be deleted and re-analyzed.')) {
     await analysisStore.retryRequest(request.id)
+  }
+}
+
+// Refresh repository metadata (stars, forks, last_commit_date) for expanded analysis request
+const refreshingAnalysisRepoId = ref<string | null>(null)
+const handleRefreshAnalysisRepo = async (request: AnalysisRequest) => {
+  if (!request.content_ids || request.content_ids.length === 0) {
+    alert('No linked content found.')
+    return
+  }
+  
+  const contentId = request.content_ids[0]!
+  refreshingAnalysisRepoId.value = request.id
+  
+  try {
+    const result = await contentStore.refreshRepoMetadata(contentId)
+    if (result) {
+      // Update analysis request result locally with refreshed data
+      if (request.result) {
+        request.result.stars = result.stars
+        request.result.forks = result.forks
+        request.result.last_commit_date = result.last_commit_date || undefined
+      }
+    } else {
+      alert('Failed to refresh: ' + (contentStore.error || 'Unknown error'))
+    }
+  } catch (e) {
+    console.error('Failed to refresh repo metadata:', e)
+    alert('Failed to refresh repository metadata.')
+  } finally {
+    refreshingAnalysisRepoId.value = null
   }
 }
 
@@ -785,11 +816,12 @@ onUnmounted(() => {
                   <template v-if="request.status === 'completed'">
                     <button
                       @click="handleRefetch(request)"
-                      class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-blue-500 hover:bg-blue-500/10 transition-colors"
-                      title="Re-fetch from GitHub"
+                      class="p-2 rounded-lg text-[var(--text-secondary)] hover:text-orange-500 hover:bg-orange-500/10 transition-colors"
+                      title="Re-collect: Delete and re-analyze from GitHub"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/>
                       </svg>
                     </button>
                     <button
@@ -854,7 +886,46 @@ onUnmounted(() => {
                   <div class="flex items-start justify-between mb-4">
                     <div>
                       <h4 class="font-header font-semibold text-[var(--text-primary)]">{{ request.result.title }}</h4>
-                      <p v-if="request.result.description" class="text-sm text-[var(--text-secondary)] mt-1">{{ request.result.description }}</p>
+                      
+                      <!-- Repository Metadata Line -->
+                      <div class="flex items-center gap-4 mt-1.5 text-xs text-[var(--text-tertiary)]">
+                        <span v-if="request.result.stars !== undefined" class="flex items-center gap-1" title="Stars">
+                          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                          </svg>
+                          {{ formatStars(request.result.stars) }}
+                        </span>
+                        <span v-if="request.result.forks !== undefined" class="flex items-center gap-1" title="Forks">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 7V3m10 4V3m-5 18v-4m0 0a3 3 0 01-3-3V9m3 5a3 3 0 003-3V9"/>
+                          </svg>
+                          {{ request.result.forks }}
+                        </span>
+                        <span v-if="request.result.last_commit_date" class="flex items-center gap-1" title="Last commit">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                          </svg>
+                          {{ formatLastCommit(request.result.last_commit_date) }}
+                        </span>
+                        <button
+                          @click.stop="handleRefreshAnalysisRepo(request)"
+                          :disabled="refreshingAnalysisRepoId === request.id"
+                          class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[var(--text-tertiary)] hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Update metadata (stars, forks, last commit)"
+                        >
+                          <svg 
+                            class="w-3.5 h-3.5"
+                            :class="{ 'animate-spin': refreshingAnalysisRepoId === request.id }"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"
+                          >
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                          </svg>
+                          <span v-if="refreshingAnalysisRepoId !== request.id" class="text-[10px]">Update</span>
+                          <span v-else class="text-[10px]">Updating...</span>
+                        </button>
+                      </div>
+                      
+                      <p v-if="request.result.description" class="text-sm text-[var(--text-secondary)] mt-1.5">{{ request.result.description }}</p>
                     </div>
                     <div class="flex gap-2">
                       <span v-if="request.result.level" class="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
@@ -961,41 +1032,7 @@ onUnmounted(() => {
                     </div>
                   </div>
                   
-                  <!-- Action Buttons -->
-                  <div class="mt-4 pt-4 border-t border-[var(--border)] flex flex-wrap gap-3">
-                    <button
-                      @click="handleRefetch(request)"
-                      class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-lg transition-colors"
-                      title="Re-fetch from GitHub"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                      </svg>
-                      Re-fetch
-                    </button>
-                    <button
-                      v-if="request.content_ids && request.content_ids.length > 0"
-                      @click="handleEditContent(request.content_ids[0]!)"
-                      class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primary-hover rounded-lg transition-colors"
-                      title="Edit content"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                      </svg>
-                      Edit
-                    </button>
-                    <button
-                      v-if="request.content_ids && request.content_ids.length > 0"
-                      @click="handlePublishContent(request.content_ids[0]!)"
-                      class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                      title="Publish content"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                      </svg>
-                      Publish
-                    </button>
-                  </div>
+
                   
                   <!-- Completed At -->
                   <div v-if="request.completed_at" class="mt-4 pt-3 border-t border-[var(--border)]">

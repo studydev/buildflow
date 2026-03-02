@@ -48,6 +48,11 @@ export interface AnalysisResult {
   learning_objectives: string[]
   lab_modules: string[]
   
+  // 저장소 메타데이터
+  stars?: number
+  forks?: number
+  last_commit_date?: string
+  
   // 메타데이터
   raw_metadata?: Record<string, unknown>
 }
