@@ -444,6 +444,47 @@ async def retry_youtube_request(
     )
 
 
+@router.post(
+    "/requests/{request_id}/recollect",
+    response_model=APIResponse,
+    summary="Recollect and update a YouTube analysis request",
+    description="Re-run analysis for an existing request and update linked content with newly collected data.",
+)
+async def recollect_youtube_request(
+    request_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(require_contributor),
+):
+    """Re-run YouTube analysis for an existing request and refresh content data."""
+    youtube_repo = get_youtube_repo()
+
+    request = await youtube_repo.get_by_id(request_id, current_user.id)
+    if not request:
+        raise NotFoundError(f"YouTube analysis request not found: {request_id}")
+
+    # Only block if a pipeline is actively running (PENDING means just submitted)
+    # After server restart, intermediate statuses (fetching/transcript/parsing) are stale
+    # so we allow recollection for all statuses
+
+    # Reset status for recollection; keep content_ids so pipeline updates existing content
+    request.status = YouTubeAnalysisStatus.PENDING
+    request.progress = 0
+    request.error_message = None
+    request.completed_at = None
+    request.result = None
+    await youtube_repo.update(request)
+
+    # Start background processing
+    background_tasks.add_task(run_youtube_pipeline, request.id, request.user_id)
+    logger.info(f"Queued YouTube pipeline recollection for request {request.id}")
+
+    return APIResponse(
+        success=True,
+        data=_to_analysis_response(request).model_dump(),
+        meta=Meta.create(message="YouTube recollection started"),
+    )
+
+
 @router.delete(
     "/requests/{request_id}",
     response_model=APIResponse,

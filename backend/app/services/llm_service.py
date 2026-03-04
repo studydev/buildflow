@@ -187,7 +187,7 @@ class LLMService:
             api_version: API version
         """
         self.api_key = api_key or getattr(settings, 'azure_openai_api_key', None)
-        self.endpoint = endpoint or getattr(settings, 'azure_openai_endpoint', 'https://genai-thon-04.openai.azure.com/')
+        self.endpoint = endpoint or getattr(settings, 'azure_openai_endpoint', 'https://aoai-260116.openai.azure.com/')
         self.deployment = deployment or getattr(settings, 'azure_openai_deployment', 'gpt-5.2')
         self.api_version = api_version or getattr(settings, 'azure_openai_api_version', '2025-04-01-preview')
         self._client: Optional[httpx.AsyncClient] = None
@@ -873,8 +873,8 @@ class LLMService:
 
         try:
             # Use GPT-5.2 for YouTube processing (high quality, handles Korean translation well)
-            # Long timeout for large transcripts (10 minutes)
-            client = await self.get_client(timeout=600.0)
+            # Long timeout for large transcripts (20 minutes)
+            client = await self.get_client(timeout=1200.0)
 
             logger.info(f"Processing YouTube with {self.deployment}, transcript length: {len(transcript_excerpt)} chars")
 
