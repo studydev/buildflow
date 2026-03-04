@@ -16,7 +16,6 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { marked } from 'marked'
 import { apiRequest } from '@/lib/api'
-import { useAuthStore } from '@/stores/auth'
 import { useContentStore } from '@/stores/content'
 
 // Configure marked for safe rendering
@@ -97,7 +96,6 @@ const emit = defineEmits<{
 // State
 // =============================================================================
 
-const authStore = useAuthStore()
 const contentStore = useContentStore()
 
 const isOpen = ref(false)
@@ -107,9 +105,6 @@ const inputMessage = ref('')
 const messages = ref<ChatMessage[]>([])
 const conversationId = ref<string | null>(null)
 const chatContainer = ref<HTMLElement | null>(null)
-
-// Check if user is authenticated
-const isAuthenticated = computed(() => authStore.isAuthenticated)
 
 // Language preference (kr as default when ambiguous)
 const isKorean = computed(() => contentStore.displayLanguage === 'ko')
@@ -157,10 +152,6 @@ function toggleChat() {
 
 async function sendMessage() {
   if (!inputMessage.value.trim() || isLoading.value) return
-  if (!isAuthenticated.value) {
-    error.value = 'Please sign in to continue.'
-    return
-  }
 
   const userMessage = inputMessage.value.trim()
   inputMessage.value = ''
@@ -305,14 +296,6 @@ watch(() => props.contentId, (newId) => {
         >
           Clear
         </button>
-      </div>
-
-      <!-- Auth Warning -->
-      <div
-        v-if="!isAuthenticated"
-        class="px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 text-sm"
-      >
-        ⚠️ Please sign in to use the assistant.
       </div>
 
       <!-- Messages Container -->
@@ -499,14 +482,14 @@ watch(() => props.contentId, (newId) => {
           <textarea
             v-model="inputMessage"
             @keypress="handleKeyPress"
-            :disabled="!isAuthenticated || isLoading"
+            :disabled="isLoading"
             placeholder="Type a message..."
             rows="1"
             class="flex-1 resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <button
             @click="sendMessage"
-            :disabled="!isAuthenticated || isLoading || !inputMessage.trim()"
+            :disabled="isLoading || !inputMessage.trim()"
             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition flex items-center justify-center"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
