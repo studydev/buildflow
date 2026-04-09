@@ -201,7 +201,11 @@ jobs:
             --name ${{ steps.get-app.outputs.app_name }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --image ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.API_IMAGE_NAME }}:${{ github.sha }} \
-            --set-env-vars "IMAGE_TAG=${{ github.sha }}"
+            --set-env-vars \
+              "IMAGE_TAG=${{ github.sha }}" \
+              "YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY }}" \
+              "YOUTUBE_TRANSCRIPT_API_URL=${{ secrets.YOUTUBE_TRANSCRIPT_API_URL }}" \
+              "YOUTUBE_TRANSCRIPT_API_KEY=${{ secrets.YOUTUBE_TRANSCRIPT_API_KEY }}"
 
   # ==========================================================================
   # Post-Deployment Validation
