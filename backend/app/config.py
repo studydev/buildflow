@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_days: int = 7
 
     # Azure OpenAI Settings
-    azure_openai_endpoint: Optional[str] = "https://genai-thon-04.openai.azure.com/"
+    azure_openai_endpoint: Optional[str] = None
     azure_openai_api_key: Optional[str] = None
     azure_openai_deployment: str = "gpt-5.2"
     azure_openai_api_version: str = "2025-04-01-preview"

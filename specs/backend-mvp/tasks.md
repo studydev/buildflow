@@ -1532,6 +1532,152 @@ T600-T602: Asset Generation
 T700-T703: AI Assistant
 
 
+MILESTONE 9: Daily Metadata Refresh (Azure Functions)
+══════════════════════════════════════════════════════════════════════════════
+
+**Status**: ✅ Complete  
+**Created**: 2026-03-02  
+**Goal**: GitHub/YouTube 콘텐츠 메타데이터를 매일 자동 갱신하는 Azure Function 구축
+
+### Phase 9.1: API Rate Limit 분석 및 설계
+
+- [x] **T900** GitHub REST API rate limit 분석 (5,000 req/hour, 1.5s delay)
+  - **Owner**: DP | **Env**: ALL
+  - **DoD**: Rate limit 전략 문서화 완료
+
+- [x] **T901** YouTube Data API v3 quota 분석 (10,000 units/day, batch 50 IDs)
+  - **Owner**: DP | **Env**: ALL
+  - **DoD**: Quota 전략 문서화 완료
+
+### Phase 9.2: Azure Function 코드 구현
+
+- [x] **T902** [BLOCKING] Function App 프로젝트 생성 (Python v2 모델)
+  - **Owner**: DP | **Env**: ALL
+  - **Files**: `functions/function_app.py`, `functions/requirements.txt`, `functions/host.json`
+  - **DoD**: Timer trigger (CRON `0 0 17 * * *` = KST 02:00) + HTTP manual trigger
+
+- [x] **T903** GitHub metadata updater 구현
+  - **Owner**: DP | **Env**: ALL
+  - **Files**: `functions/github_updater.py`
+  - **Depends**: T902
+  - **DoD**: contents, analysis_requests, AI Search 업데이트. Rate limit 모니터링, 변경 없으면 skip
+
+- [x] **T904** YouTube metadata updater 구현
+  - **Owner**: DP | **Env**: ALL
+  - **Files**: `functions/youtube_updater.py`
+  - **Depends**: T902
+  - **DoD**: youtube_contents, youtube_analysis, AI Search 업데이트. Batch 50 IDs/request
+
+### Phase 9.3: 인프라 및 배포
+
+- [x] **T905** [BLOCKING] Bicep 모듈 생성 (function-app.bicep)
+  - **Owner**: CP | **Env**: ALL
+  - **Files**: `infra/modules/function-app.bicep`
+  - **Depends**: T902
+  - **DoD**: Storage Account + Consumption Plan (Y1) + Function App + Diagnostics
+
+- [x] **T906** main.bicep에 Function App 모듈 통합
+  - **Owner**: CP | **Env**: ALL
+  - **Files**: `infra/main.bicep`, `infra/parameters.dev.json`, `infra/parameters.prod.json`
+  - **Depends**: T905
+  - **DoD**: enableFunctions 파라미터, 기존 secrets (GITHUB_TOKEN, YOUTUBE_API_KEY 등) 재활용
+
+- [x] **T907** 인프라 배포 검증
+  - **Owner**: CP | **Env**: DEV
+  - **Depends**: T906
+  - **Validation**: `az functionapp list --resource-group rg-buildflow-dev`
+  - **DoD**: func-buildflow-dev 리소스 생성 확인
+
+- [x] **T908** GitHub Actions deploy-functions job 추가
+  - **Owner**: CP | **Env**: ALL
+  - **Files**: `.github/workflows/deploy-backend.yml`
+  - **Depends**: T906
+  - **DoD**: deploy-infrastructure → deploy-functions → validate 흐름 완성
+
+### Phase 9.4: 테스트 및 버그 수정
+
+- [x] **T909** 로컬 테스트 스크립트 작성
+  - **Owner**: DP | **Env**: DEV-ONLY
+  - **Files**: `functions/test_local.py`
+  - **Depends**: T903, T904
+  - **DoD**: `--dry` 모드 지원, `.env.local` / Azure CLI 크레덴셜 자동 로드
+
+- [x] **T910** Python 3.9 호환성 수정
+  - **Owner**: DP | **Env**: ALL
+  - **Depends**: T909
+  - **DoD**: `tuple[str, str] | None` → `Optional[Tuple[str, str]]` 변환, 로컬 테스트 통과
+
+- [x] **T911** Cosmos DB partition key 버그 수정
+  - **Owner**: DP | **Env**: ALL
+  - **Files**: `functions/github_updater.py`
+  - **Depends**: T909
+  - **DoD**: `read_item` partition key를 `contributor_id` → `content_id`로 수정, 93 failed → 0
+
+- [x] **T912** AI Search 스키마 불일치 수정
+  - **Owner**: DP | **Env**: ALL
+  - **Files**: `functions/github_updater.py`, `functions/youtube_updater.py`
+  - **Depends**: T909
+  - **DoD**: 인덱스명 `buildflow-contents` → `buildflow-content`, `forks`/`comment_count` 필드 제거
+
+- [x] **T913** 로컬 전체 테스트 통과 확인
+  - **Owner**: DP | **Env**: DEV
+  - **Depends**: T910, T911, T912
+  - **Validation**: `python3 test_local.py both`
+  - **DoD**: GitHub 119개 (updated 1, failed 0), YouTube 8개 (updated 3, failed 0)
+
+```
+Phase 9.1: 분석
+┌─────┐ ┌─────┐
+│T900 │ │T901 │  (parallel)
+└──┬──┘ └──┬──┘
+   │       │
+   ▼       ▼
+Phase 9.2: 구현
+┌─────┐
+│T902 │ Function App 프로젝트 (BLOCKING)
+└──┬──┘
+   │
+   ├───────┐
+   ▼       ▼
+┌─────┐ ┌─────┐
+│T903 │ │T904 │  (parallel)
+└─────┘ └─────┘
+
+Phase 9.3: 인프라
+┌─────┐
+│T905 │ Bicep 모듈 (BLOCKING)
+└──┬──┘
+   │
+   ▼
+┌─────┐
+│T906 │ main.bicep 통합
+└──┬──┘
+   │
+   ├───────┐
+   ▼       ▼
+┌─────┐ ┌─────┐
+│T907 │ │T908 │  (parallel)
+└─────┘ └─────┘
+
+Phase 9.4: 테스트
+┌─────┐
+│T909 │ 테스트 스크립트 (BLOCKING)
+└──┬──┘
+   │
+   ├───────┬───────┐
+   ▼       ▼       ▼
+┌─────┐ ┌─────┐ ┌─────┐
+│T910 │ │T911 │ │T912 │  (parallel)
+└──┬──┘ └──┬──┘ └──┬──┘
+   │       │       │
+   └───────┼───────┘
+           ▼
+         ┌─────┐
+         │T913 │ 전체 테스트 통과
+         └─────┘
+```
+
+
 MILESTONE 8: Production
 ══════════════════════════════════════════════════════════════════════════════
 Depends on: M1-M4 complete

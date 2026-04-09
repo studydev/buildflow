@@ -789,13 +789,30 @@ async def refresh_repo_metadata(
                 repo_info.pushed_at.replace("Z", "+00:00")
             )
 
-        # Update content with new metadata
+        # Update content with new metadata (Cosmos DB contents + AI Search)
         update_data = ContentUpdateRequest(
             stars=repo_info.stars,
             forks=repo_info.forks,
             last_commit_date=last_commit_date,
         )
         updated_content = await service.update(content_id, update_data)
+
+        # Also update analysis_requests table if linked
+        analysis_request_id = getattr(content, 'analysis_request_id', None)
+        if analysis_request_id:
+            try:
+                from app.repositories.analysis_repo import get_analysis_repo
+                analysis_repo = get_analysis_repo()
+                analysis_request = await analysis_repo.get_by_id_cross_partition(analysis_request_id)
+                if analysis_request and analysis_request.result:
+                    analysis_request.result.stars = repo_info.stars
+                    analysis_request.result.forks = repo_info.forks
+                    if last_commit_date:
+                        analysis_request.result.last_commit_date = last_commit_date.isoformat()
+                    await analysis_repo.update(analysis_request)
+                    logger.info(f"Updated analysis_request {analysis_request_id} with refreshed repo metadata")
+            except Exception as e:
+                logger.warning(f"Failed to update analysis_request {analysis_request_id}: {e}")
 
         response = APIResponse(
             success=True,

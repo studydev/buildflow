@@ -31,24 +31,18 @@
       }
     },
     "azureOpenAiEndpoint": {
-      "value": "https://genai-thon-04.openai.azure.com/"
+      "value": "https://aoai-260116.openai.azure.com/"
     },
     "azureOpenAiDeployment": {
       "value": "gpt-5.2"
     },
-    "containerRegistryLoginServer": {
-      "value": "crbuildflowprod.azurecr.io"
-    },
-    "pipelineImageTag": {
-      "value": "latest"
-    },
     "enableMonitoring": {
       "value": true
     },
-    "enablePipelines": {
-      "value": false
-    },
     "enableFrontend": {
+      "value": true
+    },
+    "enableFunctions": {
       "value": true
     },
     "alertEmail": {

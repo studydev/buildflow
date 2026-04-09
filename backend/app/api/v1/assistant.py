@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.dependencies import get_current_user_required
+from app.dependencies import get_current_user_optional, get_current_user_required
 from app.models.user import UserPublic
 from app.schemas import APIResponse, Meta
 from app.services.assistant_service import (
@@ -180,7 +180,7 @@ def get_visibility_level(user: Optional[UserPublic]) -> str:
     """Determine visibility level based on user.
 
     Per design.md visibility_rules:
-    - Anonymous users: Cannot use assistant (401)
+    - Anonymous users: public access
     - Authenticated users: internal access
     - Contributors: private access (their own content)
     """
@@ -215,20 +215,20 @@ def get_visibility_level(user: Optional[UserPublic]) -> str:
     - Suggest learning paths based on skill level
 
     **Visibility Rules**:
-    - Authenticated users required (401 if not authenticated)
+    - Anonymous users: public content only
+    - Authenticated users: additional internal content
     - Response content filtered based on user's access level
 
     **Rate Limits**:
     - External search fallback: 10 per user per hour
     """,
     responses={
-        401: {"description": "Authentication required"},
         503: {"description": "Assistant service unavailable"},
     },
 )
 async def chat(
     request: ChatRequest,
-    user: UserPublic = Depends(get_current_user_required),
+    user: Optional[UserPublic] = Depends(get_current_user_optional),
     assistant: AssistantService = Depends(get_assistant),
 ) -> APIResponse[ChatResponseData]:
     """Process chat message and return AI-generated response."""

@@ -44,6 +44,9 @@ def _to_response(request) -> AnalysisRequestResponse:
             prerequisites=request.result.prerequisites or [],
             learning_objectives=request.result.learning_objectives or [],
             lab_modules=request.result.lab_modules or [],
+            stars=request.result.stars or 0,
+            forks=request.result.forks or 0,
+            last_commit_date=request.result.last_commit_date,
             raw_metadata=request.result.raw_metadata,
         )
 

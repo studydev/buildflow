@@ -419,28 +419,70 @@ class YouTubePipeline:
                     "Missing analysis result",
                 )
 
-            # Create YouTubeContent from result
-            content = YouTubeContent.from_analysis_result(
+            # Build content payload from latest analysis result
+            content_from_result = YouTubeContent.from_analysis_result(
                 result=result,
                 request_id=request.id,
                 contributor_id=request.user_id,
                 contributor_email=request.user_email,
             )
 
-            # Save content
-            saved_content = await self.youtube_content_service.create_content(content)
-            request.content_ids = [saved_content.id]
+            saved_content: Optional[YouTubeContent] = None
+            existing_content_id = request.content_ids[0] if request.content_ids else None
 
-            # Auto-publish the content
-            try:
-                await self.youtube_content_service.publish_content(
-                    content_id=saved_content.id,
-                    contributor_email=request.user_email,
-                )
-                logger.info(f"Auto-published YouTube content: {saved_content.id}")
-            except Exception as pub_error:
-                logger.warning(f"Failed to auto-publish content {saved_content.id}: {pub_error}")
-                # Continue even if publish fails - content is still created as draft
+            # Recollection path: update existing content instead of creating a duplicate
+            if existing_content_id:
+                existing_content = await self.youtube_content_service.get_content(existing_content_id)
+                if existing_content:
+                    existing_content.analysis_request_id = request.id
+                    existing_content.video_id = content_from_result.video_id
+                    existing_content.source_url = content_from_result.source_url
+                    existing_content.channel_id = content_from_result.channel_id
+                    existing_content.channel_name = content_from_result.channel_name
+                    existing_content.channel_url = content_from_result.channel_url
+                    existing_content.title = content_from_result.title
+                    existing_content.title_en = content_from_result.title_en
+                    existing_content.title_kr = content_from_result.title_kr
+                    existing_content.description = content_from_result.description
+                    existing_content.description_en = content_from_result.description_en
+                    existing_content.description_kr = content_from_result.description_kr
+                    existing_content.thumbnail_url = content_from_result.thumbnail_url
+                    existing_content.view_count = content_from_result.view_count
+                    existing_content.like_count = content_from_result.like_count
+                    existing_content.comment_count = content_from_result.comment_count
+                    existing_content.duration_seconds = content_from_result.duration_seconds
+                    existing_content.duration_minutes = content_from_result.duration_minutes
+                    existing_content.upload_date = content_from_result.upload_date
+                    existing_content.chapters = content_from_result.chapters
+                    existing_content.script_language = content_from_result.script_language
+                    existing_content.script_summary_en = content_from_result.script_summary_en
+                    existing_content.script_summary_kr = content_from_result.script_summary_kr
+                    existing_content.content_type = content_from_result.content_type
+                    existing_content.categories = content_from_result.categories
+                    existing_content.technologies = content_from_result.technologies
+                    existing_content.level = content_from_result.level
+                    existing_content.tags = content_from_result.tags
+                    existing_content.contributor_update_email = request.user_email
+
+                    saved_content = await self.youtube_content_service.update_content(existing_content)
+                    request.content_ids = [saved_content.id]
+                    logger.info(f"Updated existing YouTube content from recollection: {saved_content.id}")
+
+            # First-collection fallback: create new content if none exists
+            if saved_content is None:
+                saved_content = await self.youtube_content_service.create_content(content_from_result)
+                request.content_ids = [saved_content.id]
+
+                # Auto-publish only on first creation
+                try:
+                    await self.youtube_content_service.publish_content(
+                        content_id=saved_content.id,
+                        contributor_email=request.user_email,
+                    )
+                    logger.info(f"Auto-published YouTube content: {saved_content.id}")
+                except Exception as pub_error:
+                    logger.warning(f"Failed to auto-publish content {saved_content.id}: {pub_error}")
+                    # Continue even if publish fails - content is still created as draft
 
             # Update request status to completed
             request.result = result

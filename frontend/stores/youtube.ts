@@ -342,6 +342,34 @@ export const useYouTubeStore = defineStore('youtube', () => {
       return null
     }
   }
+
+  /**
+   * Recollect a completed/failed YouTube request
+   * Re-runs analysis and updates linked content with new data
+   */
+  async function recollectRequest(id: string): Promise<YouTubeAnalysisRequest | null> {
+    try {
+      const data = await apiRequest<YouTubeAnalysisRequest>(
+        `/youtube/requests/${id}/recollect`,
+        { method: 'POST' }
+      )
+
+      // Update local state
+      const index = requests.value.findIndex(r => r.id === id)
+      if (index !== -1) {
+        requests.value[index] = data
+      }
+
+      // Start polling
+      startPolling(id)
+
+      return data
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to recollect request'
+      console.error(`Failed to recollect YouTube request ${id}:`, e)
+      return null
+    }
+  }
   
   /**
    * Delete a YouTube request
@@ -835,6 +863,7 @@ export const useYouTubeStore = defineStore('youtube', () => {
     submitRequest,
     getRequest,
     retryRequest,
+    recollectRequest,
     deleteRequest,
     
     // Content actions
